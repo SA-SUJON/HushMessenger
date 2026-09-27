@@ -107,7 +107,7 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 ## Verification and build
 
-Nineteen Kotlin tests cover the version-code gate, manifest guards, instruction changes and the settings launcher. Nine Android unit tests cover stock defaults, independent switches, pause, web schemes, bubble API limits saved settings and opening the correct Messenger task. Eleven Python tests cover certificate selection, permission ownership, failure handling and read-only device operations. Android lint and the release build run locally.
+Twenty Kotlin tests cover the version-code gate, manifest guards, instruction changes, settings launcher and Manager source timestamp format. Nine Android unit tests cover stock defaults, independent switches, pause, web schemes, bubble API limits, saved settings and opening the correct Messenger task. Eleven Python tests cover certificate selection, permission ownership, failure handling and read-only device operations. Android lint and the release build run locally.
 
 Morphe Desktop 1.17.0 applied both v0.1.0 patches to private copies of the S22 and S25 APKs. Both rebuilt successfully, and Android verified their v3 signatures. The changed-APK check in `scripts/verify_changed_apk_failure.py` confirms that altered permission bytecode stops patching before an output is written. It passed on both fixtures in earlier releases and was repeated on S25 for this release. Two clean v0.1.0 builds produced the same bundle checksum.
 
