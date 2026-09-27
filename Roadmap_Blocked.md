@@ -1,6 +1,6 @@
 # HushMessenger blocked roadmap
 
-The phones now have two owned, signed-in test accounts. Each item below identifies its remaining verification requirement. Stock behavior can be checked without replacing either installation; patch runtime checks still depend on resolving the blank startup screen and preserving account recovery.
+The phones now have two owned, signed-in test accounts. Each item below identifies its remaining verification requirement. Stock behavior can be checked without replacing either installation; a separate diagnostic copy supports limited runtime checks. Original-package acceptance still needs the blank startup screen resolved with account recovery preserved.
 
 ## S22 stock baseline, 2026-09-27
 
@@ -110,7 +110,7 @@ The read-only certificate preflight passed for the stock S25 APK and rejected a 
   Touches: `README.md`, `patches-bundle.json`, release metadata and source-import instructions.
   Acceptance: Confirm the add-source deep link on a clean Android device. After signed runtime validation, publish a stable release discoverable without a preview flag and point its index to the tested bundle.
   Complexity: S
-  Blocked: A stable release depends on signed runtime validation. The add-source deep link still needs an isolated Android UI check; the prior emulator URL launch was blocked by command policy.
+  Blocked: The user requested a public release and v0.0.9 became a regular release; stable lookup then passed. The add-source deep link still needs an isolated Android UI check. Publishing did not resolve the original-package startup failure.
 
 - [ ] P1: Correct chat-list speech for TalkBack when reproduced on 580.
   Why: Android comments dated 2026-04-25 and 2026-04-27 say Messenger speaks chat rows as numbers or letters while in-chat reading works; the inbox is the app's primary workflow.
@@ -150,7 +150,7 @@ The read-only certificate preflight passed for the stock S25 APK and rejected a 
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/stories/` UI hook and settings switch.
   Acceptance: On a signed-in 580 account with a visible tray, the opt-in switch hides only that tray; opening a known contact's story through other available routes and normal chat navigation still work.
   Complexity: M
-  Blocked: The S22's Chats tray is visible. Its exact UI hook and alternate story routes still need a controlled before/after check.
+  Blocked: The v0.1.0 tray switch passed hide and pause/restore checks on the S25 diagnostic copy. Alternate story routes and original-package acceptance remain unverified.
 
 - [ ] P2: Add an optional Facebook shortcut switch.
   Why: Messenger's Facebook entry points add navigation clutter, but removing them must not interfere with account sharing or cross-app trust.
@@ -158,7 +158,7 @@ The read-only certificate preflight passed for the stock S25 APK and rejected a 
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/navigation/` UI hook and settings switch.
   Acceptance: All Facebook shortcut entry points found in the exact 580 UI disappear when enabled; login, account switch, provider access and direct Facebook deep links still pass the cross-app checks.
   Complexity: M
-  Blocked: Stock entry points are visible. Removing them still needs the re-signed startup failure resolved before login, account switching and guarded-provider behavior can be checked.
+  Blocked: The v0.1.0 switch passed Facebook toolbar hide and pause/restore checks on the S25 diagnostic copy. Other entry points, login, account switching and guarded-provider behavior still need acceptance checks.
 
 - [ ] P2: Hide joined community chats from the main inbox on request.
   Why: A user report describes joined community chats filling the inbox; these are real conversations and need a reversible view choice, not the suggestion filter above.
@@ -190,4 +190,4 @@ The read-only certificate preflight passed for the stock S25 APK and rejected a 
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/input/` hook and separate settings switch.
   Acceptance: With an opt-in switch, a second test account sees no typing event while messages still send and decrypt in one-to-one and group encrypted chats; the default retains stock behavior.
   Complexity: M
-  Blocked: Two owned accounts are available and stock one-to-one encrypted messages work. A verified re-signed startup path is still required before implementing and testing a typing hook; group encryption and typing events remain unverified.
+  Blocked: Two owned accounts are available and stock one-to-one encrypted messages work. The v0.1.0 active-typing hook and opt-in switch are implemented with automated checks. Account-to-account typing events and group encryption remain unverified; original-package acceptance is still open.

@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="HushMessenger settings" android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar">
+        <provider android:name="app.hushmessenger.extension.SettingsProvider" android:authorities="${applicationId}.hush.settings" android:exported="false" />
+        <activity android:name="app.hushmessenger.extension.SettingsActivity" android:label="HushMessenger settings" android:icon="@android:drawable/ic_menu_preferences" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

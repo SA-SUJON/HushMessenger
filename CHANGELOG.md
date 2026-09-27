@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0 (2026-09-27)
+
+- Add seven optional controls adapted from existing Messenger patches: stories and notes, inbox tabs, Facebook shortcuts, Meta AI buttons, external web links, typing signals and bubble eligibility. All switches start off.
+- Add a HushMessenger settings launcher entry with saved switches, a pause control and a light theme. Inbox changes take effect after reopening Messenger.
+- Check the complete hook set on both supported 580 APKs. Changed hooks stop patching rather than silently skipping a feature.
+- Verify the settings screen, light theme, pause and Messenger launch on an isolated S25 diagnostic copy. Stories, the Facebook toolbar shortcut and the Meta AI floating button passed before/after checks. The original-package startup failure remains unresolved.
+- Pass 19 patch, nine Android settings and 11 certificate tests. Both exact APKs patch and sign successfully.
+- Add bytecode and Android settings tests. Keep ad blocking and media transcoding unavailable until their current paths can be verified.
+
 ## 0.0.9 (2026-09-27)
 
 - Add a read-only installation check that verifies APK certificates and reports installed-app or permission-owner conflicts before any device changes. It checks the phone's current signer set, including API-specific rotation and multiple signers, and refuses uncertain results.

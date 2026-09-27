@@ -19,3 +19,10 @@ pluginManagement {
 plugins {
     id("app.morphe.patches") version "1.3.4"
 }
+
+settings {
+    extensions {
+        defaultNamespace = "app.hushmessenger.extension"
+        proguardFiles(rootDir.resolve("extensions/proguard-rules.pro").absolutePath)
+    }
+}
