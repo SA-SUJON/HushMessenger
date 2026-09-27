@@ -17,6 +17,13 @@ The S25 had a current Messenger secure-storage backup before testing, and a priv
 
 The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 signed the HushMessenger-patched APK with that Manager key, and Android installed it. Its first-run `NeueNuxActivity` remained blank. A zero-patch rebuild of the same stock APK, signed with the same key, also installed and remained blank. The original stock APK opened its login form on the same hidden virtual display. Logs showed token lookup and network timeouts but no Java crash. This control does not isolate a cause between rebuilding, re-signing and account state; it does show the HushMessenger permission edit is not required to reproduce the blank screen. No chats, calls or notifications were exercised.
 
+## Settings source refresh
+
+- [ ] P2: Refresh both phone sources to the published v0.3.0 settings release.
+  Why: The public bundle and Desktop remote catalog are verified. S25 disconnected during the redesign check. S22 has Manager active on its main display; moving its singleTask activity would interrupt that session.
+  Evidence: GitHub serves v0.3.0 with the matching release checksum, and Desktop lists all 21 patches. The last verified phone source version is v0.2.0 on both devices.
+  Acceptance: With the phone connected and Manager inactive on the main display, open it on an isolated display, refresh HushMessenger and verify v0.3.0 plus 21 catalog entries. Preserve both stock Messenger installations and sign-ins.
+
 ## Existing priorities
 
 - [ ] P1: Validate the Messenger 580 build reported in issue 1.
