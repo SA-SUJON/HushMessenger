@@ -6,6 +6,11 @@ import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
 class DexSiteContractTest {
+    private fun assertActionable(failure: PatchException) {
+        assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK")
+        assertContains(failure.message.orEmpty(), "version code 346013387")
+    }
+
     @Test
     fun acceptsTheSupportedInstructionSites() {
         validateDexSites(expectedDexSites.toList())
@@ -17,6 +22,7 @@ class DexSiteContractTest {
             validateDexSites(expectedDexSites.toList().dropLast(1))
         }
         assertContains(failure.message.orEmpty(), "expected 6 permission loads")
+        assertActionable(failure)
     }
 
     @Test
@@ -26,6 +32,7 @@ class DexSiteContractTest {
 
         val failure = assertFailsWith<PatchException> { validateDexSites(changed) }
         assertContains(failure.message.orEmpty(), "instruction sites differ")
+        assertActionable(failure)
     }
 
     @Test
@@ -35,5 +42,6 @@ class DexSiteContractTest {
 
         val failure = assertFailsWith<PatchException> { validateDexSites(changed) }
         assertContains(failure.message.orEmpty(), "instruction sites differ")
+        assertActionable(failure)
     }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.4 (2026-09-27)
+
+- Put the tested APK and phone-data warning before the preview setup steps.
+- Make the README easier to use on a phone, including a copyable stock APK checksum and recovery help.
+- Move the support link below the setup and verification details.
+- Give patch failures the exact Messenger build needed to retry with an unmodified APK.
+- Shorten the patch and source descriptions and cover the recovery message in ten unit tests.
+
 ## 0.0.3 (2026-09-27)
 
 - Reject Messenger builds whose shared-permission manifest counts, component owners or active DEX instruction sites differ from the checked 580 APK.

@@ -1,6 +1,6 @@
 # HushMessenger roadmap
 
-Only unfinished work is listed. Each item needs a stock APK fixture and a visible behavior check before it can be marked complete.
+Only unfinished work is listed. Patch behavior items need a stock APK fixture and a visible check before they can be marked complete.
 
 ## Existing priorities
 
@@ -55,7 +55,7 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
   Complexity: L
 
 - [ ] P2: Prepare repeatable local distribution and diagnostics.
-  Why: The public v0.0.3 preview has a versioned source index, bundle and build instructions. It still needs a clear mismatch diagnostic and tested recovery steps.
+  Why: The v0.0.4 preview has a versioned source index, reproducible bundle, exact-build mismatch guidance and a recovery section. It still needs device-tested recovery and wider-language checks.
   Evidence: [Morphe template](https://github.com/MorpheApp/morphe-patches-template), [ReVanced Manager patching flow](https://github.com/ReVanced/revanced-manager/blob/main/docs/2_1_patching.md), [Android developer verification FAQ](https://developer.android.com/developer-verification/guides/faq).
   Touches: `scripts/`, `README.md`, `CHANGELOG.md`, `patches/build.gradle.kts`, bundle metadata.
   Acceptance: A clean local build produces `patches-<version>.mpp`, a mismatch gives package/version/hash diagnostics, and release instructions cover same-key signing, secure-storage backup and rollback, plus an English and one non-English device check. Explain Android developer verification accurately for direct sideloading before the broader 2027 rollout; do not claim the 2026-09-30 store rollout blocks this channel.
@@ -64,8 +64,8 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
 ## Research-Driven Additions
 
 - [ ] P0: Make the preview bundle discoverable in Morphe.
-  Why: Morphe Desktop's default stable source lookup rejects the repository because v0.0.3 is only a prerelease; users can fail before choosing a patch.
-  Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`. The README now gives a Desktop preview command that listed the patch locally, plus Manager preview and local-bundle steps.
+  Why: Morphe Desktop's default stable source lookup rejects the repository because v0.0.4 is only a prerelease; users can fail before choosing a patch.
+  Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`. A clean Manager 1.32.0 emulator profile imported v0.0.3 and listed the patch; v0.0.4 remote refresh remains to check after publication. The README gives the working Manager labels and a Desktop preview command.
   Touches: `README.md`, `patches-bundle.json`, release metadata and source-import instructions.
   Acceptance: On a clean Manager profile, the repository source imports with preview enabled and lists the exact 580 patch. The README gives a working Desktop preview command. After signed runtime validation, a stable release is discoverable without a preview flag and its index points to the tested bundle.
   Complexity: S
@@ -86,10 +86,17 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
 
 - [ ] P2: Check whether Morphe can authenticate patch bundle updates.
   Why: The source index has an empty `signature_download_url`, and the release checksum is hosted beside the bundle. A tampered bundle would need an independent trust check.
-  Evidence: `patches-bundle.json`, the v0.0.3 release assets, and [Morphe's source format](https://github.com/MorpheApp/morphe-patches-template/blob/main/patches-bundle.json). This machine has no GPG secret key for signing a new release.
+  Evidence: `patches-bundle.json`, the v0.0.4 release assets, and [Morphe's source format](https://github.com/MorpheApp/morphe-patches-template/blob/main/patches-bundle.json). This machine has no GPG secret key for signing a new release.
   Touches: release assets, source index, public key instructions and Manager/Desktop source tests.
   Acceptance: Confirm how Manager and Desktop use `signature_download_url`. If they verify detached signatures, publish one with a maintained key and test that a changed bundle is rejected. Otherwise, document the supported trust path accurately.
   Complexity: M
+
+- [ ] P2: Set the prepared GitHub social preview.
+  Why: `assets/github-social-preview.png` is committed, but the repository still uses GitHub's generated link preview, so shared links do not show the HushMessenger artwork.
+  Evidence: `gh repo view` reported `usesCustomOpenGraphImage: false` on 2026-09-27. [GitHub's API discussion](https://github.com/orgs/community/discussions/172072) confirms no supported REST or GraphQL upload for this setting.
+  Touches: GitHub repository Settings > Social preview; no new artwork is needed.
+  Acceptance: In an isolated signed-in browser session, upload the prepared image, then verify `usesCustomOpenGraphImage: true` and that the returned image URL resolves. Do not operate the user's active display.
+  Complexity: S
 
 - [ ] P2: Add optional tracking cleanup for outbound web links.
   Why: MessengerEx exposes an independent link-privacy option; external-browser choice alone does not remove tracking wrappers or parameters.

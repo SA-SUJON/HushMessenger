@@ -15,6 +15,11 @@ class InstallBesideMetaAppsPatchTest {
     private val renamedCommunication = "app.hushfacebook.permission.prod.FB_APP_COMMUNICATION"
     private val renamedReceiver = "app.hushfacebook.receiver.permission.ACCESS"
 
+    private fun assertActionable(failure: PatchException) {
+        assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK")
+        assertContains(failure.message.orEmpty(), "version code 346013387")
+    }
+
     private fun manifest(): Document {
         val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
         val root = document.createElement("manifest")
@@ -69,6 +74,7 @@ class InstallBesideMetaAppsPatchTest {
         val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
 
         assertContains(failure.message.orEmpty(), "expected 26 manifest uses")
+        assertActionable(failure)
         assertEquals(25, values(document).count { it == appCommunication })
         assertEquals(0, values(document).count { it == renamedCommunication })
     }
@@ -84,6 +90,7 @@ class InstallBesideMetaAppsPatchTest {
         val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
 
         assertContains(failure.message.orEmpty(), "manifest roles")
+        assertActionable(failure)
         assertEquals(26, values(document).count { it == appCommunication })
         assertEquals(0, values(document).count { it == renamedCommunication })
     }
@@ -100,6 +107,7 @@ class InstallBesideMetaAppsPatchTest {
         val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
 
         assertContains(failure.message.orEmpty(), "component guards")
+        assertActionable(failure)
         assertEquals(26, values(document).count { it == appCommunication })
         assertEquals(0, values(document).count { it == renamedCommunication })
     }
@@ -114,6 +122,20 @@ class InstallBesideMetaAppsPatchTest {
         val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
 
         assertContains(failure.message.orEmpty(), "must declare $appCommunication exactly once")
+        assertActionable(failure)
         assertEquals(0, values(document).count { it == renamedCommunication })
+    }
+
+    @Test
+    fun rejectsAnAlreadyRenamedManifestWithRecoveryGuidance() {
+        val document = manifest()
+        (document.getElementsByTagName("permission").item(0) as Element)
+            .setAttribute("android:name", renamedCommunication)
+
+        val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
+
+        assertContains(failure.message.orEmpty(), "already in the manifest")
+        assertActionable(failure)
+        assertEquals(25, values(document).count { it == appCommunication })
     }
 }

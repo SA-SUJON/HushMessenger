@@ -100,6 +100,11 @@ internal val expectedDexSites = mapOf(
 private fun renamed(name: String): String =
     SHARED_PREFIX + name.removePrefix(META_PREFIX)
 
+private fun unsupportedApk(reason: String): PatchException = PatchException(
+    "$PATCH_NAME: $reason. Use an unmodified arm64 Messenger ${MessengerTarget.VERSION} " +
+        "APK (version code ${MessengerTarget.VERSION_CODE}).",
+)
+
 /**
  * Rename declarations, requests and guarded components together. Removing a declaration would
  * let Messenger install but leave its signature-protected receivers and services unprotected.
@@ -117,7 +122,7 @@ internal fun Document.renameSharedPermissions() {
         for (j in 0 until attributes.length) {
             val attr = attributes.item(j) as? org.w3c.dom.Attr ?: continue
             if (attr.value in renamedNames) {
-                throw PatchException("$PATCH_NAME: ${attr.value} is already in the manifest")
+                throw unsupportedApk("${attr.value} is already in the manifest")
             }
             if (attr.value !in sharedNames) continue
             mentions.getValue(attr.value).add(attr)
@@ -135,18 +140,18 @@ internal fun Document.renameSharedPermissions() {
     }
     for (name in sharedNames) {
         if (declarations.getValue(name) != 1) {
-            throw PatchException("$PATCH_NAME: the manifest must declare $name exactly once")
+            throw unsupportedApk("the manifest must declare $name exactly once")
         }
         val actual = mentions.getValue(name).size
         val expected = expectedManifestMentions.getValue(name)
         if (actual != expected) {
-            throw PatchException("$PATCH_NAME: expected $expected manifest uses of $name, found $actual")
+            throw unsupportedApk("expected $expected manifest uses of $name, found $actual")
         }
         if (roles.getValue(name) != expectedManifestRoles.getValue(name)) {
-            throw PatchException("$PATCH_NAME: manifest roles for $name differ from the supported APK")
+            throw unsupportedApk("manifest roles for $name differ from the tested build")
         }
         if (guardOwners.getValue(name) != expectedGuardOwners.getValue(name)) {
-            throw PatchException("$PATCH_NAME: component guards for $name differ from the supported APK")
+            throw unsupportedApk("component guards for $name differ from the tested build")
         }
     }
     mentions.values.flatten().forEach { it.value = renamed(it.value) }
@@ -172,10 +177,10 @@ private fun Method.siteId(index: Int): String =
 
 internal fun validateDexSites(sites: List<Pair<String, String>>) {
     if (sites.size != expectedDexSites.size) {
-        throw PatchException("$PATCH_NAME: expected ${expectedDexSites.size} permission loads, found ${sites.size}")
+        throw unsupportedApk("expected ${expectedDexSites.size} permission loads, found ${sites.size}")
     }
     if (sites.toMap() != expectedDexSites) {
-        throw PatchException("$PATCH_NAME: permission instruction sites differ from the supported APK")
+        throw unsupportedApk("permission instruction sites differ from the tested build")
     }
 }
 
@@ -185,7 +190,7 @@ private fun MutableMethod.renameSharedNames(): Int {
     for ((index, oldName) in sites.asReversed()) {
         val register = getInstruction<OneRegisterInstruction>(index).registerA
         if (register > 255) {
-            throw PatchException("$PATCH_NAME: $definingClass->$name uses v$register for a permission")
+            throw unsupportedApk("$definingClass->$name uses v$register for a permission")
         }
         replaceInstruction(index, "const-string/jumbo v$register, \"${renamed(oldName)}\"")
     }
@@ -219,7 +224,7 @@ private fun BytecodePatchContext.renameDexNames(): Int {
 @Suppress("unused")
 val installBesideMetaAppsPatch = bytecodePatch(
     name = PATCH_NAME,
-    description = "Renames Messenger's two shared signature permissions so it can install beside Meta apps.",
+    description = "Renames two shared permissions for installation beside Meta apps. Signed-in behavior is unverified.",
     default = true,
 ) {
     category("Fixes")
