@@ -11,6 +11,12 @@ The attached S22 runs stock Messenger 580.0.0.49.91, version code 346013387. Its
 - **Me > Notifications & sounds** exposes switches for community activity and suggestions, channel invites, message reminders, new friend chats, notes and instants. This is category control; a selected-contact allowlist was not established. No delivery or reconnect test was run.
 - **Me** shows Chat heads off. **Me > Accessibility** has Reduce motion set to System and Color filter off. These screens do not establish TalkBack speech, system font scaling, HD media behavior or Android bubble behavior.
 
+## S25 signed installation check, 2026-09-27
+
+The S25 had a current Messenger secure-storage backup before testing, and a private capture of its 40-character recovery code was saved outside the repository. Replacing the installed Messenger cleared its local sign-in. Android's backup transport could not restore app data. Stock Messenger 346013440 was reinstalled and opens a login form; account sign-in and encrypted-chat recovery still need the account holder. The S22's signed-in stock app was not replaced.
+
+The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 signed the HushMessenger-patched APK with that Manager key, and Android installed it. Its first-run `NeueNuxActivity` remained blank. A zero-patch rebuild of the same stock APK, signed with the same key, also installed and remained blank. The original stock APK opened its login form on the same hidden virtual display. Logs showed token lookup and network timeouts but no Java crash. This control does not isolate a cause between rebuilding, re-signing and account state; it does show the HushMessenger permission edit is not required to reproduce the blank screen. No chats, calls or notifications were exercised.
+
 ## Existing priorities
 
 - [ ] P0: Validate the first patch against a signed installation.
@@ -18,9 +24,9 @@ The attached S22 runs stock Messenger 580.0.0.49.91, version code 346013387. Its
   Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The S22 and S25's exact 580 APKs passed the 26 plus three manifest owner checks, six active DEX site checks, off-device patching and APK v3 signing verification on 2026-09-27. Altered copies of both APKs stopped before output. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
   Touches: `scripts/`, a private APK fixture, patch result parsing, manifest comparison, device test notes.
   Acceptance: The exact stock 580 APK applies cleanly and fails closed if its expected 26 plus three manifest mentions or six active permission loads change; its two declarations and every request and guard use the new names. A signed build opens to chats on an isolated test session. Check muted DM and group notifications, read-while-open behavior, WiFi and cellular reconnect, calls, Facebook links, secure-storage recovery and same-key update/rollback before any uninstall. Raw old strings may remain in unused `STRIP_FAST` string pools.
-  Next check: Keep both private APKs out of Git. The unit tests and `scripts/verify_changed_apk_failure.py` reject changed DEX sites before output. Use a backed-up signed-in arm64 test session for runtime checks. The attached S22 and S25 both have stock Messenger and local data that must stay intact until that session exists.
+  Next check: Keep both private APKs, the S25 Manager signing key and the recovery-code capture out of Git. The unit tests and `scripts/verify_changed_apk_failure.py` reject changed DEX sites before output. Use a backed-up, signed-in arm64 test session to trace the blank first-run screen and complete runtime checks. Preserve the S22's signed-in stock app.
   Complexity: L
-  Blocked: An isolated, backed-up, signed-in arm64 test session is required for chats, notifications, calls, recovery and rollback. Both attached phones support one user and hold stock Messenger; the x86 emulator crashes on the unmodified stock APK.
+  Blocked: The S25 requires account sign-in after stock reinstall; the S22 holds the remaining signed-in stock session. A backed-up signed-in arm64 test session is required for chats, notifications, calls, recovery and rollback. The x86 emulator crashes on the unmodified stock APK.
 
 - [ ] P0: Restore trusted cross-app behavior for a re-signed Messenger.
   Why: Changing permission names does not satisfy Messenger and Facebook's signer checks by itself.
@@ -28,7 +34,7 @@ The attached S22 runs stock Messenger 580.0.0.49.91, version code 346013387. Its
   Touches: `patches/src/main/kotlin/app/hushmessenger/patches/coexist/`, `scripts/`, companion Hushfacebook compatibility check.
   Acceptance: Stock Facebook plus patched Messenger and a same-key patched Facebook/Messenger pair install and pass login, account switch, notification deduplication and call checks. On API 28+, real partner signer identity, rotation/multiple signers, package visibility and guarded provider access are checked. A different-key pair fails with a clear diagnostic before install; package name alone never grants trust.
   Complexity: XL
-  Blocked: A signed-in arm64 session and same-key Hushfacebook/Messenger pair are required to verify login, account switching, provider access and calls without risking either phone's stock data.
+  Blocked: The S25 accepted the same-key Hushfacebook/Messenger install, but both patched and zero-patch Messenger rebuilds stayed blank. A signed-in arm64 session is still required to verify login, account switching, provider access and calls. Preserve the S22's stock data.
 
 - [ ] P1: Trace and remove the actual chat-list ad row on Messenger 580.
   Why: The earlier inbox ad loader is gone; a patch that skips a missing fingerprint can claim success while ads remain.

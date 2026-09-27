@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.8 (2026-09-27)
+
+- Record the S25 test: a same-key patched Messenger installed, but its first-run screen stayed blank. An unchanged APK rebuilt and signed through the same tool did the same.
+- Clarify the phone-data warning after reinstalling the original stock APK required a fresh sign-in. Chats, calls and notifications remain unverified.
+
 ## 0.0.7 (2026-09-27)
 
 - Record the S22 stock Messenger controls for inbox suggestions, external links, notifications, chat heads and accessibility without changing account settings.

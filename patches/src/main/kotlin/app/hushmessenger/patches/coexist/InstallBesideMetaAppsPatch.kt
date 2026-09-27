@@ -231,7 +231,7 @@ private fun BytecodePatchContext.renameDexNames(): Int {
 @Suppress("unused")
 val installBesideMetaAppsPatch = bytecodePatch(
     name = PATCH_NAME,
-    description = "Renames two shared permissions on checked Messenger 580 builds. Phone behavior is unverified.",
+    description = "Renames two shared permissions on checked Messenger 580 builds. A signed S25 build did not open chats.",
     default = true,
 ) {
     category("Fixes")
