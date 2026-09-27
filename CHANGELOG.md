@@ -9,6 +9,7 @@
 - Preserve stock behavior while switches are off or changes are paused. Check exact hook sets and the new plugin gates' disabled branches before patching.
 - Add regression tests for separate selection, capability metadata, search and ad-filter return branches. Existing tests remain intact.
 - Pass 26 Kotlin, 15 Android and 11 Python tests, Android lint, both full APK rebuilds and a separate single-control rebuild. Exercise settings search, persistence and themes on an isolated S25 display.
+- Refresh the remote source on S22 and S25 and verify all 21 entries in each phone's catalog. Keep their installed Messenger apps intact.
 - Keep the ad filter experimental. No affected-account ad row was available for a live removal check. Original-package startup remains unresolved.
 
 ## 0.1.0 (2026-09-27)

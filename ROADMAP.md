@@ -1,8 +1,5 @@
 # HushMessenger roadmap
 
-- [ ] P1: Verify and publish the expanded source.
-  Acceptance: Both supported APKs rebuild with the selected controls, automated tests and lint pass, the settings UI is exercised on an isolated display, a fresh verification review is resolved, a versioned public bundle is available, and both phones show the new catalog.
-
 Stock S22 and S25 now have separate signed-in test accounts. Two-way encrypted messages and the S22's HTTP/HTTPS browser preference have been exercised. `scripts/check_install.py` checks signing conflicts without changing either phone.
 
 The remaining acceptance checks are in [Roadmap_Blocked.md](Roadmap_Blocked.md). Account access is available; the unresolved re-signed startup failure, required fixtures and isolated system-setting checks are listed separately there. A working stock chat isn't evidence that a re-signed APK works.
