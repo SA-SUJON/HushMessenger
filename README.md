@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/version-0.1.0-0084FF" alt="Version 0.1.0"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/version-0.2.0-0084FF" alt="Version 0.2.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -10,7 +10,7 @@
 
 # HushMessenger
 
-HushMessenger is a Morphe patch source for Facebook Messenger. It adds optional inbox, navigation and conversation controls, with a settings icon in your app drawer. You bring the original Messenger APK; this repository provides patch code and a `.mpp` bundle.
+HushMessenger is a Morphe patch source for Facebook Messenger. It offers 21 selectable patches, including 20 optional controls with searchable settings in your app drawer. You bring the original Messenger APK; this repository provides patch code and a `.mpp` bundle.
 
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
@@ -21,10 +21,10 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It adds optional 
 
 1. **Check the APK.** This patch targets two arm64 Messenger builds, with version codes `346013387` and `346013440`. The [supported builds](#supported-messenger-builds) have the full details. The version name alone isn't enough.
 2. **Add the source.** Open the link above on Android with Morphe Manager installed. You can also open **Sources**, tap **+**, choose **Remote**, and enter `github.com/SysAdminDoc/HushMessenger`.
-3. **Check the source.** The HushMessenger card should show two patches. Open **Patches** to find `Messenger controls and settings` and `Install beside Meta apps`. Select both for the full bundle. Tap the card's refresh button if it stays on an old version.
+3. **Check the source.** The HushMessenger card should show **21 patches**. Open **Patches** to choose individual features. Select all for every optional control plus `Install beside Meta apps`. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend; mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.1.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.1.0) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). The remote v0.1.0 source was added and verified on S22 (Manager 1.32.0) and S25 (1.33.0-dev.3). Both cards showed version 0.1.0 and listed both patches. An earlier clean Manager emulator check also covered local import. The phone behavior warning above still applies.
+For a local source, download [`patches-0.2.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.2.0) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). The previous remote source was verified on S22 (Manager 1.32.0) and S25 (1.33.0-dev.3). Morphe Desktop lists all 21 entries in the v0.2.0 bundle. An earlier clean Manager emulator check also covered local import. The phone behavior warning above still applies.
 
 ### If something doesn't work
 
@@ -51,17 +51,30 @@ A successful check doesn't establish cross-app login, provider access or Messeng
 
 ## Find the settings
 
-After installing Messenger patched with **Messenger controls and settings**, open your phone's **app drawer → HushMessenger settings**. The gear icon opens the controls directly. Each switch starts off, and **Pause all changes** restores stock behavior without forgetting your choices. Close and reopen Messenger after changing inbox options.
+After installing Messenger with any optional HushMessenger control, open your phone's **app drawer → HushMessenger settings**. The gear icon opens the controls directly. Use **Find a control** to search by name or category. Only features selected when patching appear here. Each switch starts off, and **Pause all changes** restores stock behavior without forgetting your choices. Close and reopen Messenger after changing inbox options.
 
-| Switch | What it changes |
+| Patch / switch | What it changes |
 | --- | --- |
+| Hide inbox ads | Experimental filter for Messenger's typed inbox ad cards. Live removal isn't verified yet. |
+| Hide People You May Know | Removes suggested people from the inbox. |
+| Hide friend request cards | Hides inbox cards without accepting or rejecting requests. |
+| Hide growth prompts | Removes the inbox's add-more-people promotion unit. |
+| Hide inbox promotions | Hides quick-promotion banners in the chat list. |
 | Hide stories and notes | Hides the horizontal tray above chats. |
 | Hide inbox tabs | Hides the Home and Channels subtabs. |
 | Hide Facebook shortcuts | Removes Facebook toolbar, profile and sharing shortcuts. |
-| Hide Meta AI buttons | Hides the floating button and AI menu entries. Search and existing AI conversations remain available. |
-| Open web links externally | Uses the stock external-browser preference branch for HTTP and HTTPS. Other schemes keep their original behavior. |
-| Hide typing indicator | Suppresses the outgoing active-typing runnable. Sending messages and read receipts are separate. |
-| Allow chat bubbles | Removes Messenger's low-memory gate on Android 11 or newer. Android's notification and bubble permissions still apply. |
+| Hide Meta AI buttons | Hides the floating button, toolbar button and AI menu entries. Search and existing AI chats stay available. |
+| Hide Chat Moments | Removes Chat Moments from the menu. |
+| Hide Reels badge | Hides the Reels notification badge. |
+| Hide AI sticker tools | Hides the generated-sticker tab and AI sticker suggestions. |
+| Hide avatar stickers | Hides the avatar tab in the sticker keyboard. |
+| Hide chat promotions | Hides quick-promotion banners inside conversations. |
+| Hide business reply suggestions | Hides suggested replies in business chats. |
+| Hide business typing suggestions | Hides business suggestions as you type. |
+| Hide event prompts | Hides event quick-promotion prompts inside chats. |
+| Hide typing indicator | Suppresses your outgoing active-typing signal. |
+| Open web links externally | Uses the stock external-browser branch for HTTP and HTTPS. |
+| Allow chat bubbles | Removes the low-memory gate on Android 11 or newer. Android permissions still apply. |
 
 <p>
   <img src="assets/settings-dark.png" width="300" alt="HushMessenger settings in the dark theme">
@@ -70,13 +83,15 @@ After installing Messenger patched with **Messenger controls and settings**, ope
 
 The settings screen also has a light theme and an **Open Messenger** button. Refreshing the source in Morphe downloads the patch bundle; applying new controls to Messenger requires rebuilding and installing its APK.
 
-Ad blocking isn't included. The older upstream inbox ad loader is absent from both supported APKs. Media-transcoding changes also need a verified upload path. These are not advertised as working switches.
+The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. An affected-account before/after check is still needed. It doesn't claim to remove story ads. Media-transcoding changes remain unavailable until the upload path is verified.
 
 ## What the patches change
 
-### Messenger controls and settings
+### Independent optional controls
 
-The bundle adapts existing GPL-3.0 Messenger hooks and adds reversible runtime switches. It checks all 31 expected methods before editing, then checks the precise tab and browser preference instructions. Missing or changed hooks stop the patch. The settings provider is private; its launcher activity accepts no commands to change preferences from another app.
+Each control is a separate patch. They share one settings extension, and manifest metadata records which controls were installed. Selecting one control only edits its hooks; omitted controls have no active switches. Saved preferences remain available if you select the feature again later.
+
+The full set checks 57 hook methods across both supported APKs. New plugin gates must retain their expected enable/disable branch, and the tab, browser and ad-filter edits check their specific instruction sites. A missing or ambiguous target stops patching. The settings provider is private; its launcher accepts no external commands to change preferences.
 
 ### Install beside Meta apps
 
@@ -107,13 +122,13 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 ## Verification and build
 
-Twenty Kotlin tests cover the version-code gate, manifest guards, instruction changes, settings launcher and Manager source timestamp format. Nine Android unit tests cover stock defaults, independent switches, pause, web schemes, bubble API limits, saved settings and opening the correct Messenger task. Eleven Python tests cover certificate selection, permission ownership, failure handling and read-only device operations. Android lint and the release build run locally.
+The local suite has 26 Kotlin tests, 15 Android unit tests and 11 Python certificate tests. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Android lint and release builds run locally.
 
-Morphe Desktop 1.17.0 applied both v0.1.0 patches to private copies of the S22 and S25 APKs. Both rebuilt successfully, and Android verified their v3 signatures. The changed-APK check in `scripts/verify_changed_apk_failure.py` confirms that altered permission bytecode stops patching before an output is written. It passed on both fixtures in earlier releases and was repeated on S25 for this release. Two clean v0.1.0 builds produced the same bundle checksum.
+Morphe Desktop 1.17.0 applied all 21 patches to private copies of both supported APKs, and Android verified their v3 signatures. Two clean release builds produced the same bundle checksum. A separate S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
 
-A separately installed diagnostic copy on S25 exercised the settings screen, saved switches, light theme and Open Messenger button. Stories and notes, the Facebook toolbar shortcut and the Meta AI floating button disappeared when enabled and returned when changes were paused. The test copy needed a private package-name adjustment and skipped encrypted-history restoration. It does not establish that an original-package installation works.
+The expanded settings screen was exercised on an isolated S25 display, including search, an empty search result, saved choices and light theme. These are settings checks. The newly added host features have exact-build and automated coverage, but still need signed-in before/after checks on affected screens.
 
-Typing suppression, inbox subtabs and bubble eligibility have automated coverage but still need full account-to-account or device behavior checks. The external-browser override has scheme and instruction checks; the stock switch passed HTTP/HTTPS phone checks. Full re-signed chat delivery, calls, notification behavior and history recovery remain unverified.
+The earlier v0.1.0 diagnostic copy verified hiding and restoring stories and notes, the Facebook toolbar shortcut and the Meta AI floating button. That copy needed a private package-name adjustment and skipped encrypted-history restoration. It does not establish that an original-package installation works. Typing suppression, subtabs, bubbles, live ads and full chat behavior remain unverified.
 
 The restored stock apps on S22 and S25 exchanged messages between two owned accounts in an end-to-end encrypted chat. Both phones displayed the messages and read receipts. HTTP and HTTPS link tests on S22 confirmed the stock external-browser switch works. These checks used hidden virtual displays; installed packages and sign-ins were preserved. Re-signed chat delivery, calls and notification behavior remain unverified.
 
@@ -134,14 +149,14 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The output is `patches/build/libs/patches-0.1.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.2.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
 
 ### Check the bundle
 
-The [v0.1.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.1.0) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.2.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.2.0) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
-bedadfdf3076602197cb250ba5006bdbca9eca86f7725f712288e381d72811f8  patches-0.1.0.mpp
+52e4400e2cd625eb371360d315bc1e5fcc8cde0715961472396d0d823cc9f436  patches-0.2.0.mpp
 ```
 
 Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.
@@ -150,7 +165,7 @@ Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do n
 
 [RESEARCH.md](RESEARCH.md) compares Messenger patches in Morphe, ReVanced, De-Vanced and other projects. [Roadmap_Blocked.md](Roadmap_Blocked.md) tracks the remaining phone checks, missing fixtures and proposed patches. [Hushfeed](https://github.com/SysAdminDoc/hushfeed) is another Hush patch project.
 
-HushMessenger starts from the [Morphe patches template](https://github.com/MorpheApp/morphe-patches-template). Messenger hook definitions come from [De-Vanced](https://github.com/RookieEnough/De-Vanced), including its ReVanced contributions, and [Doom's patches](https://github.com/rushiranpise/morphe-patches). The bubble eligibility anchor originated in [ChatHeadEnabler](https://github.com/NeonOrbit/ChatHeadEnabler). The permission approach is adapted from [Hushfacebook's shared-permission patch](https://github.com/SysAdminDoc/Hushfacebook/blob/15b8e9ed9315464a3e2d1a821b4e26ad47bbc28c/patches/src/main/kotlin/app/morphe/patches/facebook/coexist/SharedPermissions.kt). Source is under [GPL-3.0](LICENSE); see [NOTICE](NOTICE). HushMessenger is independent of Meta and Morphe.
+HushMessenger starts from the [Morphe patches template](https://github.com/MorpheApp/morphe-patches-template). Messenger hook definitions come from [De-Vanced](https://github.com/RookieEnough/De-Vanced), including its ReVanced contributions, and [Doom's patches](https://github.com/rushiranpise/morphe-patches). The typed ad-filter approach follows [Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed), with its MIT notice retained. The bubble eligibility anchor originated in [ChatHeadEnabler](https://github.com/NeonOrbit/ChatHeadEnabler). The permission approach is adapted from [Hushfacebook's shared-permission patch](https://github.com/SysAdminDoc/Hushfacebook/blob/15b8e9ed9315464a3e2d1a821b4e26ad47bbc28c/patches/src/main/kotlin/app/morphe/patches/facebook/coexist/SharedPermissions.kt). Source is under [GPL-3.0](LICENSE); see [NOTICE](NOTICE). HushMessenger is independent of Meta and Morphe.
 
 <p align="center">
   <a href="https://ko-fi.com/X8K126YVER"><img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi"></a>

@@ -1,10 +1,20 @@
 # Research: HushMessenger
 
+## Messenger 580 catalog expansion, v0.2.0
+
+The source now exposes 21 independent patches: shared-permission compatibility and 20 optional controls. The original seven controls are separate selections, and 13 new controls use the exact two supported APKs.
+
+The new plugin gates cover People You May Know, friend request cards, growth prompts, Chat Moments, generated and avatar sticker tabs, inbox/chat quick promotions, business suggestions, event prompts and a Reels badge. Their full class/method sets are pinned in `PluginGates.kt`; the cached enable/disable return structure is checked too. No global mobile-config prefix override is used.
+
+[Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed/tree/b235eec406f2abd49ac7db20136e3dd11bb11dc3) suggests filtering typed `InboxAdsItem` rows. On both supported 580 APKs the type exists, but its upstream three-argument processor matcher doesn't identify the current path. HushMessenger wraps both exits of `X.2Wl.D2i`, the inbox item-list processor. The inactive/no-ad path returns the original list, while the enabled filter retains other objects and their order. This is a preview integration; no actual ad row was visible on the available accounts, so live removal and current ad production remain unverified. The MIT notice is retained in NOTICE.
+
+The old loader, media-failure shortcut and broad Meta AI config override weren't imported as working features. Current upstream references remain De-Vanced `0d01e3dd5ec82b6796b28b82c33fc6af4944b2e6` and Doom `55ca6a05ea3559e95a0876316dcb7caad1f3c9cf`.
+
 Date: 2026-09-27. Replaces prior repository research.
 
 ## Executive Summary
 
-HushMessenger v0.1.0 is a GPL-3.0 Morphe source with two patches for stock Messenger 580.0.0.49.91 arm64 APKs 346013387 and 346013440. It adds seven opt-in controls and a settings launcher entry while retaining shared-permission handling. Both exact APKs passed patching and signature checks. A separate S25 diagnostic copy verified the settings UI and three visible inbox controls, including pause. Original-package startup, account-to-account typing, bubbles and encrypted-history recovery remain unverified. Both stock sign-ins are preserved.
+The earlier HushMessenger v0.1.0 release was a GPL-3.0 Morphe source with two patches for stock Messenger 580.0.0.49.91 arm64 APKs 346013387 and 346013440. It adds seven opt-in controls and a settings launcher entry while retaining shared-permission handling. Both exact APKs passed patching and signature checks. A separate S25 diagnostic copy verified the settings UI and three visible inbox controls, including pause. Original-package startup, account-to-account typing, bubbles and encrypted-history recovery remain unverified. Both stock sign-ins are preserved.
 
 Priority order once an isolated patched arm64 session exists: (1) validate signed installation, secure-storage recovery and cross-app trust; (2) trace inbox ads without hiding real chats or safety warnings, then test whether stock `Hide suggestions` persists; (3) test font scaling and screen-reader chat rows; (4) test the stock external-browser switch and notification delivery before patching; (5) add optional link cleanup, story/notes tray and navigation controls only after the exact 580 behavior is confirmed.
 

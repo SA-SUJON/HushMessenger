@@ -25,6 +25,7 @@ tasks.test {
 
 tasks.named<Jar>("jar") {
     manifest.attributes["Timestamp"] = providers.gradleProperty("bundleTimestampMillis").get()
+    from(listOf(rootProject.file("LICENSE"), rootProject.file("NOTICE"))) { into("META-INF") }
 }
 
 dependencyLocking {

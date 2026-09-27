@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0 (2026-09-27)
+
+- Replace the two-entry catalog with 21 selectable patches. Each feature applies independently and shares one settings extension.
+- Add 13 optional controls: inbox ad filtering, People You May Know, friend request cards, growth prompts, Chat Moments, AI sticker tools, avatar stickers, inbox promotions, chat promotions, business reply suggestions, business typing suggestions, event prompts and the Reels badge.
+- Extend the existing Meta AI control to the inbox toolbar button.
+- Add settings search and show only installed controls. Saved choices survive removing and later adding a patch.
+- Preserve stock behavior while switches are off or changes are paused. Check exact hook sets and the new plugin gates' disabled branches before patching.
+- Add regression tests for separate selection, capability metadata, search and ad-filter return branches. Existing tests remain intact.
+- Pass 26 Kotlin, 15 Android and 11 Python tests, Android lint, both full APK rebuilds and a separate single-control rebuild. Exercise settings search, persistence and themes on an isolated S25 display.
+- Keep the ad filter experimental. No affected-account ad row was available for a live removal check. Original-package startup remains unresolved.
+
 ## 0.1.0 (2026-09-27)
 
 - Add seven optional controls adapted from existing Messenger patches: stories and notes, inbox tabs, Facebook shortcuts, Meta AI buttons, external web links, typing signals and bubble eligibility. All switches start off.

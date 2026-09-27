@@ -8,6 +8,7 @@ package app.hushmessenger.patches.controls
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
@@ -20,11 +21,14 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue
 
 internal const val SETTINGS = "Lapp/hushmessenger/extension/Settings;"
+internal const val AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/InboxAdsItem;"
+internal const val IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -50,13 +54,20 @@ internal val expectedHooks = mapOf(
     "typing" to setOf("LX/Ahp;->run()V"),
     "bubbles" to setOf("LX/2ZW;->A00()Z"),
     "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
-)
+    "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
+) + pluginGates.mapValues { it.value.methods }
 
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
 
 /** Match semantics first, then require the complete set from both tested APKs. */
 internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>> {
     val found = expectedHooks.keys.associateWith { mutableListOf<Method>() }
+    val adContract = classes.any { it.type == AD_ITEM } && classes.any { cls ->
+        cls.type == IMMUTABLE_LIST && cls.methods.any {
+            it.name == "copyOf" && it.parameterTypes == listOf("Ljava/util/Collection;") &&
+                it.returnType == IMMUTABLE_LIST && AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags)
+        }
+    }
     for (cls in classes) {
         val original = cls.fields.firstOrNull { it.name == "__redex_internal_original_name" }
             ?.initialValue.let { (it as? StringEncodedValue)?.value }
@@ -66,6 +77,12 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             val strings = refs.filterIsInstance<StringReference>().map { it.string }.toSet()
             val gate = method.returnType == "Z" && method.parameterTypes.isEmpty()
             fun add(key: String) { found.getValue(key).add(method) }
+            if (method.returnType == "Z" && (method.parameterTypes.isEmpty() ||
+                (AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type)))) {
+                for ((key, spec) in pluginGates) if (strings.any { it in spec.anchors }) add(key)
+            }
+            if (adContract && method.returnType == IMMUTABLE_LIST && method.parameterTypes.size == 3 &&
+                strings.containsAll(setOf("messaging.inbox.itemlistprocessor.ItemListProcessorInterfaceSpec", "processItems", "new_friend_bump_threads"))) add("ads")
             if (gate && "com.facebook.messaging.friendsinboxunit.plugins.inboxunit.FriendsInboxUnitKillSwitch" in strings) add("stories")
             if (gate && instructions.any {
                 it.opcode == Opcode.NEW_INSTANCE &&
@@ -88,13 +105,75 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
     return found
 }
 
-internal fun validateControls(found: Map<String, List<Method>>) {
-    for ((feature, expected) in expectedHooks) {
+internal fun validateControls(found: Map<String, List<Method>>, selected: Set<String> = expectedHooks.keys) {
+    for (feature in selected) {
+        val expected = expectedHooks.getValue(feature)
         val actual = found[feature].orEmpty().map { it.hookId() }
         if (actual.size != expected.size || actual.toSet() != expected) {
             throw PatchException("Messenger controls: $feature hooks differ from the tested build. " +
                 "Use an unmodified arm64 Messenger 580.0.0.49.91 (346013387 or 346013440).")
         }
+    }
+}
+
+/** New plugin gates use the same switch/pause contract without one Java getter per feature. */
+internal fun MutableMethod.injectFeatureSwitch(key: String) {
+    validateScratch()
+    if (returnType != "Z") throw PatchException("Messenger controls: expected a boolean plugin gate")
+    addInstructionsWithLabels(0, """
+        const-string v0, "$key"
+        invoke-static {v0}, $SETTINGS->enabled(Ljava/lang/String;)Z
+        move-result v0
+        if-eqz v0, :stock_behavior
+        const/4 v0, 0x0
+        return v0
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
+}
+
+/** Require the observed plugin cache contract, including the polarity of its disabled return. */
+internal fun MutableMethod.validatePluginGate() {
+    validateScratch()
+    val code = implementation!!.instructions
+    val first = code.firstOrNull() as? TwoRegisterInstruction
+    val enabled = code.getOrNull(1)
+    val disabled = code.getOrNull(2)
+    val tail = code.takeLast(5)
+    val cache = tail.getOrNull(0) as? TwoRegisterInstruction
+    val compare = tail.getOrNull(2) as? TwoRegisterInstruction
+    if (code.firstOrNull()?.opcode != Opcode.IGET_OBJECT || first?.registerA != 0 ||
+        first.registerB != implementation!!.registerCount - 1 ||
+        enabled?.opcode != Opcode.CONST_4 || (enabled as? WideLiteralInstruction)?.wideLiteral != 1L ||
+        disabled?.opcode != Opcode.CONST_4 || (disabled as? WideLiteralInstruction)?.wideLiteral != 0L ||
+        tail.map { it.opcode } != listOf(Opcode.IGET_OBJECT, Opcode.SGET_OBJECT, Opcode.IF_EQ, Opcode.RETURN, Opcode.RETURN) ||
+        cache?.registerA != 1 || cache.registerB != first.registerB ||
+        (tail[0] as? ReferenceInstruction)?.reference != (code[0] as? ReferenceInstruction)?.reference ||
+        (tail[1] as? ReferenceInstruction)?.reference.toString() != "LX/1dj;->A03:Ljava/lang/Object;" ||
+        (tail[1] as? OneRegisterInstruction)?.registerA != 0 || compare?.registerA != 1 || compare.registerB != 0 ||
+        (tail[2] as? OffsetInstruction)?.codeOffset != 3 ||
+        (tail[3] as? OneRegisterInstruction)?.registerA != (enabled as? OneRegisterInstruction)?.registerA ||
+        (tail[4] as? OneRegisterInstruction)?.registerA != (disabled as? OneRegisterInstruction)?.registerA) {
+        throw PatchException("Messenger controls: plugin enable/disable behavior changed in ${hookId()}. Use an unmodified supported APK.")
+    }
+}
+
+/** Wrap both exits, including direct branches to a return. v5 stays intact on the inactive path. */
+internal fun MutableMethod.injectAdFilter() {
+    val code = implementation!!.instructions
+    val exits = code.indices.filter { code[it].opcode == Opcode.RETURN_OBJECT }
+    if (implementation!!.registerCount != 24 || code.size != 935 || exits != listOf(916, 931) ||
+        exits.any { (code[it] as? OneRegisterInstruction)?.registerA != 5 }) {
+        throw PatchException("Messenger controls: the inbox ad filter exits differ from the tested build")
+    }
+    for (index in exits.reversed()) {
+        replaceInstruction(index, "invoke-static {v5}, $SETTINGS->filterInboxAds(Ljava/util/List;)Ljava/util/List;")
+        addInstructionsWithLabels(index + 1, """
+            move-result-object v0
+            if-eqz v0, :original_list
+            invoke-static {v0}, $IMMUTABLE_LIST->copyOf(Ljava/util/Collection;)$IMMUTABLE_LIST
+            move-result-object v5
+            :original_list
+            return-object v5
+        """.trimIndent())
     }
 }
 

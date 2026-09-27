@@ -60,7 +60,7 @@ The read-only certificate preflight passed for the stock S25 APK and rejected a 
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/inbox/` hooks, fixture checks.
   Acceptance: A captured affected account shows the traced ad row absent after patching; ordinary business conversations and safety notices remain visible. The actual 580 item producer is named in the patch notes, and a missing fingerprint fails rather than skipping.
   Complexity: L
-  Blocked: An affected signed-in account must show the actual ad row before its producer can be traced or removal verified. The older loader is absent from 580.
+  Blocked: v0.2.0 includes an experimental typed filter at both exits of X.2Wl.D2i. Both exact APKs pass its structural check, and unit tests preserve ordinary rows and inactive behavior. An affected signed-in account must still show the actual ad row before its producer and live removal can be verified. The older loader is absent from 580.
 
 - [ ] P1: Hide story ads without losing regular Montage stories.
   Why: The 580 APK retains Montage ad models and query names, while Facebook's story patch targets a different viewer.
