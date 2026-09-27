@@ -54,8 +54,8 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
   Complexity: L
 
 - [ ] P2: Prepare repeatable local distribution and diagnostics.
-  Why: A patch source needs clear build requirements, versioned metadata and a way to explain failed compatibility checks.
+  Why: The public v0.0.2 preview has a versioned source index, bundle and build instructions. It still needs a clear mismatch diagnostic and tested recovery steps.
   Evidence: [Morphe template](https://github.com/MorpheApp/morphe-patches-template), [ReVanced Manager patching flow](https://github.com/ReVanced/revanced-manager/blob/main/docs/2_1_patching.md).
   Touches: `scripts/`, `README.md`, `CHANGELOG.md`, `patches/build.gradle.kts`, bundle metadata.
-  Acceptance: A clean local build produces `patches-<version>.mpp`, a mismatch gives package/version/hash diagnostics, and release instructions cover signing, rollback and an English plus one non-English device check.
+  Acceptance: A clean local build produces `patches-<version>.mpp`, a mismatch gives package/version/hash diagnostics, and release instructions cover signing, rollback and an English plus one non-English device check. The v0.0.2 preview bundle was built and signed off-device; phone installation remains untested.
   Complexity: M

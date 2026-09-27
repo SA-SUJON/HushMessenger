@@ -4,7 +4,7 @@ Date: 2026-09-27. This replaces earlier scoping notes for this repository.
 
 ## Summary
 
-HushMessenger v0.0.1 is a local Morphe patch source for Messenger `com.facebook.orca`. Its first target is the stock S22 arm64 APK, version `580.0.0.49.91` and version code `346013387`. Existing ReVanced and Morphe projects cover inbox ads, Meta AI, navigation, typing indicators and chat heads, but their advertised targets or bytecode hooks do not establish that those patches work on this APK. The strongest first steps are reliable patch application, safe coexistence with Facebook, a traced replacement for the old inbox ad hook, and a small settings surface for optional changes.
+HushMessenger v0.0.2 is a Morphe patch source for Messenger `com.facebook.orca`. Its first target is the stock S22 arm64 APK, version `580.0.0.49.91` and version code `346013387`. Existing ReVanced and Morphe projects cover inbox ads, Meta AI, navigation, typing indicators and chat heads, but their advertised targets or bytecode hooks do not establish that those patches work on this APK. The strongest first steps are reliable patch application, safe coexistence with Facebook, a traced replacement for the old inbox ad hook, and a small settings surface for optional changes.
 
 ## Product map
 
@@ -35,7 +35,7 @@ The earlier Messenger 580 scoping pass in `C:/Obsidian/Notes/Research/Messenger 
 
 ## Reported issues
 
-This new local repo has no issue tracker. Reports in the closest projects are specific enough to guide the first checks:
+No issues have been filed in this new repo yet. Reports in the closest projects are specific enough to guide the first checks:
 
 - [De-Vanced 96](https://github.com/RookieEnough/De-Vanced/issues/96), [63](https://github.com/RookieEnough/De-Vanced/issues/63) and [Meridian 24](https://github.com/meridianfresco/morphe-meta-patches/issues/24) describe install conflicts with Facebook. Meridian 24 also reports a failure at Messenger's two-factor login step after installation. These are separate coexistence and trust checks.
 - [De-Vanced 57](https://github.com/RookieEnough/De-Vanced/issues/57), [17](https://github.com/RookieEnough/De-Vanced/issues/17) and [2](https://github.com/RookieEnough/De-Vanced/issues/2) record inbox-ad fingerprint failures on builds after the old loader changed. [Issue 95](https://github.com/RookieEnough/De-Vanced/issues/95) shows patch completion can still end in install trouble. [Issue 106](https://github.com/RookieEnough/De-Vanced/issues/106) asks for any-version support, but the thread itself warns that Meta variants differ. Keep an exact supported target until later versions pass the same checks.

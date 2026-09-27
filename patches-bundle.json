@@ -1,0 +1,7 @@
+{
+  "created_at": "2026-09-27T04:15:59",
+  "description": "HushMessenger v0.0.2 is an early Morphe patch bundle for Messenger 580.0.0.49.91 (arm64, version code 346013387). It has one patch, Install beside Meta apps, which renames two shared signature permissions without dropping component guards. The bundle built and patched a stock APK copy off-device. Installation, login, calls, notifications and cross-app behavior have not yet been checked on a phone. The .mpp is a patch bundle, not a Messenger APK. Supply your own stock APK and keep your signing key.",
+  "download_url": "https://github.com/SysAdminDoc/HushMessenger/releases/download/v0.0.2/patches-0.0.2.mpp",
+  "signature_download_url": "",
+  "version": "0.0.2"
+}
