@@ -21,6 +21,18 @@ HushMessenger is a Morphe patch source for Facebook Messenger. Its first patch c
 > [!IMPORTANT]
 > This is an early preview with one patch. The bundle built and applied to a stock APK copy. Its signed output passed APK signature verification, but it has not been installed on a phone. Login, calls, notifications and Facebook sign-on still need a device check.
 
+## Get the preview source
+
+In Morphe Manager, open **Sources**, tap **+**, and add `github.com/SysAdminDoc/HushMessenger`. Turn on **Pre-release patches** on the new source card. The [local bundle](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.2) is another option under **Sources → + → Local**. Local sources need a manual update when a new bundle comes out. The Manager import flow still needs a clean-device check; these steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md).
+
+Morphe Desktop 1.17.0 lists the preview bundle with:
+
+```powershell
+java -jar morphe-desktop-1.17.0-all.jar list-patches --patches https://github.com/SysAdminDoc/HushMessenger --prerelease --filter-package-name com.facebook.orca
+```
+
+The `--prerelease` flag is required while HushMessenger has no stable release. This command listed the patch in a local check. It doesn't install Messenger.
+
 ## What it changes
 
 | Patch | What it does |
@@ -53,6 +65,8 @@ $env:GITHUB_TOKEN = gh auth token
 ```
 
 Run `.\gradlew.bat :patches:test` to check the manifest rename guard before building a bundle.
+
+The build uses checked-in dependency locks and SHA-256 checks. If you update a dependency, review the new lockfile and verification metadata before committing them. Clean builds from the same source produce the same bundle checksum.
 
 The output is `patches/build/libs/patches-0.0.2.mpp`. Morphe Desktop 1.17.0 applied the bundle to a copy of the S22's stock APK. The rebuilt manifest kept all 29 shared-permission mentions under the new names, with none under the old names. Disassembly of the modified DEX found six renamed loads and no active old-name loads in those classes. A signed output passed Android's v3 signature check. The S22's installed Messenger was left untouched.
 

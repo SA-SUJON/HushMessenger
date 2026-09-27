@@ -26,3 +26,7 @@ tasks.test {
 tasks.named<Jar>("jar") {
     manifest.attributes["Timestamp"] = providers.gradleProperty("bundleTimestampMillis").get()
 }
+
+dependencyLocking {
+    lockAllConfigurations()
+}

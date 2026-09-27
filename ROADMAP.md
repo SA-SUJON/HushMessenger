@@ -6,7 +6,7 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
 
 - [ ] P0: Validate the first patch against a signed installation.
   Why: A completed off-device patch run does not establish that Messenger launches or works after re-signing.
-  Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`.
+  Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The exact 580 APK passed the 26 plus three manifest role checks, six active DEX load checks and APK v3 signing verification on 2026-09-27. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
   Touches: `scripts/`, a private APK fixture, patch result parsing, manifest comparison, device test notes.
   Acceptance: The exact stock 580 APK applies cleanly and fails closed if its expected 26 plus three manifest mentions or six active permission loads change; its two declarations and every request and guard use the new names. A signed build opens to chats on an isolated test session. Check muted DM and group notifications, read-while-open behavior, WiFi and cellular reconnect, calls, Facebook links, secure-storage recovery and same-key update/rollback before any uninstall. Raw old strings may remain in unused `STRIP_FAST` string pools.
   Complexity: L
@@ -64,7 +64,7 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
 
 - [ ] P0: Make the preview bundle discoverable in Morphe.
   Why: Morphe Desktop's default stable source lookup rejects the repository because v0.0.2 is only a prerelease; users can fail before choosing a patch.
-  Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`.
+  Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`. The README now gives a Desktop preview command that listed the patch locally, plus Manager preview and local-bundle steps.
   Touches: `README.md`, `patches-bundle.json`, release metadata and source-import instructions.
   Acceptance: On a clean Manager profile, the repository source imports with preview enabled and lists the exact 580 patch. The README gives a working Desktop preview command. After signed runtime validation, a stable release is discoverable without a preview flag and its index points to the tested bundle.
   Complexity: S
@@ -81,20 +81,6 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
   Evidence: [Samsung font report](https://www.reddit.com/r/SamsungGalaxyS26U/comments/1vmq86m/question_about_font_size_on_samsung_galaxy_s26/), `C:/Obsidian/Notes/Research/Messenger Scoping 2026-09-26.md` typeface anchor.
   Touches: a new `patches/src/main/kotlin/app/hushmessenger/patches/accessibility/` hook and Android 9 compatible settings if needed.
   Acceptance: Compare stock and patched 580 at default and largest system font/display sizes; chat list, composer, thread and settings text scale without clipped controls. If stock already scales, document that finding and omit the hook.
-  Complexity: M
-
-- [ ] P1: Align the smali revision with Morphe Patcher 1.14.1.
-  Why: The repository overrides the patcher's requested smali revision, so local dependency resolution uses an untested combination.
-  Evidence: `gradle/libs.versions.toml`, [Patcher 1.14.1 catalog](https://github.com/MorpheApp/morphe-patcher/blob/v1.14.1/gradle/libs.versions.toml), 2026-09-27 runtime dependency graph in `RESEARCH.md`.
-  Touches: `gradle/libs.versions.toml`, `patches/build.gradle.kts`, the exact 580 patch fixture check.
-  Acceptance: Runtime dependency resolution selects the same smali revision Patcher 1.14.1 requests; a clean bundle build, patch application and 26 plus three manifest and six active-DEX checks still pass.
-  Complexity: S
-
-- [ ] P1: Lock and verify external build dependencies.
-  Why: GitHub Packages and JitPack dependencies are resolved without Gradle locking or artifact verification metadata.
-  Evidence: `settings.gradle.kts`, [Gradle dependency verification](https://docs.gradle.org/9.7.1/userguide/dependency_verification.html), [Gradle dependency locking](https://docs.gradle.org/9.7.1/userguide/dependency_locking.html).
-  Touches: `gradle/verification-metadata.xml`, dependency lockfiles, `README.md` build instructions.
-  Acceptance: A fresh-cache build resolves only reviewed versions and hashes; substituting a changed dependency fails before compilation, and the exact 580 patch fixture still applies.
   Complexity: M
 
 - [ ] P1: Produce byte-identical patch bundles from clean builds.

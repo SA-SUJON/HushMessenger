@@ -6,6 +6,8 @@
 - Add manifest regression tests for missing guards, reassigned guards and duplicate declarations.
 - Use the smali revision requested by Morphe Patcher 1.14.1.
 - Give the patch bundle a fixed release timestamp so clean builds have the same checksum.
+- Lock build dependencies and verify their artifact hashes, including the Morphe build plugin.
+- Explain how to load a preview source in Morphe Manager and Desktop.
 
 ## 0.0.2 (2026-09-27)
 
