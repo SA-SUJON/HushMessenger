@@ -34,6 +34,21 @@ private const val EXPECTED_DEX_SITES = 6
 private val sharedNames = listOf(APP_COMMUNICATION, RECEIVER_ACCESS)
 private val dexNames = sharedNames + APP_COMMUNICATION_FORMAT
 private val expectedManifestMentions = mapOf(APP_COMMUNICATION to 26, RECEIVER_ACCESS to 3)
+private val expectedManifestRoles = mapOf(
+    APP_COMMUNICATION to mapOf(
+        "permission:name" to 1,
+        "uses-permission:name" to 1,
+        "activity:permission" to 7,
+        "provider:permission" to 1,
+        "receiver:permission" to 13,
+        "service:permission" to 3,
+    ),
+    RECEIVER_ACCESS to mapOf(
+        "permission:name" to 1,
+        "uses-permission:name" to 1,
+        "receiver:permission" to 1,
+    ),
+)
 
 private fun renamed(name: String): String =
     SHARED_PREFIX + name.removePrefix(META_PREFIX)
@@ -45,6 +60,7 @@ private fun renamed(name: String): String =
 internal fun Document.renameSharedPermissions() {
     val mentions = sharedNames.associateWith { mutableListOf<org.w3c.dom.Attr>() }
     val declarations = sharedNames.associateWith { 0 }.toMutableMap()
+    val roles = sharedNames.associateWith { mutableMapOf<String, Int>() }
     val renamedNames = sharedNames.map(::renamed).toSet()
     val elements = getElementsByTagName("*")
     for (i in 0 until elements.length) {
@@ -57,6 +73,8 @@ internal fun Document.renameSharedPermissions() {
             }
             if (attr.value !in sharedNames) continue
             mentions.getValue(attr.value).add(attr)
+            val role = "${element.tagName}:${attr.nodeName.substringAfter(':')}"
+            roles.getValue(attr.value).merge(role, 1, Int::plus)
             if (element.tagName == "permission" && attr.nodeName.substringAfter(':') == "name") {
                 declarations[attr.value] = declarations.getValue(attr.value) + 1
             }
@@ -70,6 +88,9 @@ internal fun Document.renameSharedPermissions() {
         val expected = expectedManifestMentions.getValue(name)
         if (actual != expected) {
             throw PatchException("$PATCH_NAME: expected $expected manifest uses of $name, found $actual")
+        }
+        if (roles.getValue(name) != expectedManifestRoles.getValue(name)) {
+            throw PatchException("$PATCH_NAME: manifest roles for $name differ from the supported APK")
         }
     }
     mentions.values.flatten().forEach { it.value = renamed(it.value) }

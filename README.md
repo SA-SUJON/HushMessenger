@@ -25,7 +25,7 @@ HushMessenger is a Morphe patch source for Facebook Messenger. Its first patch c
 
 | Patch | What it does |
 | --- | --- |
-| `Install beside Meta apps` | Renames Messenger's two shared Meta signature permissions. It changes declarations, requests, component guards and six matching DEX string loads together. The patch stops if the supported APK's manifest or active permission loads differ from the checked layout. |
+| `Install beside Meta apps` | Renames Messenger's two shared Meta signature permissions. It changes declarations, requests, component guards and six matching DEX string loads together. The patch stops if the supported APK's permission counts, manifest roles or active loads differ from the checked values. |
 
 The new names use the `app.hushfacebook.*` prefix from [Hushfacebook](https://github.com/SysAdminDoc/Hushfacebook). If you patch both apps, sign both with the **same key**. Android grants these signature permissions only to apps signed alike. The patch does not yet address every cross-app trust check, so Facebook login and account switching are still on the [roadmap](ROADMAP.md).
 
