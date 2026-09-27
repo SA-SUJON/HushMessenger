@@ -1,3 +1,5 @@
+import org.gradle.jvm.tasks.Jar
+
 group = "com.sysadmindoc.hushmessenger"
 
 patches {
@@ -19,4 +21,8 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.named<Jar>("jar") {
+    manifest.attributes["Timestamp"] = providers.gradleProperty("bundleTimestampMillis").get()
 }
