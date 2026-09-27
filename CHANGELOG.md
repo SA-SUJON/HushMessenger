@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 (2026-09-27)
+
+- Redesign settings with separate Controls and App tabs, compact grouped rows and category filters.
+- Add a live enabled count and a clear paused state. Keep all patch selections and saved preferences.
+- Match the new dark and light layouts with shared colors, rectangular switches and readable section headings.
+- Keep appearance, version details and setup help together in the App tab.
+- Preserve the selected tab, category, search and scroll position when changing themes. Keep 48 dp touch targets and adapt the header to narrow screens or larger text.
+- Pass all 57 local tests and Android lint. Rebuild both supported APKs with all 21 patches and verify their v3 signatures. Compare both settings pages against the design references on an isolated S22 display.
+
 ## 0.2.0 (2026-09-27)
 
 - Replace the two-entry catalog with 21 selectable patches. Each feature applies independently and shares one settings extension.

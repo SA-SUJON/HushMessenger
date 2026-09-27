@@ -1,5 +1,16 @@
 # Research: HushMessenger
 
+## Settings design and native verification, v0.3.0
+
+The settings extension has two pages. Controls holds the installed switches, an enabled count and search that works with the All, Inbox, Chats and More filters. App holds appearance, version information and setup help. The 21-patch catalog and its host hooks are unchanged. Existing preference keys are preserved.
+
+The [design references](concepts/settings/0.3.0) cover Controls in both themes and App in dark mode. Both native pages share colors and components from `SettingsUi.java`; App also supports the same light theme. The implementation uses framework views without adding host resources or UI dependencies. The reference contains no illustrations that need separate app assets.
+
+Native captures on an isolated S22 display were normalized with each reference to 540 by 1170 pixels for side-by-side comparison. Two correction passes fixed row padding, setup-card height, header spacing, Open-button sizing and the light switch outline. Final captures retain the reference hierarchy and visible content. Native font rendering, flat surfaces and stronger control outlines are intentional differences. Interactive targets are at least 48 dp. A separate 320 dp native check confirmed header stacking and wrapping; 200% text is covered by an Android unit test.
+
+The release settings build passed page navigation, theme recreation, update persistence, category counts, search recovery and pause checks on that isolated display. All 57 tests passed (26 patch tests, 20 Android tests and 11 certificate checks), with no lint errors. Both supported stock APK copies rebuilt with all 21 patches and passed v3 signature verification. Two clean bundle builds matched. These checks establish the settings implementation and patch integration, not original-package Messenger startup or signed-in behavior. Issue #1 still needs its exact unsupported APK.
+
+
 ## Messenger 580 catalog expansion, v0.2.0
 
 The source now exposes 21 independent patches: shared-permission compatibility and 20 optional controls. The original seven controls are separate selections, and 13 new controls use the exact two supported APKs.

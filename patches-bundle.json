@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-09-27T21:27:01",
-  "description": "HushMessenger for Messenger 580 (arm64 codes 346013387 and 346013440). 21 selectable patches, including 20 optional controls and shared-permission compatibility. Search controls from the HushMessenger settings app-drawer icon. All switches start off. Original-package startup and live ad removal remain unverified.",
-  "download_url": "https://github.com/SysAdminDoc/HushMessenger/releases/download/v0.2.0/patches-0.2.0.mpp",
+  "created_at": "2026-09-27T22:05:55",
+  "description": "HushMessenger for Messenger 580 (arm64 codes 346013387 and 346013440). 21 selectable patches. Redesigned Controls and App tabs with category filters, search and saved choices. Open HushMessenger settings from your app drawer. All switches start off. Original-package startup and live ad removal remain unverified.",
+  "download_url": "https://github.com/SysAdminDoc/HushMessenger/releases/download/v0.3.0/patches-0.3.0.mpp",
   "signature_download_url": "",
-  "version": "0.2.0"
+  "version": "0.3.0"
 }
