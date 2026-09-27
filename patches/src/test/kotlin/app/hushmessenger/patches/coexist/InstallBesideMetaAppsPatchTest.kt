@@ -15,9 +15,22 @@ class InstallBesideMetaAppsPatchTest {
     private val renamedCommunication = "app.hushfacebook.permission.prod.FB_APP_COMMUNICATION"
     private val renamedReceiver = "app.hushfacebook.receiver.permission.ACCESS"
 
+    @Test
+    fun acceptsBothCheckedVersionCodes() {
+        validateVersionCode("346013387")
+        validateVersionCode("346013440")
+    }
+
+    @Test
+    fun rejectsAnotherBuildWithTheSameVersionName() {
+        val failure = assertFailsWith<PatchException> { validateVersionCode("346013438") }
+        assertContains(failure.message.orEmpty(), "version code 346013438 is not supported")
+        assertActionable(failure)
+    }
+
     private fun assertActionable(failure: PatchException) {
         assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK")
-        assertContains(failure.message.orEmpty(), "version code 346013387")
+        assertContains(failure.message.orEmpty(), "version code 346013387 or 346013440")
     }
 
     private fun manifest(): Document {

@@ -6,12 +6,12 @@ These items need the named external test session or signed-in browser access. Th
 
 - [ ] P0: Validate the first patch against a signed installation.
   Why: A completed off-device patch run does not establish that Messenger launches or works after re-signing.
-  Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The exact 580 APK passed the 26 plus three manifest owner checks, six active DEX site checks and APK v3 signing verification on 2026-09-27. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
+  Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The S22 and S25's exact 580 APKs passed the 26 plus three manifest owner checks, six active DEX site checks, off-device patching and APK v3 signing verification on 2026-09-27. Altered copies of both APKs stopped before output. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
   Touches: `scripts/`, a private APK fixture, patch result parsing, manifest comparison, device test notes.
   Acceptance: The exact stock 580 APK applies cleanly and fails closed if its expected 26 plus three manifest mentions or six active permission loads change; its two declarations and every request and guard use the new names. A signed build opens to chats on an isolated test session. Check muted DM and group notifications, read-while-open behavior, WiFi and cellular reconnect, calls, Facebook links, secure-storage recovery and same-key update/rollback before any uninstall. Raw old strings may remain in unused `STRIP_FAST` string pools.
-  Next check: Keep the private APK out of Git. The unit tests and `scripts/verify_changed_apk_failure.py` reject changed DEX sites before output. Use a backed-up signed-in arm64 test session for runtime checks. The attached S22's stock Messenger and local encrypted data must stay intact until that session exists.
+  Next check: Keep both private APKs out of Git. The unit tests and `scripts/verify_changed_apk_failure.py` reject changed DEX sites before output. Use a backed-up signed-in arm64 test session for runtime checks. The attached S22 and S25 both have stock Messenger and local data that must stay intact until that session exists.
   Complexity: L
-  Blocked: An isolated, backed-up, signed-in arm64 test session is required for chats, notifications, calls, recovery and rollback. The attached S22 supports one user and still holds stock Messenger data; the x86 emulator crashes on the unmodified stock APK.
+  Blocked: An isolated, backed-up, signed-in arm64 test session is required for chats, notifications, calls, recovery and rollback. Both attached phones support one user and hold stock Messenger; the x86 emulator crashes on the unmodified stock APK.
 
 - [ ] P0: Restore trusted cross-app behavior for a re-signed Messenger.
   Why: Changing permission names does not satisfy Messenger and Facebook's signer checks by itself.
@@ -19,7 +19,7 @@ These items need the named external test session or signed-in browser access. Th
   Touches: `patches/src/main/kotlin/app/hushmessenger/patches/coexist/`, `scripts/`, companion Hushfacebook compatibility check.
   Acceptance: Stock Facebook plus patched Messenger and a same-key patched Facebook/Messenger pair install and pass login, account switch, notification deduplication and call checks. On API 28+, real partner signer identity, rotation/multiple signers, package visibility and guarded provider access are checked. A different-key pair fails with a clear diagnostic before install; package name alone never grants trust.
   Complexity: XL
-  Blocked: A signed-in arm64 session and same-key Hushfacebook/Messenger pair are required to verify login, account switching, provider access and calls without risking the S22's stock data.
+  Blocked: A signed-in arm64 session and same-key Hushfacebook/Messenger pair are required to verify login, account switching, provider access and calls without risking either phone's stock data.
 
 - [ ] P1: Trace and remove the actual chat-list ad row on Messenger 580.
   Why: The earlier inbox ad loader is gone; a patch that skips a missing fingerprint can claim success while ads remain.

@@ -49,7 +49,7 @@ private val expectedManifestRoles = mapOf(
     ),
 )
 
-// Component names and instruction sites come from the stock 346013387 arm64 APK.
+// Component names and instruction sites match both supported arm64 APKs.
 internal val expectedGuardOwners = mapOf(
     APP_COMMUNICATION to mapOf(
         "activity" to setOf(
@@ -102,8 +102,14 @@ private fun renamed(name: String): String =
 
 private fun unsupportedApk(reason: String): PatchException = PatchException(
     "$PATCH_NAME: $reason. Use an unmodified arm64 Messenger ${MessengerTarget.VERSION} " +
-        "APK (version code ${MessengerTarget.VERSION_CODE}).",
+        "APK (version code ${MessengerTarget.VERSION_CODES.joinToString(" or ")}).",
 )
+
+internal fun validateVersionCode(versionCode: String) {
+    if (versionCode.toIntOrNull() !in MessengerTarget.VERSION_CODES) {
+        throw unsupportedApk("version code $versionCode is not supported")
+    }
+}
 
 /**
  * Rename declarations, requests and guarded components together. Removing a declaration would
@@ -159,6 +165,7 @@ internal fun Document.renameSharedPermissions() {
 
 private val renameManifest = resourcePatch {
     execute {
+        validateVersionCode(packageMetadata.versionCode)
         document("AndroidManifest.xml").use { it.renameSharedPermissions() }
     }
 }
@@ -224,7 +231,7 @@ private fun BytecodePatchContext.renameDexNames(): Int {
 @Suppress("unused")
 val installBesideMetaAppsPatch = bytecodePatch(
     name = PATCH_NAME,
-    description = "Renames two shared permissions for installation beside Meta apps. Signed-in behavior is unverified.",
+    description = "Renames two shared permissions on checked Messenger 580 builds. Phone behavior is unverified.",
     default = true,
 ) {
     category("Fixes")

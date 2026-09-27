@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6 (2026-09-27)
+
+- Add the S25's Messenger 580 arm64 build to the exact compatibility list after comparing its APK with the S22 fixture.
+- Verified that altered permission bytecode in either APK stops patching before an output is written.
+- Left both phones' installed Messenger apps and local chat data untouched.
+
 ## 0.0.5 (2026-09-27)
 
 - Add a repeatable changed-APK check that confirms Morphe stops before rebuilding when permission bytecode differs from the tested Messenger build.

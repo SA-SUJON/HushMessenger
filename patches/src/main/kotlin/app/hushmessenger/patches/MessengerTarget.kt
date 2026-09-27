@@ -3,10 +3,9 @@ package app.hushmessenger.patches
 import app.morphe.patcher.patch.ApkFileType
 import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
-import app.morphe.patcher.patch.SupportedAbi
 
 /**
- * The stock arm64 Messenger build copied from the S22 on 2026-09-26.
+ * The stock arm64 Messenger builds copied from the S22 and S25 in September 2026.
  *
  * A version name alone is insufficient: Meta publishes several DEX variants with that name.
  * The build is local research input, never part of this repository.
@@ -14,7 +13,7 @@ import app.morphe.patcher.patch.SupportedAbi
 internal object MessengerTarget {
     const val PACKAGE = "com.facebook.orca"
     const val VERSION = "580.0.0.49.91"
-    const val VERSION_CODE = 346013387
+    val VERSION_CODES = listOf(346013387, 346013440)
     const val MIN_SDK = 28
 
     private const val FACEBOOK_SIGNER =
@@ -31,8 +30,8 @@ internal object MessengerTarget {
         targets = listOf(
             AppTarget(
                 version = VERSION,
-                versionCodes = mapOf(SupportedAbi.ARM64_V8A to VERSION_CODE),
                 minSdk = MIN_SDK,
+                description = "Arm64 builds 346013387 and 346013440; checked again during patching",
             ),
         ),
     )

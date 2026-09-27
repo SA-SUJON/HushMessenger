@@ -9,7 +9,10 @@ import zlib
 from pathlib import Path
 from zipfile import ZipFile
 
-STOCK_SHA256 = "128ec75e836f24328d2b28777091c03b20abba0adc536e7ee911ee5fe52e70bc"
+STOCK_SHA256 = {
+    "128ec75e836f24328d2b28777091c03b20abba0adc536e7ee911ee5fe52e70bc",
+    "e7d3c64227a7d9a26adda4e89321a87a49c85ee9e9f28f2fa7ed7fa79ae15cf6",
+}
 OLD_LITERAL = b"com.facebook.permission.prod.FB_APP_COMMUNICATION"
 CHANGED_LITERAL = b"com.facebook.permission.proX.FB_APP_COMMUNICATION"
 
@@ -31,7 +34,7 @@ def main() -> int:
 
     with args.stock_apk.open("rb") as source:
         actual_hash = hashlib.file_digest(source, "sha256").hexdigest()
-    if actual_hash != STOCK_SHA256:
+    if actual_hash not in STOCK_SHA256:
         parser.error(f"stock APK SHA-256 mismatch: {actual_hash}")
 
     with tempfile.TemporaryDirectory(prefix="hushmessenger-drift-") as scratch:
@@ -77,7 +80,10 @@ def main() -> int:
             print(json.dumps(report, sort_keys=True))
             raise RuntimeError("changed APK was not rejected by the permission patch")
         reason = patch_failure.get("reason", "").partition("\n")[0].rstrip("\r")
-        if "expected 6 permission loads, found 4" not in reason or "version code 346013387" not in reason:
+        if (
+            "expected 6 permission loads, found 4" not in reason
+            or "version code 346013387 or 346013440" not in reason
+        ):
             print(reason)
             raise RuntimeError("failure did not identify the changed permission DEX sites")
         print(f"Changed APK rejected before output: {reason}")
