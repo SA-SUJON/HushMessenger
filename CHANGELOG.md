@@ -7,7 +7,7 @@
 - Move the support link below the setup and verification details.
 - Give patch failures the exact Messenger build needed to retry with an unmodified APK.
 - Shorten the patch and source descriptions and cover the recovery message in ten unit tests.
-- Check the published source in Manager 1.32.0 and Morphe Desktop 1.17.0.
+- Check both Manager 1.32.0 source methods and the published source in Morphe Desktop 1.17.0.
 
 ## 0.0.3 (2026-09-27)
 
