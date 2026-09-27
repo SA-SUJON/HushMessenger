@@ -6,9 +6,10 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
 
 - [ ] P0: Validate the first patch against a signed installation.
   Why: A completed off-device patch run does not establish that Messenger launches or works after re-signing.
-  Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The exact 580 APK passed the 26 plus three manifest role checks, six active DEX load checks and APK v3 signing verification on 2026-09-27. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
+  Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The exact 580 APK passed the 26 plus three manifest owner checks, six active DEX site checks and APK v3 signing verification on 2026-09-27. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
   Touches: `scripts/`, a private APK fixture, patch result parsing, manifest comparison, device test notes.
   Acceptance: The exact stock 580 APK applies cleanly and fails closed if its expected 26 plus three manifest mentions or six active permission loads change; its two declarations and every request and guard use the new names. A signed build opens to chats on an isolated test session. Check muted DM and group notifications, read-while-open behavior, WiFi and cellular reconnect, calls, Facebook links, secure-storage recovery and same-key update/rollback before any uninstall. Raw old strings may remain in unused `STRIP_FAST` string pools.
+  Next check: Keep the private APK out of Git. The unit tests reject changed DEX sites; add an altered-APK fixture to check the patcher's failure path before output. Use a backed-up signed-in arm64 test session for runtime checks. The attached S22's stock Messenger and local encrypted data must stay intact until that session exists.
   Complexity: L
 
 - [ ] P0: Restore trusted cross-app behavior for a re-signed Messenger.
@@ -54,7 +55,7 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
   Complexity: L
 
 - [ ] P2: Prepare repeatable local distribution and diagnostics.
-  Why: The public v0.0.2 preview has a versioned source index, bundle and build instructions. It still needs a clear mismatch diagnostic and tested recovery steps.
+  Why: The public v0.0.3 preview has a versioned source index, bundle and build instructions. It still needs a clear mismatch diagnostic and tested recovery steps.
   Evidence: [Morphe template](https://github.com/MorpheApp/morphe-patches-template), [ReVanced Manager patching flow](https://github.com/ReVanced/revanced-manager/blob/main/docs/2_1_patching.md), [Android developer verification FAQ](https://developer.android.com/developer-verification/guides/faq).
   Touches: `scripts/`, `README.md`, `CHANGELOG.md`, `patches/build.gradle.kts`, bundle metadata.
   Acceptance: A clean local build produces `patches-<version>.mpp`, a mismatch gives package/version/hash diagnostics, and release instructions cover same-key signing, secure-storage backup and rollback, plus an English and one non-English device check. Explain Android developer verification accurately for direct sideloading before the broader 2027 rollout; do not claim the 2026-09-30 store rollout blocks this channel.
@@ -63,7 +64,7 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
 ## Research-Driven Additions
 
 - [ ] P0: Make the preview bundle discoverable in Morphe.
-  Why: Morphe Desktop's default stable source lookup rejects the repository because v0.0.2 is only a prerelease; users can fail before choosing a patch.
+  Why: Morphe Desktop's default stable source lookup rejects the repository because v0.0.3 is only a prerelease; users can fail before choosing a patch.
   Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`. The README now gives a Desktop preview command that listed the patch locally, plus Manager preview and local-bundle steps.
   Touches: `README.md`, `patches-bundle.json`, release metadata and source-import instructions.
   Acceptance: On a clean Manager profile, the repository source imports with preview enabled and lists the exact 580 patch. The README gives a working Desktop preview command. After signed runtime validation, a stable release is discoverable without a preview flag and its index points to the tested bundle.
@@ -83,11 +84,11 @@ Only unfinished work is listed. Each item needs a stock APK fixture and a visibl
   Acceptance: Compare stock and patched 580 at default and largest system font/display sizes; chat list, composer, thread and settings text scale without clipped controls. If stock already scales, document that finding and omit the hook.
   Complexity: M
 
-- [ ] P1: Produce byte-identical patch bundles from clean builds.
-  Why: Rebuilding v0.0.2 changed only the bundle manifest timestamp, making a published checksum impossible to reproduce.
-  Evidence: [Morphe plugin 1.3.4 manifest writer](https://github.com/MorpheApp/morphe-patches-gradle-plugin/blob/v1.3.4/src/main/kotlin/app/morphe/patches/gradle/PatchesPlugin.kt), [reproducible timestamp guidance](https://reproducible-builds.org/docs/timestamps/), 2026-09-27 bundle comparison in `RESEARCH.md`.
-  Touches: `patches/build.gradle.kts` or upstream plugin configuration, local release script, `README.md`.
-  Acceptance: Two clean builds from one commit have identical `.mpp` SHA-256 values; the next release checksum matches a clean rebuild and the bundle still loads in Morphe Desktop and Manager.
+- [ ] P2: Check whether Morphe can authenticate patch bundle updates.
+  Why: The source index has an empty `signature_download_url`, and the release checksum is hosted beside the bundle. A tampered bundle would need an independent trust check.
+  Evidence: `patches-bundle.json`, the v0.0.3 release assets, and [Morphe's source format](https://github.com/MorpheApp/morphe-patches-template/blob/main/patches-bundle.json). This machine has no GPG secret key for signing a new release.
+  Touches: release assets, source index, public key instructions and Manager/Desktop source tests.
+  Acceptance: Confirm how Manager and Desktop use `signature_download_url`. If they verify detached signatures, publish one with a maintained key and test that a changed bundle is rejected. Otherwise, document the supported trust path accurately.
   Complexity: M
 
 - [ ] P2: Add optional tracking cleanup for outbound web links.

@@ -29,7 +29,6 @@ private const val SHARED_PREFIX = "app.hushfacebook."
 private const val APP_COMMUNICATION = "com.facebook.permission.prod.FB_APP_COMMUNICATION"
 private const val RECEIVER_ACCESS = "com.facebook.receiver.permission.ACCESS"
 private const val APP_COMMUNICATION_FORMAT = "com.facebook.permission.%s.FB_APP_COMMUNICATION"
-private const val EXPECTED_DEX_SITES = 6
 
 private val sharedNames = listOf(APP_COMMUNICATION, RECEIVER_ACCESS)
 private val dexNames = sharedNames + APP_COMMUNICATION_FORMAT
@@ -50,6 +49,54 @@ private val expectedManifestRoles = mapOf(
     ),
 )
 
+// Component names and instruction sites come from the stock 346013387 arm64 APK.
+internal val expectedGuardOwners = mapOf(
+    APP_COMMUNICATION to mapOf(
+        "activity" to setOf(
+            "com.facebook.messenger.intents.SecureIntentHandlerActivity",
+            "com.facebook.messenger.intents.SecureSameTaskIntentHandlerActivity",
+            "com.facebook.common.keyguard.KeyguardPendingIntentActivity",
+            "com.facebook.messaging.marketplace.viewlisting.ThreadNotificationViewListingActivity",
+            "com.facebook.messaging.integrity.supportinbox.ui.detail.MessengerSupportInboxItemDetailActivity",
+            "com.facebook.messaging.rtc.incall.activity.InCallActivity",
+            "com.facebook.messaging.threadmute.ThreadNotificationMuteDialogActivity",
+        ),
+        "provider" to setOf("com.facebook.messaging.push.dedup.provider.ClientMessagePushDedupInfoProvider"),
+        "receiver" to setOf(
+            "com.facebook.messaging.bubbles.shortcuts.BubblesShortcutsThreadsRemovedBroadcastReceiver",
+            "com.facebook.messaging.chatheads.service.ChatHeadsServiceBroadcastReceiver",
+            "com.facebook.messaging.notify.client.MessagesNotificationBroadcastReceiver",
+            "com.facebook.messaging.stella.contacts.StellaContactBroadcastReceiver",
+            "com.facebook.messaging.integrity.featurelimits.alarmmanager.FeatureLimitExpiredBroadcastReceiver",
+            "com.facebook.messaging.bubbles.receiver.BubblesBroadcastReceiver",
+            "com.facebook.conditionalworker.ConditionalWorkerServiceReceiver",
+            "com.facebook.messaging.livelocation.bindings.MessengerForegroundLiveLocationBroadcastReceiver",
+            "com.facebook.rtc.receivers.RtcStartCallReceiver",
+            "com.facebook.rtc.receivers.RtcShowCallUiReceiver",
+            "com.facebook.rtc.receivers.RtcPictureInPictureReceiver",
+            "com.facebook.push.negativefeedback.PushNegativeFeedbackReceiver",
+            "com.facebook.delayedworker.DelayedWorkerServiceReceiver",
+        ),
+        "service" to setOf(
+            "com.facebook.rtc.notification.metaai.MetaAiNotificationForegroundService",
+            "com.facebook.rtc.notification.RtcNotificationForegroundService",
+            "com.facebook.rp.platform.metaai.rsys.service.MetaAICallDismissalService",
+        ),
+    ),
+    RECEIVER_ACCESS to mapOf(
+        "receiver" to setOf("com.facebook.device_id.UniqueIdSupplier"),
+    ),
+)
+
+internal val expectedDexSites = mapOf(
+    "LX/0iX;->A04(Landroid/app/Application;)V@18" to APP_COMMUNICATION_FORMAT,
+    "LX/15l;->A03()V@25" to APP_COMMUNICATION,
+    "LX/1f4;->A05(Lcom/facebook/auth/usersession/FbUserSession;LX/1f4;Ljava/lang/String;Ljava/lang/String;)V@36" to APP_COMMUNICATION,
+    "LX/2Qr;->A01(Landroid/content/Intent;LX/2Qr;)V@24" to APP_COMMUNICATION_FORMAT,
+    "LX/33K;->A04(LX/5X3;Ljava/lang/Object;II)Ljava/lang/Object;@1433" to APP_COMMUNICATION_FORMAT,
+    "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@507" to APP_COMMUNICATION_FORMAT,
+)
+
 private fun renamed(name: String): String =
     SHARED_PREFIX + name.removePrefix(META_PREFIX)
 
@@ -61,6 +108,7 @@ internal fun Document.renameSharedPermissions() {
     val mentions = sharedNames.associateWith { mutableListOf<org.w3c.dom.Attr>() }
     val declarations = sharedNames.associateWith { 0 }.toMutableMap()
     val roles = sharedNames.associateWith { mutableMapOf<String, Int>() }
+    val guardOwners = sharedNames.associateWith { mutableMapOf<String, MutableSet<String>>() }
     val renamedNames = sharedNames.map(::renamed).toSet()
     val elements = getElementsByTagName("*")
     for (i in 0 until elements.length) {
@@ -75,6 +123,11 @@ internal fun Document.renameSharedPermissions() {
             mentions.getValue(attr.value).add(attr)
             val role = "${element.tagName}:${attr.nodeName.substringAfter(':')}"
             roles.getValue(attr.value).merge(role, 1, Int::plus)
+            if (role.endsWith(":permission")) {
+                guardOwners.getValue(attr.value)
+                    .getOrPut(element.tagName) { mutableSetOf() }
+                    .add(element.getAttribute("android:name"))
+            }
             if (element.tagName == "permission" && attr.nodeName.substringAfter(':') == "name") {
                 declarations[attr.value] = declarations.getValue(attr.value) + 1
             }
@@ -91,6 +144,9 @@ internal fun Document.renameSharedPermissions() {
         }
         if (roles.getValue(name) != expectedManifestRoles.getValue(name)) {
             throw PatchException("$PATCH_NAME: manifest roles for $name differ from the supported APK")
+        }
+        if (guardOwners.getValue(name) != expectedGuardOwners.getValue(name)) {
+            throw PatchException("$PATCH_NAME: component guards for $name differ from the supported APK")
         }
     }
     mentions.values.flatten().forEach { it.value = renamed(it.value) }
@@ -111,6 +167,18 @@ private fun Instruction.sharedName(): String? {
 private fun Method.hasSharedName(): Boolean =
     implementation?.instructions?.any { it.sharedName() != null } == true
 
+private fun Method.siteId(index: Int): String =
+    "$definingClass->$name(${parameterTypes.joinToString("")})$returnType@$index"
+
+internal fun validateDexSites(sites: List<Pair<String, String>>) {
+    if (sites.size != expectedDexSites.size) {
+        throw PatchException("$PATCH_NAME: expected ${expectedDexSites.size} permission loads, found ${sites.size}")
+    }
+    if (sites.toMap() != expectedDexSites) {
+        throw PatchException("$PATCH_NAME: permission instruction sites differ from the supported APK")
+    }
+}
+
 private fun MutableMethod.renameSharedNames(): Int {
     val sites = (implementation ?: return 0).instructions.withIndex()
         .mapNotNull { (index, instruction) -> instruction.sharedName()?.let { index to it } }
@@ -130,14 +198,14 @@ private fun BytecodePatchContext.renameDexNames(): Int {
     val methods = classes.flatMap { type ->
         mutableClassDefBy(type).methods.filter { it.hasSharedName() }
     }
-    val sites = methods.sumOf { method ->
-        method.implementation?.instructions?.count { it.sharedName() != null } ?: 0
+    val sites = methods.flatMap { method ->
+        method.implementation?.instructions?.withIndex()?.mapNotNull { (index, instruction) ->
+            instruction.sharedName()?.let { method.siteId(index) to it }
+        } ?: emptyList()
     }
-    if (sites != EXPECTED_DEX_SITES) {
-        throw PatchException("$PATCH_NAME: expected $EXPECTED_DEX_SITES permission loads, found $sites")
-    }
+    validateDexSites(sites)
     val renamed = methods.sumOf { it.renameSharedNames() }
-    if (renamed != EXPECTED_DEX_SITES || methods.any { it.hasSharedName() }) {
+    if (renamed != expectedDexSites.size || methods.any { it.hasSharedName() }) {
         throw PatchException("$PATCH_NAME: not all permission loads were renamed")
     }
     return renamed

@@ -1,9 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.0.3 (2026-09-27)
 
-- Reject Messenger builds whose shared-permission manifest counts, component roles or active DEX loads differ from the checked 580 APK.
-- Add manifest regression tests for missing guards, reassigned guards and duplicate declarations.
+- Reject Messenger builds whose shared-permission manifest counts, component owners or active DEX instruction sites differ from the checked 580 APK.
+- Add regression tests for missing or reassigned guards, duplicate declarations and changed DEX sites.
 - Use the smali revision requested by Morphe Patcher 1.14.1.
 - Give the patch bundle a fixed release timestamp so clean builds have the same checksum.
 - Lock build dependencies and verify their artifact hashes, including the Morphe build plugin.

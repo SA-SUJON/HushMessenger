@@ -22,15 +22,22 @@ class InstallBesideMetaAppsPatchTest {
         fun add(tag: String, attribute: String, value: String) {
             root.appendChild(document.createElement(tag).apply { setAttribute("android:$attribute", value) })
         }
+        fun addGuards(permission: String) {
+            for ((tag, owners) in expectedGuardOwners.getValue(permission)) {
+                for (owner in owners) {
+                    root.appendChild(document.createElement(tag).apply {
+                        setAttribute("android:name", owner)
+                        setAttribute("android:permission", permission)
+                    })
+                }
+            }
+        }
         add("permission", "name", appCommunication)
         add("uses-permission", "name", appCommunication)
-        repeat(7) { add("activity", "permission", appCommunication) }
-        add("provider", "permission", appCommunication)
-        repeat(13) { add("receiver", "permission", appCommunication) }
-        repeat(3) { add("service", "permission", appCommunication) }
+        addGuards(appCommunication)
         add("permission", "name", receiverAccess)
         add("uses-permission", "name", receiverAccess)
-        add("receiver", "permission", receiverAccess)
+        addGuards(receiverAccess)
         return document
     }
 
@@ -77,6 +84,22 @@ class InstallBesideMetaAppsPatchTest {
         val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
 
         assertContains(failure.message.orEmpty(), "manifest roles")
+        assertEquals(26, values(document).count { it == appCommunication })
+        assertEquals(0, values(document).count { it == renamedCommunication })
+    }
+
+    @Test
+    fun rejectsAReassignedGuardOnAnotherReceiver() {
+        val document = manifest()
+        (document.getElementsByTagName("receiver").item(0) as Element).removeAttribute("android:permission")
+        document.documentElement.appendChild(document.createElement("receiver").apply {
+            setAttribute("android:name", "com.facebook.messaging.UncheckedReceiver")
+            setAttribute("android:permission", appCommunication)
+        })
+
+        val failure = assertFailsWith<PatchException> { document.renameSharedPermissions() }
+
+        assertContains(failure.message.orEmpty(), "component guards")
         assertEquals(26, values(document).count { it == appCommunication })
         assertEquals(0, values(document).count { it == renamedCommunication })
     }

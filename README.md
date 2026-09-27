@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.2"><img src="https://img.shields.io/badge/version-0.0.2-0084FF" alt="Version 0.0.2"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.3"><img src="https://img.shields.io/badge/version-0.0.3-0084FF" alt="Version 0.0.3"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -16,14 +16,14 @@
 
 HushMessenger is a Morphe patch source for Facebook Messenger. Its first patch changes two shared permissions needed for a re-signed Messenger to live beside other Meta apps without dropping the permission guards on its components. You supply your own stock Messenger APK. This repository ships patch code and a patch bundle, not Messenger itself.
 
-[Add the preview source to Morphe](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger) | [Download the patch bundle](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.2) | [See what's next](ROADMAP.md)
+[Add the preview source to Morphe](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger) | [Download the patch bundle](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.3) | [See what's next](ROADMAP.md)
 
 > [!IMPORTANT]
 > This is an early preview with one patch. The bundle built and applied to a stock APK copy. Its signed output passed APK signature verification, but it has not been installed on a phone. Login, calls, notifications and Facebook sign-on still need a device check.
 
 ## Get the preview source
 
-In Morphe Manager, open **Sources**, tap **+**, and add `github.com/SysAdminDoc/HushMessenger`. Turn on **Pre-release patches** on the new source card. The [local bundle](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.2) is another option under **Sources → + → Local**. Local sources need a manual update when a new bundle comes out. The Manager import flow still needs a clean-device check; these steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md).
+In Morphe Manager, open **Sources**, tap **+**, and add `github.com/SysAdminDoc/HushMessenger`. Turn on **Pre-release patches** on the new source card. The [local bundle](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.3) is another option under **Sources → + → Local**. Local sources need a manual update when a new bundle comes out. The Manager import flow still needs a clean-device check; these steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md).
 
 Morphe Desktop 1.17.0 lists the preview bundle with:
 
@@ -37,7 +37,7 @@ The `--prerelease` flag is required while HushMessenger has no stable release. T
 
 | Patch | What it does |
 | --- | --- |
-| `Install beside Meta apps` | Renames Messenger's two shared Meta signature permissions. It changes declarations, requests, component guards and six matching DEX string loads together. The patch stops if the supported APK's permission counts, manifest roles or active loads differ from the checked values. |
+| `Install beside Meta apps` | Renames Messenger's two shared Meta signature permissions. It changes declarations, requests, component guards and six matching DEX string loads together. The patch stops if the supported APK's permission counts, guarded components or active instruction sites differ from the checked values. |
 
 The new names use the `app.hushfacebook.*` prefix from [Hushfacebook](https://github.com/SysAdminDoc/Hushfacebook). If you patch both apps, sign both with the **same key**. Android grants these signature permissions only to apps signed alike. The patch does not yet address every cross-app trust check, so Facebook login and account switching are still on the [roadmap](ROADMAP.md).
 
@@ -68,7 +68,7 @@ Run `.\gradlew.bat :patches:test` to check the manifest rename guard before buil
 
 The build uses checked-in dependency locks and SHA-256 checks. If you update a dependency, review the new lockfile and verification metadata before committing them. Clean builds from the same source produce the same bundle checksum.
 
-The output is `patches/build/libs/patches-0.0.2.mpp`. Morphe Desktop 1.17.0 applied the bundle to a copy of the S22's stock APK. The rebuilt manifest kept all 29 shared-permission mentions under the new names, with none under the old names. Disassembly of the modified DEX found six renamed loads and no active old-name loads in those classes. A signed output passed Android's v3 signature check. The S22's installed Messenger was left untouched.
+The output is `patches/build/libs/patches-0.0.3.mpp`. Morphe Desktop 1.17.0 applied the bundle to a copy of the S22's stock APK. The rebuilt manifest kept all 29 shared-permission mentions under the new names, with none under the old names. Disassembly of the modified DEX found six renamed loads and no active old-name loads in those classes. A signed output passed Android's v3 signature check. The S22's installed Messenger was left untouched.
 
 ## Research and related work
 
