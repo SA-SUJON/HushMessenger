@@ -7,6 +7,7 @@
 - Check the complete hook set on both supported 580 APKs. Changed hooks stop patching rather than silently skipping a feature.
 - Verify the settings screen, light theme, pause and Messenger launch on an isolated S25 diagnostic copy. Stories, the Facebook toolbar shortcut and the Meta AI floating button passed before/after checks. The original-package startup failure remains unresolved.
 - Pass 20 patch, nine Android settings and 11 certificate tests. Both exact APKs patch and sign successfully.
+- Verify the v0.1.0 remote source and both patch entries on S22 and S25. Their stock Messenger installations and sign-ins stayed intact.
 - Correct the remote index timestamp for Manager's local date-time parser. The bundle download and checksum are unchanged.
 - Add bytecode and Android settings tests. Keep ad blocking and media transcoding unavailable until their current paths can be verified.
 
