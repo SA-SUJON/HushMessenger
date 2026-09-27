@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.8"><img src="https://img.shields.io/badge/version-0.0.8-0084FF" alt="Version 0.0.8"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.9"><img src="https://img.shields.io/badge/version-0.0.9-0084FF" alt="Version 0.0.9"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -15,7 +15,7 @@ HushMessenger is a preview Morphe patch source for Facebook Messenger. Its first
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
 > [!WARNING]
-> **The re-signed app is not ready for daily use.** A patched Messenger installed on the S25 with the same key as its patched Facebook app, but its first-run screen stayed blank. An unchanged APK rebuilt and signed through Morphe did the same. The original stock APK opened its login form after reinstalling, but the reinstall cleared its previous sign-in. Chats, calls and notifications with a re-signed APK remain unverified. Make sure you can sign in again and recover your encrypted chats before replacing an installed app. Keep your signing key and follow [Morphe's backup and keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
+> **The re-signed app is not ready for daily use.** A patched Messenger installed on the S25 with the same key as its patched Facebook app, but its first-run screen stayed blank. An unchanged APK rebuilt and signed through Morphe did the same. Stock Messenger is restored and signed in. Its successful chat tests do not establish that a re-signed build works. Make sure you can sign in again and recover your encrypted chats before replacing an installed app. Keep your signing key and follow [Morphe's backup and keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
 
 ## Get the preview
 
@@ -24,7 +24,7 @@ HushMessenger is a preview Morphe patch source for Facebook Messenger. Its first
 3. **Check the source.** The HushMessenger card should show one patch. Open **Patches** to find `Install beside Meta apps` for Messenger. Turn on **Pre-release patches** on this card for future preview updates; Morphe's app-update preview setting is separate. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend; mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.0.8.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.8) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). A clean Manager 1.32.0 profile imported both v0.0.4 source methods and listed the exact Messenger patch in an isolated Android emulator. The phone behavior warning above still applies.
+For a local source, download [`patches-0.0.9.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.9) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). A clean Manager 1.32.0 profile imported both v0.0.4 source methods and listed the exact Messenger patch in an isolated Android emulator. The phone behavior warning above still applies.
 
 ### If something doesn't work
 
@@ -33,7 +33,21 @@ For a local source, download [`patches-0.0.8.mpp`](https://github.com/SysAdminDo
 - **Android rejects installation over stock Messenger:** A re-signed APK can't replace Meta's signed copy. Keep your local data intact while you plan a backup. Future updates of your patched copy must reuse your key; see [Morphe's keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
 - **Local source still old:** Download the latest `.mpp` and replace the local source yourself.
 
-The S22's stock Messenger 580 has a **Hide suggestions** action in the `People you may know` menu and an **Open links in external browser** switch under **Me → Photos & media**. We found these in a read-only session. Link behavior and the persistence of the suggestions choice still need testing. See the [device notes](Roadmap_Blocked.md#s22-stock-baseline-2026-09-27).
+The S22's stock Messenger 580 has a **Hide suggestions** action in the `People you may know` menu. Its **Open links in external browser** switch under **Me → Photos & media** works for the HTTP and HTTPS links we tested in an encrypted chat. Off opened Messenger's browser; on opened Chrome. The original setting was restored afterward. Suggestion persistence, internal links and malicious-link warnings still need separate checks.
+
+### Check a signed APK before installation
+
+The repository includes a read-only certificate check. It uses Android's `apksigner` to verify the candidate and installed APKs, compares the complete signer sets for the phone's Android version, and checks who owns the candidate's declared permissions. Source-stamp certificates aren't treated as app signers. It also catches version downgrades.
+
+Use Python 3.11 or newer, JDK 21, Android SDK Build Tools (tested with 36.1.0), and an authorized ADB connection. Run this from the repository with the phone's exact serial from `adb devices`:
+
+```powershell
+python scripts/check_install.py --apk .\messenger-signed.apk --serial YOUR_PHONE_SERIAL --build-tools "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0" --java "$env:JAVA_HOME\bin\java.exe"
+```
+
+Exit `0` means no certificate or downgrade conflict was found. Exit `1` reports a conflict; exit `2` means the check couldn't finish. Different current certificates aren't approved through a possible rotation lineage. The check reads user 0's installed base APKs into a temporary directory, then deletes those local copies. It doesn't install, uninstall, clear data or change phone settings.
+
+A successful check doesn't establish cross-app login, provider access or Messenger startup. Run it before planning an installation, and keep the installed app's data intact when it reports a conflict. See [Android's signing tool reference](https://developer.android.com/tools/apksigner).
 
 ## What the patch changes
 
@@ -66,7 +80,11 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 ## Verification and build
 
-Twelve unit tests cover the version-code gate, manifest guards, DEX sites and mismatch guidance. Morphe Desktop 1.17.0 applied v0.0.8 to a private S25 APK copy and v0.0.7 to copies from both phones. Android verified v3 signatures. Each rebuilt manifest had 26 plus three renamed permission mentions and no old names. The changed-APK check in `scripts/verify_changed_apk_failure.py` confirms that altered permission bytecode in either stock APK stops patching before an output is written. On the S25, a same-key signed patch installed but did not open chats. An unchanged Morphe rebuild showed the same blank first-run screen. Stock Messenger is installed again and requires sign-in. The S22's signed-in stock app was not replaced.
+Twelve Kotlin tests cover the version-code gate, manifest guards, DEX sites and mismatch guidance. Eleven Python tests cover certificate selection, permission ownership, failure handling and read-only device operations. The certificate check passed against the S25's stock APK. A separately signed fixture reported the installed Messenger mismatch and both conflicting Facebook-owned permissions without attempting installation.
+
+Morphe Desktop 1.17.0 applied v0.0.9 to a private S25 APK copy and v0.0.7 to copies from both phones. Android verified v3 signatures. Each rebuilt manifest had 26 plus three renamed permission mentions and no old names. The changed-APK check in `scripts/verify_changed_apk_failure.py` confirms that altered permission bytecode in either stock APK stops patching before an output is written. On the S25, a same-key signed patch installed but did not open chats. An unchanged Morphe rebuild showed the same blank first-run screen.
+
+The restored stock apps on S22 and S25 exchanged messages between two owned accounts in an end-to-end encrypted chat. Both phones displayed the messages and read receipts. HTTP and HTTPS link tests on S22 confirmed the stock external-browser switch works. These checks used hidden virtual displays; installed packages and sign-ins were preserved. Re-signed chat delivery, calls and notification behavior remain unverified.
 
 To inspect the preview source with Morphe Desktop 1.17.0, set `JAVA_HOME` to a JDK 21 or newer:
 
@@ -82,16 +100,17 @@ To build the bundle on Windows, install JDK 21 or newer and use the Gradle wrapp
 $env:GITHUB_ACTOR = gh api user --jq .login
 $env:GITHUB_TOKEN = gh auth token
 .\gradlew.bat :patches:test :patches:buildAndroid --no-daemon
+python -m unittest discover -s scripts/tests -v
 ```
 
-The output is `patches/build/libs/patches-0.0.8.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.0.9.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
 
 ### Check the bundle
 
-The [v0.0.8 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.8) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.0.9 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.9) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
-5f04281156c034abcf51506819f502ceac1ac3b78ca9bd8ef8feea305ab4ed7c  patches-0.0.8.mpp
+c384c808c82d6ec83805a502ecddc48737d3ee66752327ba2030a9ea2e827d8b  patches-0.0.9.mpp
 ```
 
 Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.

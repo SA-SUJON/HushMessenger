@@ -1,6 +1,6 @@
 # HushMessenger blocked roadmap
 
-These items need the named external test session or signed-in browser access. They return to ROADMAP.md when that access exists.
+The phones now have two owned, signed-in test accounts. Each item below identifies its remaining verification requirement. Stock behavior can be checked without replacing either installation; patch runtime checks still depend on resolving the blank startup screen and preserving account recovery.
 
 ## S22 stock baseline, 2026-09-27
 
@@ -13,20 +13,38 @@ The attached S22 runs stock Messenger 580.0.0.49.91, version code 346013387. Its
 
 ## S25 signed installation check, 2026-09-27
 
-The S25 had a current Messenger secure-storage backup before testing, and a private capture of its 40-character recovery code was saved outside the repository. Replacing the installed Messenger cleared its local sign-in. Android's backup transport could not restore app data. Stock Messenger 346013440 was reinstalled and opens a login form; account sign-in and encrypted-chat recovery still need the account holder. The S22's signed-in stock app was not replaced.
+The S25 had a current Messenger secure-storage backup before testing, and a private capture of its recovery code was saved outside the repository. Replacing the installed Messenger cleared its local sign-in. Android's backup transport could not restore app data. Stock Messenger 346013440 was reinstalled, and the account holder restored sign-in. Historical encrypted-chat recovery has not been established. The S22's signed-in stock app was not replaced.
 
 The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 signed the HushMessenger-patched APK with that Manager key, and Android installed it. Its first-run `NeueNuxActivity` remained blank. A zero-patch rebuild of the same stock APK, signed with the same key, also installed and remained blank. The original stock APK opened its login form on the same hidden virtual display. Logs showed token lookup and network timeouts but no Java crash. This control does not isolate a cause between rebuilding, re-signing and account state; it does show the HushMessenger permission edit is not required to reproduce the blank screen. No chats, calls or notifications were exercised.
 
 ## Existing priorities
+
+- [ ] P1: Validate the Messenger 580 build reported in issue 1.
+  Reported: #1
+  Why: Morphe lists patches by version name, but the report uses version code 346013370, which hasn't been validated. The current guard accepts only 346013387 and 346013440.
+  Evidence: [Can't patch with Morphe manger](https://github.com/SysAdminDoc/HushMessenger/issues/1), reported with HushMessenger 0.0.7 and Manager 1.32.0. The log shows the deliberate version-code rejection before patch mutation.
+  Touches: `MessengerTarget.kt`, the manifest and DEX contracts, `scripts/check_install.py`, fixture checks and supported-build documentation.
+  Acceptance: When the exact unmodified 346013370 APK is available, verify its Meta signature and architecture, compare the complete manifest owner matrix and six DEX sites, and apply the patch off-device. Add support only if those checks pass; otherwise document the concrete incompatibility. Preserve rejection of unvalidated builds.
+  Blocked: The report includes logs but no APK. The local stock fixtures are 346013387 and 346013440, so the reported build cannot yet be compared. The issue remains open.
+
+### Two-account stock checks, 2026-09-27
+
+Both phones opened their owned-account chat on separate hidden virtual displays. Three clearly labeled test messages were sent only between those accounts. Each phone displayed the received plaintext in the encrypted thread, and read receipts appeared. No other conversation was opened during this check. The phones' primary activities remained unchanged.
+
+On S22, `Open links in external browser` was initially off. HTTP and HTTPS links to `example.com` opened `com.facebook.browser.lite.BrowserLiteActivity`. With the switch on, both opened `com.android.chrome` on the same hidden display with their test query parameters intact. The first internal-browser opening showed the stock leaving-messaging notice. The switch was restored to off and verified. This notice isn't a malicious-link warning; internal Messenger routes and malicious-link warnings remain untested.
+
+The stock chat-row accessibility description contained the contact name, the allowed test-message preview and its seen state. TalkBack speech wasn't enabled because that service would also affect the active phone display. Screenshots, recordings and raw accessibility trees stayed outside the repository.
+
+The read-only certificate preflight passed for the stock S25 APK and rejected a separately signed minimal fixture. Its diagnostics named the installed Messenger signer mismatch and both shared permissions owned by Facebook. It checks API-specific current signer sets and multiple signers; it doesn't approve a changed key through a possible rotation lineage or establish guarded-provider trust.
 
 - [ ] P0: Validate the first patch against a signed installation.
   Why: A completed off-device patch run does not establish that Messenger launches or works after re-signing.
   Evidence: `RESEARCH.md` target APK and signer findings; `patches/src/main/kotlin/app/hushmessenger/patches/coexist/InstallBesideMetaAppsPatch.kt`. The S22 and S25's exact 580 APKs passed the 26 plus three manifest owner checks, six active DEX site checks, off-device patching and APK v3 signing verification on 2026-09-27. Altered copies of both APKs stopped before output. Stock and patched Messenger both crashed in the x86 emulator's arm64 native bridge before opening chats. The available native arm64 image cannot boot on this x86 host.
   Touches: `scripts/`, a private APK fixture, patch result parsing, manifest comparison, device test notes.
   Acceptance: The exact stock 580 APK applies cleanly and fails closed if its expected 26 plus three manifest mentions or six active permission loads change; its two declarations and every request and guard use the new names. A signed build opens to chats on an isolated test session. Check muted DM and group notifications, read-while-open behavior, WiFi and cellular reconnect, calls, Facebook links, secure-storage recovery and same-key update/rollback before any uninstall. Raw old strings may remain in unused `STRIP_FAST` string pools.
-  Next check: Keep both private APKs, the S25 Manager signing key and the recovery-code capture out of Git. The unit tests and `scripts/verify_changed_apk_failure.py` reject changed DEX sites before output. Use a backed-up, signed-in arm64 test session to trace the blank first-run screen and complete runtime checks. Preserve the S22's signed-in stock app.
+  Next check: Keep both private APKs and the recovery-code capture out of Git. The temporary exported Manager key was deleted after the earlier signing check. The unit tests and `scripts/verify_changed_apk_failure.py` reject changed DEX sites before output. Use a backed-up, signed-in arm64 test session to trace the blank first-run screen and complete runtime checks. Preserve both stock installations.
   Complexity: L
-  Blocked: The S25 requires account sign-in after stock reinstall; the S22 holds the remaining signed-in stock session. A backed-up signed-in arm64 test session is required for chats, notifications, calls, recovery and rollback. The x86 emulator crashes on the unmodified stock APK.
+  Blocked: Both stock apps are signed in, and the owned-account chat works. Re-signed Messenger and the zero-patch rebuilt control still have an unresolved blank startup screen. Replacing either stock installation would clear its sign-in again; a virtual display doesn't isolate APKs or app data. The x86 emulator also crashes on the unmodified stock APK. Recovery, signed runtime checks and same-key rollback remain unverified.
 
 - [ ] P0: Restore trusted cross-app behavior for a re-signed Messenger.
   Why: Changing permission names does not satisfy Messenger and Facebook's signer checks by itself.
@@ -34,7 +52,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: `patches/src/main/kotlin/app/hushmessenger/patches/coexist/`, `scripts/`, companion Hushfacebook compatibility check.
   Acceptance: Stock Facebook plus patched Messenger and a same-key patched Facebook/Messenger pair install and pass login, account switch, notification deduplication and call checks. On API 28+, real partner signer identity, rotation/multiple signers, package visibility and guarded provider access are checked. A different-key pair fails with a clear diagnostic before install; package name alone never grants trust.
   Complexity: XL
-  Blocked: The S25 accepted the same-key Hushfacebook/Messenger install, but both patched and zero-patch Messenger rebuilds stayed blank. A signed-in arm64 session is still required to verify login, account switching, provider access and calls. Preserve the S22's stock data.
+  Blocked: The read-only preflight now detects installed-signer and permission-owner conflicts before installation. The S25 accepted the same-key Hushfacebook/Messenger install, but both patched and zero-patch rebuilds stayed blank. Signed login, account switching, provider access and calls remain unverified; the two restored stock sessions must retain their data.
 
 - [ ] P1: Trace and remove the actual chat-list ad row on Messenger 580.
   Why: The earlier inbox ad loader is gone; a patch that skips a missing fingerprint can claim success while ads remain.
@@ -66,7 +84,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/links/` hook and settings control.
   Acceptance: On a backed-up test account, compare HTTP and HTTPS message links with the stock switch off and on, including encrypted chats, internal Messenger routes and unsafe-link warnings. If stock satisfies the behavior, close this patch idea with the result. Otherwise, trace the failing route and make the opt-in patch open the chosen browser while preserving those routes and warnings.
   Complexity: M
-  Blocked: The stock preference is confirmed on S22, but its effect on message links and safety interstitials still needs a controlled signed-in session, including encrypted chats.
+  Remaining verification: Stock HTTP and HTTPS links passed the off/on comparison in the owned encrypted chat, and the original preference was restored. No browser patch is justified by those cases. Internal Messenger routes and malicious-link warnings still need permitted test fixtures; no unsafe URLs were sent through the personal accounts.
 
 - [ ] P2: Check update prompts, chat heads and media quality on the exact target.
   Why: Existing catalogs list these features, but the current target and Android 9 compatibility have not been established.
@@ -74,7 +92,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/updates/`, `chatheads/`, `media/`.
   Acceptance: Separate opt-in patches pass fixture checks and user-visible tests. Distinguish Play Store update offers from server-required app updates without spoofing a maximum version code. Compare identical media files against stock HD sending, already offered by Messenger. Test chat heads and native bubbles as distinct modes and respect Android's permission flow.
   Complexity: L
-  Blocked: A signed-in arm64 test session is needed to compare stock controls and identical media, and to exercise update, bubble and chat-head flows.
+  Remaining verification: Stock accounts are available. An identical-media baseline and update/bubble/chat-head checks have not been run. Any patch still needs the re-signed startup failure resolved; permission and overlay flows must stay off the active display.
 
 - [ ] P2: Prepare repeatable local distribution and diagnostics.
   Why: The v0.0.4 preview has a versioned source index, reproducible bundle, exact-build mismatch guidance and a recovery section. It still needs device-tested recovery and wider-language checks.
@@ -82,7 +100,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: `scripts/`, `README.md`, `CHANGELOG.md`, `patches/build.gradle.kts`, bundle metadata.
   Acceptance: A clean local build produces `patches-<version>.mpp`, a mismatch gives package/version/hash diagnostics, and release instructions cover same-key signing, secure-storage backup and rollback, plus an English and one non-English device check. Explain Android developer verification accurately for direct sideloading before the broader 2027 rollout; do not claim the 2026-09-30 store rollout blocks this channel.
   Complexity: M
-  Blocked: Clean builds and mismatch diagnostics pass, but same-key recovery and one non-English device check require an isolated, backed-up, signed-in arm64 session.
+  Blocked: Clean builds and mismatch diagnostics pass, including the read-only signer preflight. Same-key recovery needs a working re-signed startup path. A non-English device check needs an isolated user session so a locale change doesn't affect the active Messenger display.
 
 ## Research-Driven Additions
 
@@ -100,7 +118,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: a new `patches/src/main/kotlin/app/hushmessenger/patches/accessibility/` hook, fixture checks, optional settings label.
   Acceptance: Capture the stock 580 accessibility tree and TalkBack speech for at least one chat row. If broken, patched rows announce sender, unread state and any preview the user has allowed, without duplicate speech; swipe actions and encrypted chats still work. If stock 580 is already correct, record that fixture result and avoid a patch.
   Complexity: L
-  Blocked: The S22's in-app Accessibility page exposes Reduce motion and Color filter, but the stock chat row's accessibility tree and TalkBack speech still need capture before a hook is justified.
+  Blocked: The owned test chat's stock row exposes the contact name, message preview and seen state in its accessibility description. TalkBack speech remains unverified. Enabling TalkBack changes the whole phone's accessibility behavior, including the active display, so that check needs an isolated Android user session.
 
 - [ ] P1: Respect Android's system font size in Messenger text.
   Why: A Samsung user report describes scaling trouble, and the older 580 fixture has a Messenger typeface resolver that may override system sizing.
@@ -124,7 +142,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/links/` logic and a separate settings switch.
   Acceptance: An opt-in control unwraps only validated HTTP(S) tracking redirects and strips an explicit tested parameter set; signed links and functional query parameters stay intact. Malicious-link warnings, internal Messenger routes and stock link opening still work.
   Complexity: M
-  Blocked: A signed-in 580 session is needed to trace outbound links and verify that safety interstitials, encrypted chats and internal routes survive cleaning.
+  Blocked: The two-account stock HTTP/HTTPS baseline works and preserves query parameters. An opt-in cleanup hook still needs a working re-signed startup path, permitted redirect/signed-link fixtures and verification of internal routes and malicious-link warnings.
 
 - [ ] P2: Add an independent stories and notes tray switch.
   Why: A De-Vanced contribution reports unwanted people appearing in this tray, which is separate from sponsored stories and inbox suggestions.
@@ -140,7 +158,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/navigation/` UI hook and settings switch.
   Acceptance: All Facebook shortcut entry points found in the exact 580 UI disappear when enabled; login, account switch, provider access and direct Facebook deep links still pass the cross-app checks.
   Complexity: M
-  Blocked: The exact 580 entry points and cross-app behavior need a signed-in arm64 test session before removing navigation hooks.
+  Blocked: Stock entry points are visible. Removing them still needs the re-signed startup failure resolved before login, account switching and guarded-provider behavior can be checked.
 
 - [ ] P2: Hide joined community chats from the main inbox on request.
   Why: A user report describes joined community chats filling the inbox; these are real conversations and need a reversible view choice, not the suggestion filter above.
@@ -156,7 +174,7 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Touches: notification mapping in a new `patches/src/main/kotlin/app/hushmessenger/patches/notifications/` hook and optional settings.
   Acceptance: Document stock 580 controls first. If needed, an opt-in allowlist silences nonselected message alerts while preserving delivery, selected-chat alerts and calls; test DM/group, muted thread, background, WiFi and cellular reconnect cases.
   Complexity: L
-  Blocked: The S22's top-level category switches are documented. A controlled session with selected DM and group threads is still needed to inspect per-chat controls and test alert delivery across reconnects.
+  Remaining verification: The stock category switches and the owned DM are available. Per-chat alert controls, group delivery and reconnect cases remain untested. A notification hook also depends on a working re-signed startup path; radio changes and alert tests must preserve the active phone session.
 
 - [ ] P3: Add story saving only after locating the 580 media path.
   Why: A 2026-09-14 request asks for a save control, but an older implementation does not establish the 580 story viewer or media permissions.
@@ -167,9 +185,9 @@ The S25's Facebook app is a same-key Hushfacebook build. Morphe Desktop 1.17.0 s
   Blocked: An owned or permitted test story on a signed-in arm64 session is required to trace the media path and verify saved playback.
 
 - [ ] P3: Suppress typing signals only if encrypted chats remain correct.
-  Why: De-Vanced has a typing hook, while a MessengerPro report describes E2EE failures in a comparable modification.
+  Why: De-Vanced has a typing hook, while a MessengerPro report says typing and read-receipt suppression stop working in encrypted chats. It does not report message decryption failures.
   Evidence: [De-Vanced typing hook](https://github.com/RookieEnough/De-Vanced/blob/main/patches/src/main/kotlin/app/morphe/patches/messenger/inputfield/DisableTypingIndicatorPatch.kt), [MessengerPro issue 70](https://github.com/Mino260806/MessengerPro/issues/70).
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/input/` hook and separate settings switch.
   Acceptance: With an opt-in switch, a second test account sees no typing event while messages still send and decrypt in one-to-one and group encrypted chats; the default retains stock behavior.
   Complexity: M
-  Blocked: Two signed-in test accounts on arm64 devices are required to observe typing events and verify one-to-one and group E2EE delivery.
+  Blocked: Two owned accounts are available and stock one-to-one encrypted messages work. A verified re-signed startup path is still required before implementing and testing a typing hook; group encryption and typing events remain unverified.
