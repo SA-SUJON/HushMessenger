@@ -9,6 +9,10 @@
 *.apkm
 *.xapk
 *.mpp
+*.keystore
+*.jks
+__pycache__/
+*.pyc
 fixtures/
 local.properties
 gradle.local.properties

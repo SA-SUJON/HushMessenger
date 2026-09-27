@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.4"><img src="https://img.shields.io/badge/version-0.0.4-0084FF" alt="Version 0.0.4"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.5"><img src="https://img.shields.io/badge/version-0.0.5-0084FF" alt="Version 0.0.5"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -24,7 +24,7 @@ HushMessenger is a preview Morphe patch source for Facebook Messenger. Its first
 3. **Check the source.** The HushMessenger card should show one patch. Open **Patches** to find `Install beside Meta apps` for Messenger. Turn on **Pre-release patches** on this card for future preview updates; Morphe's app-update preview setting is separate. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend; mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.0.4.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.4) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). A clean Manager 1.32.0 profile imported both v0.0.4 source methods and listed the exact Messenger patch in an isolated Android emulator. The phone behavior warning above still applies.
+For a local source, download [`patches-0.0.5.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.5) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). A clean Manager 1.32.0 profile imported both v0.0.4 source methods and listed the exact Messenger patch in an isolated Android emulator. The phone behavior warning above still applies.
 
 ### If something doesn't work
 
@@ -61,7 +61,7 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 ## Verification and build
 
-Ten unit tests cover the exact manifest guards, DEX sites and mismatch guidance. Morphe Desktop 1.17.0 listed the published v0.0.4 source and applied the bundle to a copy of the stock APK, rebuilt it and signed it. Android verified the output's v3 signature. The rebuilt manifest has 29 renamed permission mentions and no old names; the modified DEX has six active renamed loads and no active old loads in those classes. The S22's installed Messenger was left untouched.
+Ten unit tests cover the exact manifest guards, DEX sites and mismatch guidance. Morphe Desktop 1.17.0 applied the bundle to a copy of the stock APK, rebuilt it and signed it. Android verified the output's v3 signature. The rebuilt manifest has 29 renamed permission mentions and no old names; the modified DEX has six active renamed loads and no active old loads in those classes. The changed-APK check in `scripts/verify_changed_apk_failure.py` confirms that a modified permission literal stops patching before an output is written. The S22's installed Messenger was left untouched.
 
 To inspect the preview source with Morphe Desktop 1.17.0, set `JAVA_HOME` to a JDK 21 or newer:
 
@@ -79,11 +79,21 @@ $env:GITHUB_TOKEN = gh auth token
 .\gradlew.bat :patches:test :patches:buildAndroid --no-daemon
 ```
 
-The output is `patches/build/libs/patches-0.0.4.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.0.5.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+
+### Check the bundle
+
+The [v0.0.5 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.5) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+
+```text
+6258332476b63758c3cb263d68ecdac236d4456e03a5928b199a7a314e15d398  patches-0.0.5.mpp
+```
+
+Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.
 
 ## Research and credits
 
-[RESEARCH.md](RESEARCH.md) compares Messenger patches in Morphe, ReVanced, De-Vanced and other projects. [ROADMAP.md](ROADMAP.md) tracks the phone checks and proposed patches. [Hushfeed](https://github.com/SysAdminDoc/hushfeed) is another Hush patch project.
+[RESEARCH.md](RESEARCH.md) compares Messenger patches in Morphe, ReVanced, De-Vanced and other projects. [Roadmap_Blocked.md](Roadmap_Blocked.md) tracks the phone checks and proposed patches waiting on an isolated test session. [Hushfeed](https://github.com/SysAdminDoc/hushfeed) is another Hush patch project.
 
 HushMessenger starts from the [Morphe patches template](https://github.com/MorpheApp/morphe-patches-template). The permission approach is adapted from [Hushfacebook's shared-permission patch](https://github.com/SysAdminDoc/Hushfacebook/blob/15b8e9ed9315464a3e2d1a821b4e26ad47bbc28c/patches/src/main/kotlin/app/morphe/patches/facebook/coexist/SharedPermissions.kt). Source is under [GPL-3.0](LICENSE); see [NOTICE](NOTICE). HushMessenger is independent of Meta and Morphe.
 

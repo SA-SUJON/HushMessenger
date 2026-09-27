@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.5 (2026-09-27)
+
+- Add a repeatable changed-APK check that confirms Morphe stops before rebuilding when permission bytecode differs from the tested Messenger build.
+- Ignore local signing keys and Python cache files so they cannot be staged by accident.
+- Explain that Manager and Desktop currently load patch bundles without verifying the source index's detached-signature URL.
+- Keep device-dependent patch work in a blocked tracker until an isolated signed-in arm64 session can verify it.
+
 ## 0.0.4 (2026-09-27)
 
 - Put the tested APK and phone-data warning before the preview setup steps.
