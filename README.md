@@ -8,6 +8,12 @@
   <img src="https://img.shields.io/badge/status-preview-8A2BE2" alt="Preview release">
 </p>
 
+<p align="center">
+  <a href="https://ko-fi.com/X8K126YVER">
+    <img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi" />
+  </a>
+</p>
+
 # HushMessenger
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It adds optional inbox, navigation and conversation controls, with a settings icon in your app drawer. You bring the original Messenger APK; this repository provides patch code and a `.mpp` bundle.
