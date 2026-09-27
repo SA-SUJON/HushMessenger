@@ -65,9 +65,9 @@ Only unfinished work is listed. Patch behavior items need a stock APK fixture an
 
 - [ ] P0: Make the preview bundle discoverable in Morphe.
   Why: Morphe Desktop's default stable source lookup rejects the repository because v0.0.4 is only a prerelease; users can fail before choosing a patch.
-  Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`. A clean Manager 1.32.0 emulator profile imported v0.0.3 and listed the patch; v0.0.4 remote refresh remains to check after publication. The README gives the working Manager labels and a Desktop preview command.
+  Evidence: [Morphe Desktop source docs](https://github.com/MorpheApp/morphe-desktop/blob/main/docs/documentation.md), [Manager source docs](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md), local 2026-09-27 stable and `--prerelease` lookup results in `RESEARCH.md`. A clean Manager 1.32.0 emulator profile imported v0.0.4, refreshed it with preview enabled and listed the patch. Morphe Desktop fetched v0.0.4 with `--prerelease`. The README's add-source deep link still needs a separate device check.
   Touches: `README.md`, `patches-bundle.json`, release metadata and source-import instructions.
-  Acceptance: On a clean Manager profile, the repository source imports with preview enabled and lists the exact 580 patch. The README gives a working Desktop preview command. After signed runtime validation, a stable release is discoverable without a preview flag and its index points to the tested bundle.
+  Acceptance: Confirm the add-source deep link on a clean Android device. After signed runtime validation, publish a stable release discoverable without a preview flag and point its index to the tested bundle.
   Complexity: S
 
 - [ ] P1: Correct chat-list speech for TalkBack when reproduced on 580.
