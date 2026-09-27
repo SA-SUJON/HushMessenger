@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Reject Messenger builds whose shared-permission manifest references or active DEX loads differ from the checked 580 APK layout.
+- Add manifest regression tests for a changed layout and duplicate declarations.
+
 ## 0.0.2 (2026-09-27)
 
 - Published the Messenger patch source with a README hero, icon and social preview in the Hush project style.
