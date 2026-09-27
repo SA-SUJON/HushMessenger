@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.6"><img src="https://img.shields.io/badge/version-0.0.6-0084FF" alt="Version 0.0.6"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.7"><img src="https://img.shields.io/badge/version-0.0.7-0084FF" alt="Version 0.0.7"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -15,7 +15,7 @@ HushMessenger is a preview Morphe patch source for Facebook Messenger. Its first
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
 > [!WARNING]
-> **Phone behavior is unverified.** We patched, rebuilt and signed a stock APK copy off-device. We haven't tested sign-in, encrypted chats, calls or notifications on a phone. Use a test session. A differently signed APK cannot update Meta's installed app, and uninstalling it can remove local data. Keep your signing key and follow [Morphe's backup and keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md) before replacing anything.
+> **Patched phone behavior is unverified.** We patched, rebuilt and signed a stock APK copy off-device. We haven't tested sign-in, encrypted chats, calls or notifications with a re-signed APK on a phone. Use a test session. A differently signed APK cannot update Meta's installed app, and uninstalling it can remove local data. Keep your signing key and follow [Morphe's backup and keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md) before replacing anything.
 
 ## Get the preview
 
@@ -24,7 +24,7 @@ HushMessenger is a preview Morphe patch source for Facebook Messenger. Its first
 3. **Check the source.** The HushMessenger card should show one patch. Open **Patches** to find `Install beside Meta apps` for Messenger. Turn on **Pre-release patches** on this card for future preview updates; Morphe's app-update preview setting is separate. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend; mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.0.6.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.6) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). A clean Manager 1.32.0 profile imported both v0.0.4 source methods and listed the exact Messenger patch in an isolated Android emulator. The phone behavior warning above still applies.
+For a local source, download [`patches-0.0.7.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.7) and add it through **Sources → + → Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). A clean Manager 1.32.0 profile imported both v0.0.4 source methods and listed the exact Messenger patch in an isolated Android emulator. The phone behavior warning above still applies.
 
 ### If something doesn't work
 
@@ -32,6 +32,8 @@ For a local source, download [`patches-0.0.6.mpp`](https://github.com/SysAdminDo
 - **APK rejected:** Use an unmodified arm64 Messenger 580.0.0.49.91 APK with version code `346013387` or `346013440`. If a permission or instruction check fails, the error names the tested builds.
 - **Android rejects installation over stock Messenger:** A re-signed APK can't replace Meta's signed copy. Keep your local data intact while you plan a backup. Future updates of your patched copy must reuse your key; see [Morphe's keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
 - **Local source still old:** Download the latest `.mpp` and replace the local source yourself.
+
+The S22's stock Messenger 580 has a **Hide suggestions** action in the `People you may know` menu and an **Open links in external browser** switch under **Me → Photos & media**. We found these in a read-only session. Link behavior and the persistence of the suggestions choice still need testing. See the [device notes](Roadmap_Blocked.md#s22-stock-baseline-2026-09-27).
 
 ## What the patch changes
 
@@ -82,14 +84,14 @@ $env:GITHUB_TOKEN = gh auth token
 .\gradlew.bat :patches:test :patches:buildAndroid --no-daemon
 ```
 
-The output is `patches/build/libs/patches-0.0.6.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.0.7.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
 
 ### Check the bundle
 
-The [v0.0.6 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.6) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.0.7 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.0.7) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
-6f1418f37a475e961fa8d430415fb6dc08cfa1fe0fac5abf1c97f44e327a8155  patches-0.0.6.mpp
+b7c9cf6a2ce6731382de012b19eaffb5fa121019a23db7626c71e15388ba1364  patches-0.0.7.mpp
 ```
 
 Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.

@@ -2,6 +2,15 @@
 
 These items need the named external test session or signed-in browser access. They return to ROADMAP.md when that access exists.
 
+## S22 stock baseline, 2026-09-27
+
+The attached S22 runs stock Messenger 580.0.0.49.91, version code 346013387. Its signed-in app was inspected on a separate Android virtual display, leaving the phone's main display, installed package and account settings untouched. Private captures stay off-repository. This establishes the stock UI only; it does not validate a re-signed APK, notification delivery, calls or encrypted chat recovery.
+
+- The Chats screen shows an `Ask Meta AI or search` field, a stories/notes tray and a `People you may know` section. That section's menu offers `See more suggestions` and `Hide suggestions`. No sponsored chat row was visible in the captured viewport.
+- **Me > Photos & media** has `Open links in external browser`, currently off. Its description says links shared in messages open externally. It also has `Save photos and videos`, currently off. Neither switch was changed, and no message link or safety warning was opened.
+- **Me > Notifications & sounds** exposes switches for community activity and suggestions, channel invites, message reminders, new friend chats, notes and instants. This is category control; a selected-contact allowlist was not established. No delivery or reconnect test was run.
+- **Me** shows Chat heads off. **Me > Accessibility** has Reduce motion set to System and Color filter off. These screens do not establish TalkBack speech, system font scaling, HD media behavior or Android bubble behavior.
+
 ## Existing priorities
 
 - [ ] P0: Validate the first patch against a signed installation.
@@ -38,24 +47,24 @@ These items need the named external test session or signed-in browser access. Th
   Blocked: A signed-in arm64 account showing a sponsored Montage story is needed to trace the viewer and verify normal story playback.
 
 - [ ] P1: Add user controls for inbox suggestions and Meta AI entry points.
-  Why: Both surfaces occupy chat-list space and existing sources show multiple insertion points.
-  Evidence: [ReVanced Messenger patch API](https://gitlab.com/ReVanced/revanced-patches/-/blob/main/patches/api/patches.api?ref_type=heads), [Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed/blob/main/README.md), [People You May Know request](https://github.com/RookieEnough/De-Vanced/issues/38), `RESEARCH.md` supplier leads.
+  Why: Both surfaces occupy chat-list space. The S22's stock 580 build already offers `Hide suggestions` for the People you may know section, while `Ask Meta AI or search` remains a separate entry point.
+  Evidence: S22 stock baseline above; [ReVanced Messenger patch API](https://gitlab.com/ReVanced/revanced-patches/-/blob/main/patches/api/patches.api?ref_type=heads), [Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed/blob/main/README.md), [People You May Know request](https://github.com/RookieEnough/De-Vanced/issues/38), `RESEARCH.md` supplier leads.
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/inbox/` and `settings/`; Android 9 compatible extension code.
-  Acceptance: Each control can be switched independently; regular chats, search, tabs, scam warnings and notifications remain usable. Screenshots show each surface before and after. Copy calls the Meta AI control a UI hide, with no claim that it blocks Meta data processing.
+  Acceptance: Check whether stock `Hide suggestions` persists and covers every suggestion placement. Add a suggestions patch only for a demonstrated gap. A separate opt-in Meta AI UI control must preserve ordinary search, chats, tabs, scam warnings and notifications. Capture each affected surface before and after; never claim a UI hide blocks Meta data processing.
   Complexity: L
-  Blocked: A signed-in arm64 test session is needed to capture each 580 surface and verify independent controls without hiding safety notices or regular chats.
+  Blocked: The S22 shows both surfaces and the stock suggestions menu. Persistence after `Hide suggestions`, other suggestion placements and a Meta AI UI change still need a controlled session that preserves search, safety notices and regular chats.
 
 - [ ] P1: Open message links in the chosen external browser.
-  Why: Users request direct browser opening, but Messenger may already expose a browser preference; the patch is justified only if the exact 580 setting does not deliver the chosen behavior.
-  Evidence: [De-Vanced browser PR](https://github.com/RookieEnough/De-Vanced/pull/84), [fingerprint failure](https://github.com/RookieEnough/De-Vanced/issues/97), [Messenger link safety](https://engineering.fb.com/2026/03/09/security/how-advanced-browsing-protection-works-in-messenger/).
+  Why: Users request direct browser opening. The S22's stock 580 build has an `Open links in external browser` switch, so a patch needs a reproduced failure after that setting is enabled.
+  Evidence: S22 stock Photos & media baseline above; [De-Vanced browser PR](https://github.com/RookieEnough/De-Vanced/pull/84), [fingerprint failure](https://github.com/RookieEnough/De-Vanced/issues/97), [Messenger link safety](https://engineering.fb.com/2026/03/09/security/how-advanced-browsing-protection-works-in-messenger/).
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/links/` hook and settings control.
-  Acceptance: Document the stock 580 browser preference first. If a patch remains needed, HTTP and HTTPS links open through the user's chosen browser; internal Messenger routes and unsafe-link warning interstitials still work, including links in encrypted chats.
+  Acceptance: On a backed-up test account, compare HTTP and HTTPS message links with the stock switch off and on, including encrypted chats, internal Messenger routes and unsafe-link warnings. If stock satisfies the behavior, close this patch idea with the result. Otherwise, trace the failing route and make the opt-in patch open the chosen browser while preserving those routes and warnings.
   Complexity: M
-  Blocked: The stock 580 preference and link-safety interstitial must first be exercised in a signed-in arm64 test session, including encrypted chats.
+  Blocked: The stock preference is confirmed on S22, but its effect on message links and safety interstitials still needs a controlled signed-in session, including encrypted chats.
 
 - [ ] P2: Check update prompts, chat heads and media quality on the exact target.
   Why: Existing catalogs list these features, but the current target and Android 9 compatibility have not been established.
-  Evidence: [Rushi Messenger catalog](https://github.com/rushiranpise/morphe-patches/blob/main/PATCHES.md), [chat-head request](https://github.com/RookieEnough/De-Vanced/issues/91), [native-bubble request](https://github.com/RookieEnough/De-Vanced/issues/47), `RESEARCH.md` version constraint.
+  Evidence: S22 stock baseline above (Chat heads and Photos & media); [Rushi Messenger catalog](https://github.com/rushiranpise/morphe-patches/blob/main/PATCHES.md), [chat-head request](https://github.com/RookieEnough/De-Vanced/issues/91), [native-bubble request](https://github.com/RookieEnough/De-Vanced/issues/47), `RESEARCH.md` version constraint.
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/updates/`, `chatheads/`, `media/`.
   Acceptance: Separate opt-in patches pass fixture checks and user-visible tests. Distinguish Play Store update offers from server-required app updates without spoofing a maximum version code. Compare identical media files against stock HD sending, already offered by Messenger. Test chat heads and native bubbles as distinct modes and respect Android's permission flow.
   Complexity: L
@@ -85,7 +94,7 @@ These items need the named external test session or signed-in browser access. Th
   Touches: a new `patches/src/main/kotlin/app/hushmessenger/patches/accessibility/` hook, fixture checks, optional settings label.
   Acceptance: Capture the stock 580 accessibility tree and TalkBack speech for at least one chat row. If broken, patched rows announce sender, unread state and any preview the user has allowed, without duplicate speech; swipe actions and encrypted chats still work. If stock 580 is already correct, record that fixture result and avoid a patch.
   Complexity: L
-  Blocked: The stock chat row's accessibility tree and TalkBack speech must be captured on a signed-in 580 session before a hook is justified.
+  Blocked: The S22's in-app Accessibility page exposes Reduce motion and Color filter, but the stock chat row's accessibility tree and TalkBack speech still need capture before a hook is justified.
 
 - [ ] P1: Respect Android's system font size in Messenger text.
   Why: A Samsung user report describes scaling trouble, and the older 580 fixture has a Messenger typeface resolver that may override system sizing.
@@ -117,7 +126,7 @@ These items need the named external test session or signed-in browser access. Th
   Touches: new `patches/src/main/kotlin/app/hushmessenger/patches/stories/` UI hook and settings switch.
   Acceptance: On a signed-in 580 account with a visible tray, the opt-in switch hides only that tray; opening a known contact's story through other available routes and normal chat navigation still work.
   Complexity: M
-  Blocked: A signed-in 580 account with a visible tray is needed to identify the exact UI hook and verify alternate story routes.
+  Blocked: The S22's Chats tray is visible. Its exact UI hook and alternate story routes still need a controlled before/after check.
 
 - [ ] P2: Add an optional Facebook shortcut switch.
   Why: Messenger's Facebook entry points add navigation clutter, but removing them must not interfere with account sharing or cross-app trust.
@@ -137,11 +146,11 @@ These items need the named external test session or signed-in browser access. Th
 
 - [ ] P2: Check selected-chat notification exceptions before adding an allowlist.
   Why: A MessengerPro request asks for silence except chosen contacts, but Android channels and stock Messenger mute controls may already cover part of this need.
-  Evidence: [MessengerPro issue 41](https://github.com/Mino260806/MessengerPro/issues/41), [Android conversation notification guidance](https://developer.android.com/develop/ui/views/notifications/conversations).
+  Evidence: S22 stock Notifications & sounds baseline above; [MessengerPro issue 41](https://github.com/Mino260806/MessengerPro/issues/41), [Android conversation notification guidance](https://developer.android.com/develop/ui/views/notifications/conversations).
   Touches: notification mapping in a new `patches/src/main/kotlin/app/hushmessenger/patches/notifications/` hook and optional settings.
   Acceptance: Document stock 580 controls first. If needed, an opt-in allowlist silences nonselected message alerts while preserving delivery, selected-chat alerts and calls; test DM/group, muted thread, background, WiFi and cellular reconnect cases.
   Complexity: L
-  Blocked: A signed-in arm64 session with selected DM and group threads is needed to compare stock controls and test alert delivery across reconnects.
+  Blocked: The S22's top-level category switches are documented. A controlled session with selected DM and group threads is still needed to inspect per-chat controls and test alert delivery across reconnects.
 
 - [ ] P3: Add story saving only after locating the 580 media path.
   Why: A 2026-09-14 request asks for a save control, but an older implementation does not establish the 580 story viewer or media permissions.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7 (2026-09-27)
+
+- Record the S22 stock Messenger controls for inbox suggestions, external links, notifications, chat heads and accessibility without changing account settings.
+- Refine patch plans around the controls Messenger already provides, including checks that would justify a separate browser or suggestions patch.
+- Rebuild the preview bundle and repeat the S22 off-device patch, signature and changed-APK checks.
+
 ## 0.0.6 (2026-09-27)
 
 - Add the S25's Messenger 580 arm64 build to the exact compatibility list after comparing its APK with the S22 fixture.
