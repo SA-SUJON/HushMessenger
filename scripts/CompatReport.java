@@ -1,7 +1,7 @@
 /*
  * Dry-run compatibility report for Messenger APKs.
  *
- * Checks whether a given APK is compatible with all 25 HushMessenger patches
+ * Checks whether a given APK is compatible with all 26 HushMessenger patches
  * without modifying the file. Prints package, version code, ABI, signer and
  * PASS/FAIL per patch, then exits non-zero on any failure.
  *
@@ -23,6 +23,7 @@ import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
@@ -198,6 +199,32 @@ public class CompatReport {
             }
         }
         return classes;
+    }
+
+    static Method findSignerMethod(List<ClassDef> classes) {
+        for (var cls : classes) {
+            for (var method : cls.getMethods()) {
+                if (!method.getParameterTypes().isEmpty()) continue;
+                var impl = method.getImplementation();
+                if (impl == null) continue;
+                boolean hasApkContents = false, hasHistory = false, hasSignatures = false;
+                for (var insn : impl.getInstructions()) {
+                    if (!(insn instanceof ReferenceInstruction ref)) continue;
+                    var refObj = ref.getReference();
+                    if (refObj instanceof MethodReference mRef &&
+                        "Landroid/content/pm/SigningInfo;".equals(mRef.getDefiningClass())) {
+                        if ("getApkContentsSigners".equals(mRef.getName())) hasApkContents = true;
+                        if ("getSigningCertificateHistory".equals(mRef.getName())) hasHistory = true;
+                    } else if (refObj instanceof FieldReference fRef &&
+                        "Landroid/content/pm/PackageInfo;".equals(fRef.getDefiningClass()) &&
+                        "signatures".equals(fRef.getName())) {
+                        hasSignatures = true;
+                    }
+                }
+                if (hasApkContents && hasHistory && hasSignatures) return method;
+            }
+        }
+        return null;
     }
 
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
@@ -733,6 +760,18 @@ public class CompatReport {
             }
         }
 
+        // Check Restore screens on re-signed builds (signer lookup fingerprint)
+        {
+            Method signerMethod = findSignerMethod(classes);
+            if (signerMethod != null) {
+                System.out.println("[PASS] Restore screens on re-signed builds (" + hookId(signerMethod) + ")");
+            } else {
+                System.out.println("[FAIL] Restore screens on re-signed builds");
+                System.out.println("       No method found matching the signer lookup pattern");
+                anyFail = true;
+            }
+        }
+
         // Check each control patch
         for (var entry : PATCHES.entrySet()) {
             String patchName = entry.getKey();
@@ -768,7 +807,7 @@ public class CompatReport {
                     .collect(Collectors.joining(" or ")) + ").");
             System.exit(1);
         } else {
-            System.out.println("RESULT: PASS — all " + (PATCHES.size() + 1) + " patches are compatible.");
+            System.out.println("RESULT: PASS — all " + (PATCHES.size() + 2) + " patches are compatible.");
             System.exit(0);
         }
     }
