@@ -10,13 +10,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Runtime switches default to the original Messenger behavior. */
 public final class Settings {
     static volatile SharedPreferences preferences;
     static volatile Set<String> installed = Collections.emptySet();
     static boolean preview;
+    static final ConcurrentHashMap<String, Long> activeAt = new ConcurrentHashMap<>();
 
     public static void initialize(Context context) {
         preferences = context.getApplicationContext().getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
@@ -36,8 +39,15 @@ public final class Settings {
 
     public static boolean enabled(String key) {
         SharedPreferences prefs = preferences;
-        return installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
+        boolean on = installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
                 && !CrashGuard.isSafeMode() && prefs.getBoolean(key, false);
+        if (on) activeAt.put(key, System.currentTimeMillis());
+        return on;
+    }
+
+    public static long lastActive(String key) {
+        Long ts = activeAt.get(key);
+        return ts != null ? ts : 0;
     }
 
     public static boolean hideStories() { return enabled("stories"); }

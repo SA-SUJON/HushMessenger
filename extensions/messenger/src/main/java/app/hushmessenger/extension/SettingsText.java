@@ -127,6 +127,9 @@ final class SettingsText {
             case "imported_many": return "Restored %d choices";
             case "import_empty": return "Nothing to import. Export choices first, then paste them here.";
             case "import_invalid": return "Not a valid HushMessenger export. Copy your export to the clipboard and try again.";
+            case "active_now": return "Active just now";
+            case "active_ago": return "Active %s ago";
+            case "not_active": return "Not active since restart";
             case "changes_paused": return "Changes paused";
             case "changes_resumed": return "Changes resumed";
             case "safe_mode": return "Safe mode";

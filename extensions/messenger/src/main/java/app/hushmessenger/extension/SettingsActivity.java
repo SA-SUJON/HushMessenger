@@ -423,6 +423,13 @@ public final class SettingsActivity extends Activity {
         }
         ui.add(labels, titleLine, 0);
         if (!description.isEmpty()) ui.add(labels, ui.text(text.display(description), 14, ui.muted, false), 6);
+        if (divided) {
+            long lastActive = Settings.lastActive(key);
+            String status = lastActive == 0 ? text.get("not_active") : formatActive(lastActive);
+            TextView activeLabel = ui.text(status, 12, lastActive > 0 ? ui.accent : ui.muted, false);
+            activeLabel.setAlpha(0.7f);
+            ui.add(labels, activeLabel, 4);
+        }
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         Switch control = ui.toggle(key, text.display(title), text.display(("ads".equals(key) ? text.base("experimental") + ". " : "") + description), Settings.preferences.getBoolean(key, false));
         LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ui.dp(48), -2);
@@ -532,9 +539,12 @@ public final class SettingsActivity extends Activity {
                 String key = spec[0];
                 boolean installed = Settings.installed.contains(key);
                 boolean selected = Settings.preferences.getBoolean(key, false);
+                long lastActive = Settings.lastActive(key);
                 summary.append(key).append(": installed=").append(installed)
                     .append(", selected=").append(selected)
-                    .append(", active=").append(!Settings.preview && installed && selected && !paused && !safeMode && Settings.available(key)).append('\n');
+                    .append(", active=").append(!Settings.preview && installed && selected && !paused && !safeMode && Settings.available(key))
+                    .append(", last_active=").append(lastActive == 0 ? "none" : ((System.currentTimeMillis() - lastActive) / 1000) + "s ago")
+                    .append('\n');
             }
             ClipData clip = ClipData.newPlainText(text.get("clipboard"), summary.toString());
             PersistableBundle extras = new PersistableBundle();
@@ -548,6 +558,16 @@ public final class SettingsActivity extends Activity {
             android.util.Log.e("HushMessenger", "Can't copy setup", error);
             feedback(text.get("copy_failed"), Toast.LENGTH_LONG);
         }
+    }
+
+    private String formatActive(long timestamp) {
+        long seconds = (System.currentTimeMillis() - timestamp) / 1000;
+        if (seconds < 10) return text.get("active_now");
+        if (seconds < 60) return text.get("active_ago", seconds + "s");
+        long minutes = seconds / 60;
+        if (minutes < 60) return text.get("active_ago", minutes + "m");
+        long hours = minutes / 60;
+        return text.get("active_ago", hours + "h");
     }
 
     private static final String EXPORT_HEADER = "hushmessenger:choices";
