@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:label="HushMessenger settings" android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar">
+    <application android:label="HushMessenger settings" android:allowBackup="false" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar">
         <meta-data android:name="hush.feature.ads" android:value="true" />
         <meta-data android:name="hush.feature.people" android:value="true" />
         <meta-data android:name="hush.feature.friend_requests" android:value="true" />

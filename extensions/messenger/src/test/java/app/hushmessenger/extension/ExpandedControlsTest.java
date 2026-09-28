@@ -89,7 +89,7 @@ public class ExpandedControlsTest {
             assertFalse(Settings.hideStories());
             assertTrue(Settings.preferences.getBoolean("stories", false));
             assertTrue(Settings.enabled("people"));
-            assertEquals("1 of 1 installed controls", ((TextView) root.findViewWithTag("search_status")).getText().toString());
+            assertEquals("1 of 1 installed control", ((TextView) root.findViewWithTag("search_status")).getText().toString());
         }
         installedFeatures("stories");
         Settings.initialize(RuntimeEnvironment.getApplication());

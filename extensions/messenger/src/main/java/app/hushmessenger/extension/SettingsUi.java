@@ -40,7 +40,8 @@ final class SettingsUi {
         infoBorder = light ? 0xffbdd1ea : 0xff274361;
         selectedText = light ? accent : background;
         largeText = context.getResources().getConfiguration().fontScale > 1.3f ||
-            context.getResources().getConfiguration().screenWidthDp < 360;
+            context.getResources().getConfiguration().screenWidthDp < 360 ||
+            new SettingsText(context).isPseudo();
     }
 
     int dp(int value) { return Math.round(value * context.getResources().getDisplayMetrics().density); }
