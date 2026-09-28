@@ -45,11 +45,14 @@ internal fun Document.addSettingsEntry() {
 private val settingsResources = resourcePatch(description = "Install HushMessenger settings") {
     execute {
         validateVersionCode(packageMetadata.versionCode)
+        val shortcutsPath = resolveShortcutsPath(listApkEntries("res/")) { path ->
+            document(path).use { it }
+        }
         // ARSCLib infers the resource type from the filename, so append to strings.xml.
         document(SHORTCUT_LABEL_PATH).use { labels ->
             labels.validateShortcutLabels()
             document("AndroidManifest.xml").use { manifest ->
-                document(SHORTCUTS_PATH).use { shortcuts -> manifest.addSettingsAccess(shortcuts) }
+                document(shortcutsPath).use { shortcuts -> manifest.addSettingsAccess(shortcuts) }
             }
             labels.addShortcutLabels()
         }

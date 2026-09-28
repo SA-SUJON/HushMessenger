@@ -106,4 +106,34 @@ class SettingsShortcutTest {
         assertEquals(snapshot, strings.snapshot())
         assertFailsWith<PatchException> { xml("<wrong/>").addShortcutLabels() }
     }
+
+    @Test fun resolveFindsTheShortcutsXmlUnderAnyShrunkName() {
+        val docs = mapOf(
+            "res/eve.xml" to shortcuts(),
+            "res/values/strings.xml" to xml("<resources/>"),
+            "res/abc.xml" to xml("<resources/>"),
+        )
+        assertEquals("res/eve.xml", resolveShortcutsPath(docs.keys.toList()) { docs.getValue(it) })
+        assertEquals("res/los.xml", resolveShortcutsPath(listOf("res/los.xml")) { shortcuts() })
+    }
+
+    @Test fun resolveRejectsZeroOrMultipleShortcutsFiles() {
+        assertFailsWith<PatchException> {
+            resolveShortcutsPath(listOf("res/values/strings.xml")) { xml("<resources/>") }
+        }
+        assertFailsWith<PatchException> {
+            resolveShortcutsPath(emptyList()) { error("unreachable") }
+        }
+        assertFailsWith<PatchException> {
+            resolveShortcutsPath(listOf("res/a.xml", "res/b.xml")) { shortcuts() }
+        }
+    }
+
+    @Test fun resolveSkipsUnreadableEntriesAndValuesDirectory() {
+        val docs = mapOf("res/ok.xml" to shortcuts())
+        val entries = listOf("res/values/strings.xml", "res/broken.xml", "res/ok.xml")
+        assertEquals("res/ok.xml", resolveShortcutsPath(entries) { path ->
+            docs[path] ?: throw RuntimeException("parse failure")
+        })
+    }
 }
