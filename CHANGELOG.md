@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The shortcuts XML is now found by scanning APK entries instead of expecting a fixed file name. Variant 346013442 stores it at res/eve.xml instead of res/los.xml; the patch now works with either.
 - Other apps can no longer restart Messenger. Restart Messenger used to accept a request from any app on the phone, which could close Messenger at any moment, even during a call. The long-press shortcut and the App tab button still work.
 - The search field now reads back what you typed with a screen reader. The selected filter keeps a visible focus ring, and switches that can't work on your Android version look unavailable.
 - Quick toggles, including the theme switch, no longer stack up old messages. Pause now says "Changes paused" or "Changes resumed".
