@@ -59,6 +59,12 @@ internal val expectedHooks = mapOf(
     "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
     "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
     "people_jewel" to setOf("LX/HAR;->A01(LX/HAR;)Z"),
+    "allow_screenshot" to setOf(
+        "LX/N2h;->run()V",
+        "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
+    ),
+    "hide_read_receipts" to setOf("LX/AX0;->run()V"),
+    "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
 ) + pluginGates.mapValues { it.value.methods }
 
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
@@ -106,12 +112,19 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.name == "run" && method.returnType == "V" && method.parameterTypes.isEmpty()) {
                 if (original == "InboxSubtabsItemSupplierImplementation\$onSubscribe\$1") add("subtabs")
                 if (original == "ConversationTypingContext\$sendActiveStateRunnable\$1") add("typing")
+                if (original == "SecureWindowUtils\$1") add("allow_screenshot")
+                if (original == "ReadThreadManager\$1") add("hide_read_receipts")
             }
             if (gate && refs.any { it.toString() == "Landroid/os/Build\$VERSION;->SDK_INT:I" } &&
                 refs.any { it.toString() == "Landroid/app/ActivityManager;->isLowRamDevice()Z" }) add("bubbles")
             if (method.returnType == "Z" && strings.containsAll(setOf("iab_skipped_reason", "user_prefers_external"))) add("browser")
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type) &&
                 refs.any { it.toString() in peopleJewelKeys } && refs.any { it.toString() == PREFERENCE_GETTER }) add("people_jewel")
+            if (cls.type == "Lcom/facebook/screenshot/ScreenshotContentObserver;" && method.name == "onChange" &&
+                method.returnType == "V") add("allow_screenshot")
+            if (method.returnType == "V" && method.parameterTypes.size == 3 &&
+                method.parameterTypes[0] == "Landroid/content/Intent;" &&
+                "ACTION_REVOKE_MESSAGE" in strings) add("keep_unsent")
         }
     }
     return found

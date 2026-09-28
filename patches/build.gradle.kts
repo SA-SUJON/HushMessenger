@@ -53,6 +53,17 @@ for ((taskName, mode) in mapOf("generatePatchCatalog" to "generate", "checkPatch
 
 tasks.check { dependsOn("checkPatchCatalog") }
 
+tasks.register<JavaExec>("scanDex") {
+    group = "verification"
+    description = "Scan a stock Messenger APK for hookable method anchors."
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].output + configurations["testRuntimeClasspath"]
+    mainClass.set("app.hushmessenger.tools.DexScanner")
+    val apkPath = providers.gradleProperty("apkPath").orNull
+    val feature = providers.gradleProperty("feature").orNull ?: "all"
+    args(listOfNotNull(apkPath, feature))
+}
+
 tasks.register<Exec>("verifyReleaseMetadata") {
     group = "verification"
     description = "Check the bundle hash and all public release versions before publication."

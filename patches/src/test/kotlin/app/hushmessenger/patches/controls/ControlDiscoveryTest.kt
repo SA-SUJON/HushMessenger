@@ -13,6 +13,8 @@ class ControlDiscoveryTest {
     private val originals = mapOf(
         "LX/2UL;" to "InboxSubtabsItemSupplierImplementation\$onSubscribe\$1",
         "LX/Ahp;" to "ConversationTypingContext\$sendActiveStateRunnable\$1",
+        "LX/N2h;" to "SecureWindowUtils\$1",
+        "LX/AX0;" to "ReadThreadManager\$1",
     )
 
     private fun completeFixture(): List<MutableClass> {
@@ -37,7 +39,8 @@ class ControlDiscoveryTest {
                         return v0
                     """.trimIndent()
                     "ai_fab" -> "const-string v0, \"AiFabComponent\"\nconst/4 v0, 0x0\nreturn-object v0"
-                    "subtabs", "typing" -> "return-void"
+                    "subtabs", "typing", "allow_screenshot", "hide_read_receipts" -> "return-void"
+                    "keep_unsent" -> "const-string v0, \"ACTION_REVOKE_MESSAGE\"\nreturn-void"
                     "bubbles" -> """
                         sget v0, Landroid/os/Build${'$'}VERSION;->SDK_INT:I
                         const/4 v1, 0x0
@@ -76,7 +79,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(60, found.values.sumOf { it.size })
+        assertEquals(64, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

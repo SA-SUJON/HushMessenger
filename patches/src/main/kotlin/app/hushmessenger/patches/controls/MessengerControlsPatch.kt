@@ -113,6 +113,9 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "ai_menu", "ai_fab", "ai_toolbar" -> method.injectSwitch("hideMetaAi", "0x0")
             "typing" -> method.injectSwitch("suppressTyping", "0x0")
             "bubbles" -> method.injectSwitch("enableBubbles", "0x1")
+            "allow_screenshot" -> method.injectSwitch("allowScreenshot", "0x0")
+            "hide_read_receipts" -> method.injectSwitch("hideReadReceipts", "0x0")
+            "keep_unsent" -> method.injectSwitch("keepUnsent", "0x0")
             else -> method.injectFeatureSwitch(key)
         }
     }
@@ -192,3 +195,9 @@ val suppressTypingPatch = controlPatch("typing", "Hide typing indicator", "Suppr
 val externalBrowserPatch = controlPatch("external_browser", "Open web links externally", "Uses Messenger's external-browser branch for HTTP and HTTPS links.", "Links and bubbles", "browser")
 @Suppress("unused")
 val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Removes the low-memory eligibility limit on Android 11 and newer.", "Links and bubbles")
+@Suppress("unused")
+val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "Privacy")
+@Suppress("unused")
+val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt so senders can't see when you viewed their message.", "Privacy")
+@Suppress("unused")
+val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone. Your own unsend ability may be limited while active.", "Privacy")

@@ -71,6 +71,7 @@ final class SettingsText {
             case "stickers": return "Stickers";
             case "conversations": return "Conversations";
             case "links_bubbles": return "Links and bubbles";
+            case "privacy": return "Privacy";
             case "settings": return "HushMessenger settings";
             case "preview_title": return "HushMessenger UI preview";
             case "preview_notice": return "UI preview. These switches don't change Messenger.";

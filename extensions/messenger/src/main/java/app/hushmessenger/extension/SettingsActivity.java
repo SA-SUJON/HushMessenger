@@ -78,6 +78,9 @@ public final class SettingsActivity extends Activity {
         {"typing", "Hide typing indicator", "Stops your outgoing active-typing signal. Messages and read receipts are separate.", "conversations"},
         {"external_browser", "Open web links externally", "Uses your default browser for HTTP and HTTPS links. Other link types keep their original behavior.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
+        {"allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "privacy"},
+        {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. Senders won't see when you viewed their message.", "privacy"},
+        {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone. Your own unsend ability may be limited.", "privacy"},
     };
 
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {

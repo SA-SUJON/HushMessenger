@@ -49,6 +49,9 @@ public final class Settings {
     public static boolean suppressTyping() { return enabled("typing"); }
     static boolean available(String key) { return !"bubbles".equals(key) || Build.VERSION.SDK_INT >= 30; }
     public static boolean enableBubbles() { return available("bubbles") && enabled("bubbles"); }
+    public static boolean allowScreenshot() { return enabled("allow_screenshot"); }
+    public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
+    public static boolean keepUnsent() { return enabled("keep_unsent"); }
 
     /** Null means return the exact original list. Only typed ad rows are removed. */
     public static List<?> filterInboxAds(List<?> items) {
