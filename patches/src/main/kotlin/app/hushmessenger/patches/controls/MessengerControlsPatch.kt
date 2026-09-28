@@ -214,7 +214,7 @@ val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Prese
 @Suppress("unused")
 val menuSettingsPatch = bytecodePatch(
     name = "Open settings from menu",
-    description = "Adds a HushMessenger entry to the Menu tab grid. Always on.",
+    description = "Adds a HushMessenger entry to the Menu tab. Always on.",
     default = true,
 ) {
     category("Navigation")
@@ -224,12 +224,16 @@ val menuSettingsPatch = bytecodePatch(
         validateControls(discoveredControls, setOf("menu_settings"))
         val methods = discoveredControls.getValue("menu_settings")
         val addMethod = methods.single { it.returnType == "Ljava/util/ArrayList;" }
-        val bindMethod = methods.single { it.returnType == "V" }
+        val bindMethod = methods.single { it.returnType == "V" && it.parameterTypes.size == 2 }
+        val drawerMethod = methods.single { it.returnType == "V" && it.parameterTypes == listOf("Ljava/util/List;") }
         mutableClassDefBy(addMethod.definingClass).methods
             .single { it.hookId() == addMethod.hookId() }
             .injectMenuSettingsAdd()
         mutableClassDefBy(bindMethod.definingClass).methods
             .single { it.hookId() == bindMethod.hookId() }
             .injectMenuSettingsBind()
+        mutableClassDefBy(drawerMethod.definingClass).methods
+            .single { it.hookId() == drawerMethod.hookId() }
+            .injectMenuDrawerAdd()
     }
 }

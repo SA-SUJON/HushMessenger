@@ -1302,7 +1302,7 @@
         },
         {
             "name": "Open settings from menu",
-            "description": "Adds a HushMessenger entry to the Menu tab grid. Always on.",
+            "description": "Adds a HushMessenger entry to the Menu tab. Always on.",
             "default": true,
             "category": "Navigation",
             "dependencies": [

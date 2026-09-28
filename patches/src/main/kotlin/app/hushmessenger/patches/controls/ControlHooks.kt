@@ -77,6 +77,7 @@ internal val expectedHooks = mapOf(
     "menu_settings" to setOf(
         "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
         "LX/TxV;->CAo(LX/4jw;I)V",
+        "LX/Txc;->A0I(Ljava/util/List;)V",
     ),
 ) + pluginGates.mapValues { it.value.methods }
 
@@ -193,6 +194,25 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "V" && method.parameterTypes.size == 2 &&
                 method.parameterTypes[1] == "I" && !AccessFlags.STATIC.isSet(method.accessFlags) &&
                 strings.contains("Unknown ViewHolder")) add("menu_settings")
+        }
+    }
+    val gridBinderType = found["menu_settings"].orEmpty()
+        .firstOrNull { it.returnType == "V" && it.parameterTypes.size == 2 && it.parameterTypes[1] == "I" }
+        ?.definingClass
+    if (gridBinderType != null) {
+        for (cls in classes) {
+            val instantiates = cls.methods.any { m ->
+                m.implementation?.instructions?.any { insn ->
+                    insn.opcode == Opcode.NEW_INSTANCE &&
+                        ((insn as? ReferenceInstruction)?.reference as? TypeReference)?.type == gridBinderType
+                } == true
+            }
+            if (!instantiates) continue
+            cls.methods.singleOrNull {
+                it.returnType == "V" && it.parameterTypes == listOf("Ljava/util/List;") &&
+                    !AccessFlags.STATIC.isSet(it.accessFlags)
+            }?.let { found.getValue("menu_settings").add(it) }
+            break
         }
     }
     return found
@@ -465,6 +485,19 @@ internal fun MutableMethod.injectMenuSettingsBind() {
     val code = implementation!!.instructions.toList()
     val normalExit = code.indexOfFirst { it.opcode == Opcode.RETURN_VOID }
     addInstructions(normalExit, "invoke-static {v$viewHolderReg}, $SETTINGS->handleMenuItemBound(Ljava/lang/Object;)V")
+}
+
+internal fun MutableMethod.validateMenuDrawerAdd() {
+    if (returnType != "V") throw PatchException("Messenger controls: menu drawer items setter returns $returnType")
+    if (parameterTypes != listOf("Ljava/util/List;")) throw PatchException("Messenger controls: menu drawer items setter takes ${parameterTypes.joinToString()}")
+}
+
+internal fun MutableMethod.injectMenuDrawerAdd() {
+    validateMenuDrawerAdd()
+    addInstructions(0, """
+        invoke-static {p1}, $SETTINGS->addMenuDrawerEntry(Ljava/util/List;)Ljava/util/List;
+        move-result-object p1
+    """.trimIndent())
 }
 
 internal fun MutableMethod.validateKeepUnsent() {

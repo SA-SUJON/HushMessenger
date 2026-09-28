@@ -43,9 +43,12 @@ class ControlDiscoveryTest {
                     "keep_unsent" -> "const-string v0, \"com.facebook.stella.ipc.messenger.ACTION_REVOKE_MESSAGE\"\nreturn-void"
                     "ai_search" -> "const-string v0, \"com.facebook.messaging.search.aiagent.plugins.implementations.SearchAiagentImplementationsKillSwitch\"\nconst/4 v0, 0x1\nreturn v0"
                     "emoji_typeface" -> "const-string v0, \"FacebookEmojiTypefaceProviderImpl\"\nconst/4 v0, 0x0\nreturn-object v0"
-                    "menu_settings" -> if (id.contains("ArrayList"))
-                        "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
-                    else "const-string v0, \"Unknown ViewHolder\"\nreturn-void"
+                    "menu_settings" -> when {
+                        id.contains("ArrayList") ->
+                            "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
+                        id.contains("Ljava/util/List;") -> "return-void"
+                        else -> "const-string v0, \"Unknown ViewHolder\"\nreturn-void"
+                    }
                     "bubbles" -> """
                         sget v0, Landroid/os/Build${'$'}VERSION;->SDK_INT:I
                         const/4 v1, 0x0
@@ -74,7 +77,11 @@ class ControlDiscoveryTest {
             }
         }
         return methods.groupBy { it.definingClass }.map { (type, grouped) ->
-            fixtureClass(type, grouped, originals[type])
+            val extra = if (type == "LX/Txc;") listOf(
+                fixtureMethod("LX/Txc;->CH7(Landroid/view/ViewGroup;I)LX/4jw;",
+                    "new-instance v0, LX/TxV;\nconst/4 v0, 0x0\nreturn-object v0")
+            ) else emptyList()
+            fixtureClass(type, grouped + extra, originals[type])
         } + listOf(fixtureClass(AD_ITEM), fixtureClass(IMMUTABLE_LIST, listOf(
             fixtureMethod("$IMMUTABLE_LIST->copyOf(Ljava/util/Collection;)$IMMUTABLE_LIST",
                 "const/4 v0, 0x0\nreturn-object v0", flags = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value),
@@ -84,7 +91,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(71, found.values.sumOf { it.size })
+        assertEquals(72, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

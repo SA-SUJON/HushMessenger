@@ -155,6 +155,38 @@ public final class Settings {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public static java.util.List addMenuDrawerEntry(java.util.List list) {
+        try {
+            if (list == null || list.size() < 2) return list;
+            for (Object item : list) {
+                try {
+                    java.lang.reflect.Field f = item.getClass().getDeclaredField("A05");
+                    f.setAccessible(true);
+                    if ("HushMessenger".equals(f.get(item))) return list;
+                } catch (NoSuchFieldException ignored) {}
+            }
+            Object template = list.get(0);
+            Object clone = shallowClone(template);
+            if (clone == null) return list;
+            java.lang.reflect.Field label = clone.getClass().getDeclaredField("A05");
+            if (label.getType() != String.class) return list;
+            label.setAccessible(true);
+            label.set(clone, "HushMessenger");
+            try {
+                java.lang.reflect.Field longPress = clone.getClass().getDeclaredField("A03");
+                longPress.setAccessible(true);
+                longPress.set(clone, null);
+            } catch (NoSuchFieldException ignored) {}
+            java.util.ArrayList result = new java.util.ArrayList(list);
+            result.add(clone);
+            return result;
+        } catch (Exception e) {
+            android.util.Log.e("HushMessenger", "addMenuDrawerEntry failed", e);
+            return list;
+        }
+    }
+
     public static void handleMenuItemBound(Object viewHolder) {
         try {
             java.lang.reflect.Field textField = viewHolder.getClass().getDeclaredField("A06");
