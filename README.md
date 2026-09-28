@@ -194,7 +194,7 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 ## Remaining checks
 
 - Fresh-install startup, encrypted-history recovery and cross-app account behavior still need dedicated checks. The existing signed-in S25 installation now passes an update and restart.
-- [Issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1) reports Messenger 580 build `346013370`, which isn't one of the two validated APKs. Its exact original APK is needed before adding support.
+- [Issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1) and [issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3) report Messenger 580 builds `346013370` and `346013354`. Neither is one of the two validated APKs. Each build's exact original APK is needed before adding support.
 - Live ad removal, typing suppression, bubbles, calls and patched message delivery remain unverified. Structural APK checks don't establish those behaviors.
 - S22 still runs stock Messenger. A source refresh alone cannot activate its patches.
 
