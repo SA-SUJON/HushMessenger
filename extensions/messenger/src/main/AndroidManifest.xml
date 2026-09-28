@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:label="HushMessenger settings" android:allowBackup="false" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar">
+    <application android:label="HushMessenger UI preview" android:allowBackup="false" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar">
+        <meta-data android:name="hush.preview" android:value="true" />
         <meta-data android:name="hush.feature.ads" android:value="true" />
         <meta-data android:name="hush.feature.people" android:value="true" />
         <meta-data android:name="hush.feature.friend_requests" android:value="true" />
@@ -21,11 +22,6 @@
         <meta-data android:name="hush.feature.external_browser" android:value="true" />
         <meta-data android:name="hush.feature.bubbles" android:value="true" />
         <provider android:name="app.hushmessenger.extension.SettingsProvider" android:authorities="${applicationId}.hush.settings" android:exported="false" />
-        <activity android:name="app.hushmessenger.extension.SettingsActivity" android:label="HushMessenger settings" android:icon="@android:drawable/ic_menu_preferences" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity android:name="app.hushmessenger.extension.SettingsActivity" android:icon="@android:drawable/ic_menu_preferences" android:exported="true" />
     </application>
 </manifest>

@@ -84,7 +84,7 @@ public final class SettingsActivity extends Activity {
         super.onCreate(state);
         text = new SettingsText(this);
         ui = new SettingsUi(this, light);
-        setTitle(text.get("settings"));
+        setTitle(text.get(Settings.preview ? "preview_title" : "settings"));
         getWindow().setNavigationBarColor(ui.background);
         getWindow().setStatusBarColor(ui.background);
         getWindow().getDecorView().setSystemUiVisibility(light ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0);
@@ -237,7 +237,10 @@ public final class SettingsActivity extends Activity {
         TextView title = ui.text("HushMessenger", 28, ui.text, true);
         title.setAccessibilityHeading(true);
         ui.add(wordmark, title, 0);
-        ui.add(wordmark, ui.text(text.get("tagline"), 14, ui.muted, false), 5);
+        TextView subtitle = ui.text(text.get(Settings.preview ? "preview_notice" : "tagline"), 14,
+            Settings.preview ? ui.warning : ui.muted, false);
+        if (Settings.preview) subtitle.setTag("preview_notice");
+        ui.add(wordmark, subtitle, 5);
         brand.addView(wordmark, new LinearLayout.LayoutParams(ui.largeText ? -1 : 0, -2, ui.largeText ? 0 : 1));
         Button open = ui.button(text.get("open"));
         open.setTag("open_messenger");
@@ -474,13 +477,14 @@ public final class SettingsActivity extends Activity {
                 .append("\nHost version code: ").append(host.getLongVersionCode())
                 .append("\nAndroid API: ").append(Build.VERSION.SDK_INT)
                 .append("\nPaused: ").append(paused).append("\nControls:\n");
+            if (Settings.preview) summary.append("Mode: UI preview. Does not change Messenger.\n");
             for (String[] spec : CONTROLS) {
                 String key = spec[0];
                 boolean installed = Settings.installed.contains(key);
                 boolean selected = Settings.preferences.getBoolean(key, false);
                 summary.append(key).append(": installed=").append(installed)
                     .append(", selected=").append(selected)
-                    .append(", active=").append(installed && selected && !paused && Settings.available(key)).append('\n');
+                    .append(", active=").append(!Settings.preview && installed && selected && !paused && Settings.available(key)).append('\n');
             }
             ClipData clip = ClipData.newPlainText(text.get("clipboard"), summary.toString());
             PersistableBundle extras = new PersistableBundle();

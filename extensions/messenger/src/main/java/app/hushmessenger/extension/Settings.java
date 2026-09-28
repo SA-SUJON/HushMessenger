@@ -16,12 +16,15 @@ import java.util.Set;
 public final class Settings {
     static volatile SharedPreferences preferences;
     static volatile Set<String> installed = Collections.emptySet();
+    static boolean preview;
 
     public static void initialize(Context context) {
         preferences = context.getApplicationContext().getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
         Set<String> features = new HashSet<>();
+        preview = false;
         try {
             Bundle metadata = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA).metaData;
+            preview = metadata != null && metadata.getBoolean("hush.preview", false);
             if (metadata != null) for (String name : metadata.keySet()) {
                 if (name.startsWith("hush.feature.") && metadata.getBoolean(name, false)) features.add(name.substring(13));
             }
