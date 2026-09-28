@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Publish a catalog generated from the built patch bundle. Local checks reject changed control keys, metadata, release versions and checksums before publication.
 - Add Copy setup to the App tab. It copies app versions and control states only when tapped, excludes account and chat data, and distinguishes saved choices from active controls while paused or unavailable.
 
 ## 0.3.1 (2026-09-27)

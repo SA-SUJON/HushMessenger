@@ -17,6 +17,8 @@ patches {
 dependencies {
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
+    // Reuse the patcher's JSON version only in local tooling and tests.
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 }
 
 tasks.test {
@@ -30,4 +32,26 @@ tasks.named<Jar>("jar") {
 
 dependencyLocking {
     lockAllConfigurations()
+}
+
+for ((taskName, mode) in mapOf("generatePatchCatalog" to "generate", "checkPatchCatalog" to "check")) {
+    tasks.register<JavaExec>(taskName) {
+        group = "verification"
+        description = "$mode the public catalog against the built Android patch bundle."
+        dependsOn("buildAndroid", "testClasses")
+        // Exclude main output: the loader must read the MPP, never stale loose classes.
+        classpath = sourceSets["test"].output + configurations["testRuntimeClasspath"]
+        mainClass.set("app.hushmessenger.tools.CatalogTool")
+        args(mode, tasks.named<Jar>("jar").get().archiveFile.get().asFile.absolutePath, rootDir.absolutePath)
+    }
+}
+
+tasks.check { dependsOn("checkPatchCatalog") }
+
+tasks.register<Exec>("verifyReleaseMetadata") {
+    group = "verification"
+    description = "Check the bundle hash and all public release versions before publication."
+    dependsOn("checkPatchCatalog")
+    workingDir(rootDir)
+    commandLine("python", "scripts/check_release.py")
 }
