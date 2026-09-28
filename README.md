@@ -146,7 +146,7 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 The S25 took each update in place with the same signing key as its installed Messenger and Facebook apps. Its original install date and 19 enabled controls were retained. On 0.4.2 the Notifications tab lost its People You May Know section, which came back while paused and disappeared again after resuming. Chats and real notifications still showed. A build from the current source refuses Restart Messenger requests from other apps as not exported. The real long-press Restart Messenger shortcut and the App tab button still start a new process and return to the signed-in chat screen. Both settings pages were captured in both themes, then the original dark theme was restored. No conversations were opened or messages sent. S22 remains stock.
 
-The local suite has 52 Kotlin tests, 75 Android unit tests and 35 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and eight warnings, including two package-visibility notices for queries restricted to this app.
+The local suite has 52 Kotlin tests, 76 Android unit tests and 35 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and eight warnings, including two package-visibility notices for queries restricted to this app.
 
 Morphe Desktop 1.17.0 applied all 21 patches to private copies of both supported APKs, and Android verified their v3 signatures. Two clean release builds produced the same bundle checksum. Both rebuilt APKs preserved all 13 compressed arm64 libraries, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output; continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
 
@@ -181,7 +181,7 @@ Before publishing, synchronize the release version, source index, changelog and 
 
 ### Check the bundle
 
-The [v0.4.2 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.4.2) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.4.2 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.4.2) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. Bundles up to v0.4.2 copied LICENSE and NOTICE with the line endings of the checkout they were built from, so a fresh clone of those tags can differ in those two files. Newer source normalizes them. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
 d666809e454937849b7e473b891a573ba717f921432fb2526a7ddc24a63902b1  patches-0.4.2.mpp

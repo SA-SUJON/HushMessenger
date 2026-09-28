@@ -4,12 +4,13 @@
 
 - Other apps can no longer restart Messenger. Restart Messenger used to accept a request from any app on the phone, which could close Messenger at any moment, even during a call. The long-press shortcut and the App tab button still work.
 - The search field now reads back what you typed with a screen reader. The selected filter keeps a visible focus ring, and switches that can't work on your Android version look unavailable.
-- Quick toggles no longer stack up old messages. Pause now says "Changes paused" or "Changes resumed".
-- The selected filter in the light theme is filled like it is in the dark theme. The search cursor uses the app's blue and the restart screen follows your theme. The header now lines up with the cards.
+- Quick toggles, including the theme switch, no longer stack up old messages. Pause now says "Changes paused" or "Changes resumed".
+- The selected filter in the light theme is filled like it is in the dark theme. On Android 10 and newer the search cursor uses the app's blue, and the restart screen and its system bars follow your theme. The header now lines up with the cards.
 - The title stays on one line at large text sizes on older Android versions, and very long pasted searches are trimmed.
 - In the right-to-left test language, headings and descriptions now line up on the right instead of running into their counts.
 - The README links the two APKMirror builds that work, since six look alike on that page. The Install beside Meta apps description no longer says signed builds don't open chats.
-- Release checks compare every README link to this project's own releases, and the permission failure check says when Morphe Desktop never started. Pass 162 local tests.
+- Building the same source now gives the same bundle from any checkout. The license files used to carry whichever line endings Git wrote, so a fresh clone couldn't reproduce the published checksum.
+- Release checks compare every README link to this project's own releases, and the permission failure check says when Morphe Desktop never started. Pass 163 local tests.
 
 ## 0.4.2 (2026-09-28)
 
