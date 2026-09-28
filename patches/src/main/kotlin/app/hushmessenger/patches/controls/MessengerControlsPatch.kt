@@ -35,8 +35,9 @@ internal fun Document.addSettingsEntry() {
     val filter = activity.child("intent-filter")
     filter.child("action", "name" to "android.intent.action.MAIN")
     filter.child("category", "name" to "android.intent.category.LAUNCHER")
+    // Launcher shortcuts start it as Messenger itself, so no other app needs a way to kill the process.
     application.child("activity", "name" to "app.hushmessenger.extension.RestartActivity",
-        "label" to "Restart Messenger", "exported" to "true", "excludeFromRecents" to "true",
+        "label" to "Restart Messenger", "exported" to "false", "excludeFromRecents" to "true",
         "noHistory" to "true", "configChanges" to "orientation|screenSize|keyboardHidden",
         "theme" to "@android:style/Theme.Material.NoActionBar")
 }

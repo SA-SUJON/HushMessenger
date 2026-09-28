@@ -47,7 +47,9 @@ class SettingsShortcutTest {
         assertEquals("@string/hushmessenger_restart", restart.getAttribute("android:shortcutShortLabel"))
         assertEquals("app.hushmessenger.extension.RestartActivity", shortcuts.nodes("intent")[1].getAttribute("android:targetClass"))
         val restartActivity = manifest.nodes("activity").single { it.getAttribute("android:name").endsWith(".RestartActivity") }
-        assertEquals("true", restartActivity.getAttribute("android:exported"))
+        // Shortcuts launch as Messenger itself; another app must not be able to kill and relaunch it.
+        assertEquals("false", restartActivity.getAttribute("android:exported"))
+        assertTrue(restartActivity.getAttribute("android:permission").isEmpty())
         assertEquals("true", restartActivity.getAttribute("android:noHistory"))
         assertEquals(0, restartActivity.getElementsByTagName("intent-filter").length)
         assertEquals("stock_action", shortcuts.nodes("shortcut")[2].getAttribute("android:shortcutId"))
