@@ -42,6 +42,19 @@ public class SettingsLocaleTest {
         }
     }
 
+    @Test public void mirroredTextPreservesTheVisualOrderOfNumbersAndVersions() {
+        SettingsText words = new SettingsText(Locale.forLanguageTag("ar-XB"));
+        for (String source : new String[] {words.count("enabled", 12), words.get("results_many", 12, 20), words.display("Version 0.4.12")}) {
+            String visual = new android.icu.text.Bidi(source, android.icu.text.Bidi.DIRECTION_RIGHT_TO_LEFT)
+                .writeReordered(android.icu.text.Bidi.REMOVE_BIDI_CONTROLS);
+            if (source.contains("0.4.12")) assertTrue(visual, visual.contains("0.4.12"));
+            else {
+                assertTrue(visual, visual.contains(words.number(12)));
+                if (source.contains(words.number(20))) assertTrue(visual, visual.contains(words.number(20)));
+            }
+        }
+    }
+
     @Test @Config(sdk = 36) public void requestedAppLocaleWinsWhenResourceSelectionFallsBackToEnglish() {
         RuntimeEnvironment.setQualifiers("en-rUS-w400dp-h800dp-mdpi");
         android.app.LocaleManager manager = RuntimeEnvironment.getApplication().getSystemService(android.app.LocaleManager.class);

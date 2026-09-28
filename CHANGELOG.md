@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep multi-digit counts and version numbers in their normal reading order in the right-to-left test language.
 - Distinguish named and hidden dependencies in the generated catalog, including their transitive dependency graph.
 - Clearly mark the standalone settings app as a UI preview and remove its app-drawer entry. Preview setup reports never claim active Messenger controls. Remove leftover previews from both test phones after confirming their Messenger APKs remain stock.
 
