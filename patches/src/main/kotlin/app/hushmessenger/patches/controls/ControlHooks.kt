@@ -144,7 +144,7 @@ internal fun validateControls(found: Map<String, List<Method>>, selected: Set<St
         val actual = found[feature].orEmpty().map { it.hookId() }
         if (actual.size != expected.size || actual.toSet() != expected) {
             throw PatchException("Messenger controls: $feature hooks differ from the tested build. " +
-                "Use an unmodified arm64 Messenger 580.0.0.49.91 (346013387 or 346013440).")
+                "Use an unmodified arm64 Messenger 580.0.0.49.91 (346013387, 346013440 or 346013442).")
         }
     }
 }

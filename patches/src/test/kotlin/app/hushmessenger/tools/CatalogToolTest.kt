@@ -15,7 +15,7 @@ class CatalogToolTest {
             category("Example")
             dependsOn(dependency)
             compatibleWith(Compatibility("com.example.app", "Example", targets = listOf(
-                AppTarget("580", versionCodes = null, minSdk = 28, description = "346013387 and 346013440"),
+                AppTarget("580", versionCodes = null, minSdk = 28, description = "346013387, 346013440 and 346013442"),
             )))
         }
         val catalog = CatalogTool.catalog("1.2.3", setOf(patch))
@@ -30,7 +30,7 @@ class CatalogToolTest {
         assertEquals("Fixture dependency", dependencyEntry.getValue("description").jsonPrimitive.content)
         val target = entry.getValue("compatiblePackages").jsonArray.single().jsonObject.getValue("targets").jsonArray.single().jsonObject
         assertEquals(JsonNull, target.getValue("versionCodes"))
-        assertEquals("346013387 and 346013440", target.getValue("description").jsonPrimitive.content)
+        assertEquals("346013387, 346013440 and 346013442", target.getValue("description").jsonPrimitive.content)
     }
 
     @Test fun catalogOrderIsIndependentOfDiscoveryOrder() {
