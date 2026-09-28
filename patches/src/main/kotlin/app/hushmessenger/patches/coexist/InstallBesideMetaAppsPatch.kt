@@ -171,14 +171,14 @@ internal fun Document.renameSharedPermissions() {
     mentions.values.flatten().forEach { it.value = renamed(it.value) }
 }
 
-private val validatePermissionBytecode = bytecodePatch {
+private val validatePermissionBytecode = bytecodePatch(description = "Validate Messenger shared-permission bytecode") {
     execute {
         validateVersionCode(packageMetadata.versionCode)
         checkedPermissionMethods()
     }
 }
 
-private val renameManifest = resourcePatch {
+private val renameManifest = resourcePatch(description = "Rename Messenger shared permissions") {
     dependsOn(validatePermissionBytecode)
     execute {
         validateVersionCode(packageMetadata.versionCode)

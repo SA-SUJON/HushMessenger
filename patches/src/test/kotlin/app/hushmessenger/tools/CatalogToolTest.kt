@@ -10,7 +10,7 @@ import kotlin.test.*
 
 class CatalogToolTest {
     @Test fun metadataPreservesEscapingDefaultsDependenciesAndExactTargetDescription() {
-        val dependency = resourcePatch { }
+        val dependency = resourcePatch(description = "Fixture dependency") { }
         val patch = bytecodePatch("Quoted \"patch\"", "Line one\nLine two", default = false) {
             category("Example")
             dependsOn(dependency)
@@ -25,7 +25,9 @@ class CatalogToolTest {
         assertEquals("Line one\nLine two", entry.getValue("description").jsonPrimitive.content)
         assertFalse(entry.getValue("default").jsonPrimitive.boolean)
         assertEquals("Example", entry.getValue("category").jsonPrimitive.content)
-        assertEquals("ResourcePatch", entry.getValue("dependencies").jsonArray.single().jsonPrimitive.content)
+        val dependencyEntry = entry.getValue("dependencies").jsonArray.single().jsonObject
+        assertEquals("ResourcePatch", dependencyEntry.getValue("type").jsonPrimitive.content)
+        assertEquals("Fixture dependency", dependencyEntry.getValue("description").jsonPrimitive.content)
         val target = entry.getValue("compatiblePackages").jsonArray.single().jsonObject.getValue("targets").jsonArray.single().jsonObject
         assertEquals(JsonNull, target.getValue("versionCodes"))
         assertEquals("346013387 and 346013440", target.getValue("description").jsonPrimitive.content)
@@ -35,6 +37,18 @@ class CatalogToolTest {
         val first = resourcePatch("A", "First") { }
         val last = resourcePatch("Z", "Last") { }
         assertEquals(CatalogTool.catalog("1", linkedSetOf(first, last)), CatalogTool.catalog("1", linkedSetOf(last, first)))
+    }
+
+    @Test fun replacingNamedHiddenOrTransitiveDependenciesChangesTheCatalog() {
+        fun snapshot(name: String?, description: String?, child: String) = CatalogTool.catalog("1", setOf(
+            bytecodePatch("Feature") {
+                dependsOn(resourcePatch(name, description) { dependsOn(resourcePatch(child) { }) })
+            },
+        ))
+        assertNotEquals(snapshot("A", null, "Leaf"), snapshot("B", null, "Leaf"))
+        assertNotEquals(snapshot(null, "Capability A", "Leaf"), snapshot(null, "Capability B", "Leaf"))
+        assertNotEquals(snapshot(null, "Capability", "Leaf A"), snapshot(null, "Capability", "Leaf B"))
+        assertFailsWith<IllegalArgumentException> { snapshot(null, null, "Leaf") }
     }
 
     @Test fun changedOrDuplicateControlKeysAndCapabilitiesFail() {

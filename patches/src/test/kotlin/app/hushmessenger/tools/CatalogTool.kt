@@ -14,6 +14,19 @@ import org.xml.sax.InputSource
 
 /** Local tooling only. This class is excluded from the distributed bundle. */
 object CatalogTool {
+    private fun dependency(patch: Patch<*>, ancestors: Set<Patch<*>> = emptySet()): JsonObject {
+        require(patch !in ancestors) { "Cyclic patch dependency" }
+        require(!patch.name.isNullOrBlank() || !patch.description.isNullOrBlank()) {
+            "Hidden dependencies need stable descriptions for the public catalog"
+        }
+        return JsonObject(linkedMapOf(
+            "type" to JsonPrimitive(patch.javaClass.simpleName),
+            "name" to JsonPrimitive(patch.name),
+            "description" to JsonPrimitive(patch.description),
+            "dependencies" to JsonArray(patch.dependencies.map { dependency(it, ancestors + patch) }.sortedBy { it.toString() }),
+        ))
+    }
+
     fun catalog(version: String, patches: Set<Patch<*>>): JsonObject = JsonObject(linkedMapOf(
         "NOTE" to JsonPrimitive("Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand."),
         "version" to JsonPrimitive(version),
@@ -24,7 +37,7 @@ object CatalogTool {
                 "description" to JsonPrimitive(patch.description),
                 "default" to JsonPrimitive(patch.default),
                 "category" to JsonPrimitive(patch.category),
-                "dependencies" to JsonArray(patch.dependencies.map { JsonPrimitive(it.javaClass.simpleName) }.sortedBy { it.content }),
+                "dependencies" to JsonArray(patch.dependencies.map { dependency(it) }.sortedBy { it.toString() }),
                 "compatiblePackages" to (patch.compatibility?.let { compatible -> JsonArray(compatible.map { app ->
                     JsonObject(linkedMapOf(
                         "packageName" to JsonPrimitive(app.packageName),

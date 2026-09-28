@@ -37,7 +37,7 @@ internal fun Document.addSettingsEntry() {
     filter.child("category", "name" to "android.intent.category.LAUNCHER")
 }
 
-private val settingsResources = resourcePatch {
+private val settingsResources = resourcePatch(description = "Install HushMessenger settings") {
     execute {
         validateVersionCode(packageMetadata.versionCode)
         document("AndroidManifest.xml").use { it.addSettingsEntry() }
@@ -46,7 +46,7 @@ private val settingsResources = resourcePatch {
 
 private var discoveredControls: Map<String, List<Method>> = emptyMap()
 
-private val settingsExtension = bytecodePatch {
+private val settingsExtension = bytecodePatch(description = "Load HushMessenger runtime controls") {
     dependsOn(settingsResources)
     extendWith("extensions/messenger.mpe")
     execute {
@@ -103,7 +103,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
 
 private fun controlPatch(key: String, title: String, summary: String, group: String, vararg hooks: String): BytecodePatch {
     var applied = false
-    val featureResources = resourcePatch {
+    val featureResources = resourcePatch(description = "Record HushMessenger capability: $key") {
         dependsOn(settingsResources)
         execute {
             applied = false

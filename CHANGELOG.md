@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Distinguish named and hidden dependencies in the generated catalog, including their transitive dependency graph.
 - Clearly mark the standalone settings app as a UI preview and remove its app-drawer entry. Preview setup reports never claim active Messenger controls. Remove leftover previews from both test phones after confirming their Messenger APKs remain stock.
 
 - Keep page and category state independent of translated labels. Add an English text catalog with expanded and right-to-left test languages, whole plural messages and locale-aware numbers. Honor Android app languages even when the host resource table falls back to English.
