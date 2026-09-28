@@ -3,6 +3,7 @@
 ## 0.4.0 (2026-09-27)
 
 - Pass 133 local tests and rebuild both exact APKs with all 21 patches. Verify all 57 runtime hook calls and preserve every stock class and native library. Both installed phone APKs remain stock; their account data is unchanged.
+- Verify the published bundle checksum and all 21 entries through Morphe's remote lookup. Refresh the S25 source to v0.4.0. Source updates do not install a patched Messenger APK.
 
 - Keep multi-digit counts and version numbers in their normal reading order in the right-to-left test language.
 - Distinguish named and hidden dependencies in the generated catalog, including their transitive dependency graph.
