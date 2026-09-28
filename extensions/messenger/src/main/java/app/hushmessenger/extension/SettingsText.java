@@ -44,7 +44,7 @@ final class SettingsText {
 
     String display(String english) {
         if (english.isEmpty()) return english;
-        if (rtl) return "\u202e" + english.replaceAll("\\p{N}+(?:[.,]\\p{N}+)*", "\u2066$0\u2069") + "\u202c";
+        if (rtl) return "\u202e" + english.replaceAll("\\p{N}+(?:[.,\u066b\u066c]\\p{N}+)*", "\u2066$0\u2069") + "\u202c";
         if (!expanded) return english;
         String plain = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         String accented = "áḃçďéḟģĥíĵķĺḿńóṕqŕśţúṽẃẋýź";

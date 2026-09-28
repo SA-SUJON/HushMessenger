@@ -44,14 +44,17 @@ public class SettingsLocaleTest {
 
     @Test public void mirroredTextPreservesTheVisualOrderOfNumbersAndVersions() {
         SettingsText words = new SettingsText(Locale.forLanguageTag("ar-XB"));
-        for (String source : new String[] {words.count("enabled", 12), words.get("results_many", 12, 20), words.display("Version 0.4.12")}) {
-            String visual = new android.icu.text.Bidi(source, android.icu.text.Bidi.DIRECTION_RIGHT_TO_LEFT)
+        String[][] examples = {
+            {words.count("enabled", 12), words.number(12)},
+            {words.get("results_many", 12, 20), words.number(12), words.number(20)},
+            {words.display("Version 0.4.12"), "0.4.12"},
+            {words.display("Count ١٬٢٣٤"), "١٬٢٣٤"},
+            {words.display("Value ١٢٫٣٤"), "١٢٫٣٤"},
+        };
+        for (String[] example : examples) {
+            String visual = new android.icu.text.Bidi(example[0], android.icu.text.Bidi.DIRECTION_RIGHT_TO_LEFT)
                 .writeReordered(android.icu.text.Bidi.REMOVE_BIDI_CONTROLS);
-            if (source.contains("0.4.12")) assertTrue(visual, visual.contains("0.4.12"));
-            else {
-                assertTrue(visual, visual.contains(words.number(12)));
-                if (source.contains(words.number(20))) assertTrue(visual, visual.contains(words.number(20)));
-            }
+            for (int index = 1; index < example.length; index++) assertTrue(visual, visual.contains(example[index]));
         }
     }
 

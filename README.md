@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.1"><img src="https://img.shields.io/badge/version-0.3.1-0084FF" alt="Version 0.3.1"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.4.0"><img src="https://img.shields.io/badge/version-0.4.0-0084FF" alt="Version 0.4.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -24,7 +24,7 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It offers 21 sele
 3. **Check the source.** The HushMessenger card should show **21 patches**. Open **Patches** to browse the catalog. When preparing Messenger, use **Choose patches** to select individual features. Select all for every optional control plus `Install beside Meta apps`. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend; mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.3.1.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.1) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL; the command below lists its 21 entries. Phone source verification last covered v0.2.0 on S22 (Manager 1.32.0) and S25 (1.33.0-dev.3). The phones are available for source refreshes. Their installed Messenger APKs are still unpatched. Both stock Messenger installations stayed intact. An earlier clean Manager emulator check covered local import. The phone behavior warning above still applies.
+For a local source, download [`patches-0.4.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.4.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL; the command below lists its 21 entries. Phone source verification last covered v0.2.0 on S22 (Manager 1.32.0) and S25 (1.33.0-dev.3). The phones are available for source refreshes. Their installed Messenger APKs are still unpatched. Both stock Messenger installations stayed intact. An earlier clean Manager emulator check covered local import. The phone behavior warning above still applies.
 
 ### If something doesn't work
 
@@ -140,7 +140,7 @@ The local suite has 43 Kotlin tests, 56 Android unit tests and 34 Python checks.
 
 Morphe Desktop 1.17.0 applied all 21 patches to private copies of both supported APKs, and Android verified their v3 signatures. Two clean release builds produced the same bundle checksum. Both rebuilt APKs preserved all 13 compressed arm64 libraries, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output; continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
 
-The v0.3.1 settings extension was exercised as a standalone release build on an isolated S22 display. Both pages and themes were compared with the [design references](concepts/settings/0.3.0). Search recovery, category filters, pause and saved choices across an update passed. A headless Android 16 emulator also checked 320 by 360 dp and 640 by 360 dp windows at 200% text, including keyboard-visible search in both themes. Automated checks cover API 28 and 36, state restoration and accessible actions. These checks verify the settings UI. The Messenger features still need signed-in before/after checks on affected screens.
+The current settings extension was exercised as a clearly marked standalone UI preview on the S25 physical screen. Both pages and themes passed; the mirrored test language preserved multi-digit counts. The preview was removed after each check. Automated tests cover API 28 and 36, short windows at 200% text, state restoration and accessible actions. These checks verify settings behavior. Live TalkBack was stopped at the user's request and remains unverified. Messenger features still need signed-in before/after checks in a working patched installation.
 
 The earlier v0.1.0 diagnostic copy verified hiding and restoring stories and notes, the Facebook toolbar shortcut and the Meta AI floating button. That copy needed a private package-name adjustment and skipped encrypted-history restoration. It does not establish that an original-package installation works. Typing suppression, subtabs, bubbles, live ads and full chat behavior remain unverified.
 
@@ -163,18 +163,18 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The output is `patches/build/libs/patches-0.3.1.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.4.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 20 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 
-Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.3.1 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash.
+Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.4.0 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash.
 
 ### Check the bundle
 
-The [v0.3.1 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.1) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.4.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.4.0) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
-4237294480109d0a1c8b8a4e6e2280ee05530be5780d664167de499d7f532ce8  patches-0.3.1.mpp
+d945c9f58b94bb09ecf8483965d0c447329d2a15f336815b601ac9f7b737453b  patches-0.4.0.mpp
 ```
 
 Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.
