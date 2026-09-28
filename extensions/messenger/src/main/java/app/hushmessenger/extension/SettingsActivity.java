@@ -501,6 +501,13 @@ public final class SettingsActivity extends Activity {
         ui.add(about, importBtn, 8);
         ui.add(about, ui.text(text.get("import_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
+        LinearLayout updates = ui.panel();
+        ui.add(updates, controlRow("check_updates", text.base("check_updates"), text.base("check_updates_help"), false), 0);
+        TextView updateStatus = ui.text("", 13, ui.muted, false);
+        updateStatus.setVisibility(View.GONE);
+        ui.add(updates, updateStatus, 8);
+        ui.add(content, updates, 12);
+        if (Settings.preferences.getBoolean("check_updates", false)) checkForUpdates(updateStatus);
         ui.add(content, ui.heading(text.get("usage")), 22);
         ui.add(content, ui.text(text.get("save_help"), 14, ui.muted, false), 16);
         ui.add(content, ui.text(text.get("pause_help"), 14, ui.muted, false), 14);
@@ -558,6 +565,64 @@ public final class SettingsActivity extends Activity {
             android.util.Log.e("HushMessenger", "Can't copy setup", error);
             feedback(text.get("copy_failed"), Toast.LENGTH_LONG);
         }
+    }
+
+    private void checkForUpdates(TextView status) {
+        new Thread(() -> {
+            try {
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+                    new java.net.URL("https://api.github.com/repos/SysAdminDoc/HushMessenger/releases/latest").openConnection();
+                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                if (conn.getResponseCode() != 200) throw new java.io.IOException("HTTP " + conn.getResponseCode());
+                java.io.InputStream stream = conn.getInputStream();
+                byte[] bytes = new byte[4096];
+                StringBuilder response = new StringBuilder();
+                int read;
+                while ((read = stream.read(bytes)) != -1) response.append(new String(bytes, 0, read, "UTF-8"));
+                stream.close();
+                String body = response.toString();
+                int tagStart = body.indexOf("\"tag_name\"");
+                if (tagStart < 0) throw new java.io.IOException("No tag_name");
+                int valueStart = body.indexOf('"', tagStart + 10) + 1;
+                int valueEnd = body.indexOf('"', valueStart);
+                String tag = body.substring(valueStart, valueEnd);
+                String latest = tag.startsWith("v") ? tag.substring(1) : tag;
+                String current = BuildConfig.VERSION_NAME;
+                boolean newer = latest.compareTo(current) > 0;
+                String htmlUrl = "";
+                int urlStart = body.indexOf("\"html_url\"");
+                if (urlStart >= 0) {
+                    int us = body.indexOf('"', urlStart + 10) + 1;
+                    int ue = body.indexOf('"', us);
+                    htmlUrl = body.substring(us, ue);
+                }
+                String releaseUrl = htmlUrl;
+                runOnUiThread(() -> {
+                    if (newer) {
+                        status.setText(text.get("update_available", latest));
+                        status.setTextColor(ui.accent);
+                        if (!releaseUrl.isEmpty()) {
+                            Button view = ui.button(text.get("update_action"));
+                            view.setOnClickListener(v -> {
+                                try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(releaseUrl))); }
+                                catch (android.content.ActivityNotFoundException e) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
+                            });
+                            ViewGroup parent = (ViewGroup) status.getParent();
+                            int idx = parent.indexOfChild(status);
+                            parent.addView(view, idx + 1);
+                        }
+                    } else {
+                        status.setText(text.get("up_to_date"));
+                    }
+                    status.setVisibility(View.VISIBLE);
+                });
+            } catch (Exception error) {
+                android.util.Log.e("HushMessenger", "Update check failed", error);
+                runOnUiThread(() -> { status.setText(text.get("update_error")); status.setVisibility(View.VISIBLE); });
+            }
+        }).start();
     }
 
     private String formatActive(long timestamp) {

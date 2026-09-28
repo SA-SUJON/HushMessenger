@@ -127,6 +127,12 @@ final class SettingsText {
             case "imported_many": return "Restored %d choices";
             case "import_empty": return "Nothing to import. Export choices first, then paste them here.";
             case "import_invalid": return "Not a valid HushMessenger export. Copy your export to the clipboard and try again.";
+            case "check_updates": return "Check for updates";
+            case "check_updates_help": return "Compares your version with the latest release when you open settings. Off by default. No data is sent.";
+            case "update_available": return "Version %s is available";
+            case "update_action": return "View release";
+            case "up_to_date": return "You have the latest version.";
+            case "update_error": return "Couldn't check for updates.";
             case "active_now": return "Active just now";
             case "active_ago": return "Active %s ago";
             case "not_active": return "Not active since restart";
