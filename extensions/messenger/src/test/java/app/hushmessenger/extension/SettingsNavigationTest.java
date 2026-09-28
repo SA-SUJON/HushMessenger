@@ -43,6 +43,22 @@ public class SettingsNavigationTest {
         }
     }
 
+    @Test public void selectedChipIsFilledInBothThemesAndTheWordmarkStaysOnOneLine() {
+        for (boolean light : new boolean[] {false, true}) {
+            Settings.preferences.edit().putBoolean("light", light).commit();
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                View root = screen.get().getWindow().getDecorView();
+                SettingsUi ui = new SettingsUi(screen.get(), light);
+                assertEquals(ui.accent, ui.selected);
+                assertEquals(light ? 0xffffffff : ui.background, ((TextView) root.findViewWithTag("category_all")).getCurrentTextColor());
+                assertEquals(ui.muted, ((TextView) root.findViewWithTag("category_inbox")).getCurrentTextColor());
+                TextView wordmark = root.findViewWithTag("wordmark");
+                assertEquals(1, wordmark.getMaxLines());
+                assertEquals(TextView.AUTO_SIZE_TEXT_TYPE_UNIFORM, wordmark.getAutoSizeTextType());
+            }
+        }
+    }
+
     @Test public void pageAndFilterSurviveThemeRecreationWithoutChangingControls() {
         Bundle state = new Bundle();
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {

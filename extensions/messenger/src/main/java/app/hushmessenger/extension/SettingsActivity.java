@@ -25,6 +25,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.EditText;
 import android.text.Editable;
+import android.text.InputFilter;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
 import android.text.TextWatcher;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +55,7 @@ public final class SettingsActivity extends Activity {
     private final List<View> tabLines = new ArrayList<>();
     private TextView searchStatus, enabledCount, setupNote;
     private LinearLayout emptyState;
-    private Button clearSearch;
+    private Toast toast;
     static final String[][] CONTROLS = {
         {"ads", "Hide inbox ads", "Supported inbox ad cards. Live removal isn't verified yet.", "inbox"},
         {"people", "Hide People You May Know", "Removes suggested people from chats and Notifications.", "inbox"},
@@ -137,7 +140,7 @@ public final class SettingsActivity extends Activity {
         controlsContent = pageContent(controlsScroll);
         buildControls(controlsContent);
         reminder = ui.text(text.get("reopen"), 12, ui.muted, false);
-        reminder.setPadding(ui.dp(24), ui.dp(12), ui.dp(24), ui.dp(16));
+        reminder.setPadding(ui.dp(20), ui.dp(12), ui.dp(20), ui.dp(16));
         ui.add(controlsPage, reminder, 0);
         appPage = ui.column();
         appPage.setTag("app_page");
@@ -202,11 +205,12 @@ public final class SettingsActivity extends Activity {
         if (compact == next && scrollHeader == nextScrollHeader) return;
         compact = next;
         scrollHeader = nextScrollHeader;
-        header.setPadding(ui.dp(scrollHeader ? 4 : 24), ui.dp(compact ? 8 : 50), ui.dp(scrollHeader ? 4 : 24), 0);
+        // Content pages already pad 20dp, so a header or reminder moved inside them adds none.
+        header.setPadding(ui.dp(scrollHeader ? 0 : 20), ui.dp(compact ? 8 : 50), ui.dp(scrollHeader ? 0 : 20), 0);
         placeBrand();
         placeHeader();
         ((ViewGroup) reminder.getParent()).removeView(reminder);
-        reminder.setPadding(ui.dp(compact ? 4 : 24), ui.dp(12), ui.dp(compact ? 4 : 24), ui.dp(16));
+        reminder.setPadding(ui.dp(compact ? 0 : 20), ui.dp(12), ui.dp(compact ? 0 : 20), ui.dp(16));
         ui.add(compact ? controlsContent : controlsPage, reminder, 0);
     }
 
@@ -229,13 +233,17 @@ public final class SettingsActivity extends Activity {
 
     private void buildHeader(LinearLayout root) {
         header = ui.column();
-        header.setPadding(ui.dp(24), ui.dp(50), ui.dp(24), 0);
+        header.setPadding(ui.dp(20), ui.dp(50), ui.dp(20), 0);
         ui.add(root, header, 0);
         brand = ui.row();
         if (ui.largeText) brand.setOrientation(LinearLayout.VERTICAL);
         LinearLayout wordmark = ui.column();
         TextView title = ui.text("HushMessenger", 28, ui.text, true);
+        title.setTag("wordmark");
         title.setAccessibilityHeading(true);
+        // Linear font scaling on Android 13 and older could otherwise split the wordmark mid-word.
+        title.setMaxLines(1);
+        title.setAutoSizeTextTypeUniformWithConfiguration(18, 28, 1, TypedValue.COMPLEX_UNIT_SP);
         ui.add(wordmark, title, 0);
         TextView subtitle = ui.text(text.get(Settings.preview ? "preview_notice" : "tagline"), 14,
             Settings.preview ? ui.warning : ui.muted, false);
@@ -309,10 +317,13 @@ public final class SettingsActivity extends Activity {
         ui.add(content, setup, 0);
         search = new EditText(this);
         search.setTag("find_control");
+        // The hint labels the field; a content description would make TalkBack skip what was typed.
         search.setHint(text.get("search"));
-        search.setContentDescription(text.get("search"));
         search.setTextSize(16);
         search.setSingleLine(true);
+        search.setFilters(new InputFilter[] {new InputFilter.LengthFilter(100)});
+        search.setHighlightColor((ui.accent & 0x00ffffff) | 0x55000000);
+        tintTextHandles(search);
         search.setTextColor(ui.text);
         search.setHintTextColor(ui.muted);
         search.setMinHeight(ui.dp(48));
@@ -360,11 +371,16 @@ public final class SettingsActivity extends Activity {
             controlRows.add(row);
             installedControls.add(spec);
         }
+        if (installedControls.isEmpty()) {
+            // Nothing to search; the status line explains how to add controls.
+            search.setVisibility(View.GONE);
+            filters.setVisibility(View.GONE);
+        }
         emptyState = ui.panel();
         emptyState.setTag("empty_state");
         ui.add(emptyState, ui.text(text.get("empty_title"), 18, ui.text, true), 0);
         ui.add(emptyState, ui.text(text.get("empty_help"), 14, ui.muted, false), 10);
-        clearSearch = ui.button(text.get("clear"));
+        Button clearSearch = ui.button(text.get("clear"));
         clearSearch.setTag("clear_filters");
         clearSearch.setOnClickListener(view -> {
             category = "all";
@@ -407,11 +423,14 @@ public final class SettingsActivity extends Activity {
         row.addView(control, switchParams);
         switches.add(control);
         control.setEnabled(available);
+        // The custom track has no disabled state, so dim it; the description says why.
+        if (!available) control.setAlpha(0.4f);
         control.setOnCheckedChangeListener((button, checked) -> {
             if (binding) return;
             Settings.preferences.edit().putBoolean(key, checked).apply();
             updateSetup();
-            Toast.makeText(this, text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT).show();
+            feedback("paused".equals(key) ? text.get(checked ? "changes_paused" : "changes_resumed")
+                : text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT);
             if ("light".equals(key)) refreshChoices();
         });
         row.setOnClickListener(view -> { if (control.isEnabled()) control.toggle(); });
@@ -468,7 +487,7 @@ public final class SettingsActivity extends Activity {
         source.setTag("source_licenses");
         source.setOnClickListener(view -> {
             try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/SysAdminDoc/HushMessenger#research-and-credits"))); }
-            catch (android.content.ActivityNotFoundException error) { Toast.makeText(this, text.get("no_browser"), Toast.LENGTH_LONG).show(); }
+            catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
         });
         ui.add(content, source, 16);
         ui.add(content, ui.text(text.get("credits"), 12, ui.muted, false), 16);
@@ -484,8 +503,9 @@ public final class SettingsActivity extends Activity {
                 .append("\nHost version: ").append(host.versionName == null ? "unknown" : host.versionName)
                 .append("\nHost version code: ").append(host.getLongVersionCode())
                 .append("\nAndroid API: ").append(Build.VERSION.SDK_INT)
-                .append("\nPaused: ").append(paused).append("\nControls:\n");
+                .append("\nPaused: ").append(paused).append('\n');
             if (Settings.preview) summary.append("Mode: UI preview. Does not change Messenger.\n");
+            summary.append("Controls:\n");
             for (String[] spec : CONTROLS) {
                 String key = spec[0];
                 boolean installed = Settings.installed.contains(key);
@@ -501,10 +521,10 @@ public final class SettingsActivity extends Activity {
             ClipboardManager clipboard = getSystemService(ClipboardManager.class);
             if (clipboard == null) throw new IllegalStateException("Clipboard service unavailable");
             clipboard.setPrimaryClip(clip);
-            if (Build.VERSION.SDK_INT < 33) Toast.makeText(this, text.get("copied"), Toast.LENGTH_SHORT).show();
+            if (Build.VERSION.SDK_INT < 33) feedback(text.get("copied"), Toast.LENGTH_SHORT);
         } catch (PackageManager.NameNotFoundException | SecurityException | IllegalStateException error) {
             android.util.Log.e("HushMessenger", "Can't copy setup", error);
-            Toast.makeText(this, text.get("copy_failed"), Toast.LENGTH_LONG).show();
+            feedback(text.get("copy_failed"), Toast.LENGTH_LONG);
         }
     }
 
@@ -573,13 +593,14 @@ public final class SettingsActivity extends Activity {
             button.setSelected(selected);
             button.setTextColor(selected ? ui.selectedText : ui.muted);
             button.setBackground(new android.graphics.drawable.InsetDrawable(
-                ui.interactive(selected ? ui.selected : ui.background, selected ? 0 : ui.outline, 8), 0, ui.dp(6), 0, ui.dp(6)));
+                ui.interactive(selected ? ui.selected : ui.background, selected ? 0 : ui.outline, 8, selected ? ui.text : ui.accent),
+                0, ui.dp(6), 0, ui.dp(6)));
             button.setPadding(ui.dp(4), ui.dp(8), ui.dp(4), ui.dp(8));
         }
         searchStatus.setText(controlRows.isEmpty() ? text.get("none_installed") :
             visible == 0 ? text.get("no_matches") : text.get(controlRows.size() == 1 ? "results_one" : "results_many", visible, controlRows.size()));
-        emptyState.setVisibility(visible == 0 ? View.VISIBLE : View.GONE);
-        clearSearch.setVisibility(controlRows.isEmpty() ? View.GONE : View.VISIBLE);
+        // With nothing installed, the status line already explains what to do.
+        emptyState.setVisibility(visible == 0 && !controlRows.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -608,6 +629,30 @@ public final class SettingsActivity extends Activity {
                 android.util.Log.e("HushMessenger", "Messenger launcher is unavailable", error);
             }
         }
-        Toast.makeText(this, text.get("open_help"), Toast.LENGTH_LONG).show();
+        feedback(text.get("open_help"), Toast.LENGTH_LONG);
+    }
+
+    /** One toast at a time: toasts queued by quick toggles would outlive the switch they describe. */
+    private void feedback(String message, int length) {
+        if (toast != null) toast.cancel();
+        toast = Toast.makeText(this, message, length);
+        toast.show();
+    }
+
+    /** Framework Material themes draw the cursor and handles in teal; match the settings accent. */
+    private void tintTextHandles(EditText field) {
+        if (Build.VERSION.SDK_INT < 29) return;
+        Drawable cursor = field.getTextCursorDrawable(), middle = field.getTextSelectHandle();
+        Drawable left = field.getTextSelectHandleLeft(), right = field.getTextSelectHandleRight();
+        if (cursor != null) field.setTextCursorDrawable(tinted(cursor));
+        if (middle != null) field.setTextSelectHandle(tinted(middle));
+        if (left != null) field.setTextSelectHandleLeft(tinted(left));
+        if (right != null) field.setTextSelectHandleRight(tinted(right));
+    }
+
+    private Drawable tinted(Drawable drawable) {
+        Drawable copy = drawable.mutate();
+        copy.setTint(ui.accent);
+        return copy;
     }
 }

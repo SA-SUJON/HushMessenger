@@ -117,6 +117,7 @@ final class SettingsText {
             case "copied": return "Setup copied";
             case "copy_failed": return "Couldn't copy setup. Try again.";
             case "changes_paused": return "Changes paused";
+            case "changes_resumed": return "Changes resumed";
             case "enabled_one": return "%d control enabled";
             case "enabled_many": return "%d controls enabled";
             case "saved_one": return "%d saved choice. Turn pause off to resume.";

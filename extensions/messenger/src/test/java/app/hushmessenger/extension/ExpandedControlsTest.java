@@ -103,6 +103,20 @@ public class ExpandedControlsTest {
             for (String[] spec : SettingsActivity.CONTROLS) assertNull(root.findViewWithTag(spec[0]));
             assertTrue(((TextView) root.findViewWithTag("search_status")).getText().toString().startsWith("No optional controls installed."));
             assertNotNull(root.findViewWithTag("open_messenger"));
+            // Nothing to search, and no "try another search" panel contradicting the status line.
+            assertEquals(View.GONE, root.findViewWithTag("find_control").getVisibility());
+            assertEquals(View.GONE, ((View) root.findViewWithTag("category_all").getParent()).getVisibility());
+            assertEquals(View.GONE, root.findViewWithTag("empty_state").getVisibility());
+        }
+    }
+
+    @Test public void searchFieldReadsTypedTextAndCapsPastedLength() {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            EditText search = screen.get().getWindow().getDecorView().findViewWithTag("find_control");
+            assertNull(search.getContentDescription());
+            assertEquals("Find a control", search.getHint().toString());
+            search.setText("x".repeat(5000));
+            assertEquals(100, search.length());
         }
     }
 

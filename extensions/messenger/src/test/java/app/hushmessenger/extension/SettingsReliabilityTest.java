@@ -15,6 +15,7 @@ import android.widget.OverScroller;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.time.Duration;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,6 +25,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowToast;
 import org.robolectric.util.ReflectionHelpers;
 import static org.junit.Assert.*;
 
@@ -41,6 +43,8 @@ public class SettingsReliabilityTest {
             View root = screen.get().getWindow().getDecorView();
             assertTrue(((Switch) root.findViewWithTag("bubbles")).isChecked());
             assertFalse(root.findViewWithTag("bubbles").isEnabled());
+            // The custom track has no disabled drawable, so the switch itself must look unavailable.
+            assertEquals(0.4f, root.findViewWithTag("bubbles").getAlpha(), 0.001f);
             assertTrue(Settings.preferences.getBoolean("bubbles", false));
             assertFalse(Settings.enableBubbles());
             assertEquals("0 controls enabled", ((TextView) root.findViewWithTag("enabled_count")).getText().toString());
@@ -52,14 +56,21 @@ public class SettingsReliabilityTest {
             View root = screen.get().getWindow().getDecorView();
             Switch bubbles = root.findViewWithTag("bubbles");
             assertTrue(bubbles.isEnabled());
+            assertEquals(1f, bubbles.getAlpha(), 0f);
             assertFalse(Settings.enableBubbles());
             bubbles.performClick();
+            Toast first = ShadowToast.getLatestToast();
+            assertEquals("Allow chat bubbles on", ShadowToast.getTextOfLatestToast());
             assertTrue(Settings.enableBubbles());
             assertEquals("1 control enabled", ((TextView) root.findViewWithTag("enabled_count")).getText().toString());
             root.findViewWithTag("paused").performClick();
+            // A newer toast replaces the old one instead of queueing behind it.
+            assertTrue(Shadows.shadowOf(first).isCancelled());
+            assertEquals("Changes paused", ShadowToast.getTextOfLatestToast());
             assertTrue(bubbles.isChecked());
             assertFalse(Settings.enableBubbles());
             root.findViewWithTag("paused").performClick();
+            assertEquals("Changes resumed", ShadowToast.getTextOfLatestToast());
             assertTrue(Settings.enableBubbles());
         }
     }

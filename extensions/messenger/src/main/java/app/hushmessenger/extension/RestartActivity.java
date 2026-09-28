@@ -17,10 +17,11 @@ public class RestartActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         Settings.initialize(this);
+        SettingsUi ui = new SettingsUi(this, Settings.preferences.getBoolean("light", false));
         TextView status = new TextView(this);
         status.setText(new SettingsText(this).get("restarting"));
-        status.setTextColor(0xffeeeeee);
-        status.setBackgroundColor(0xff000000);
+        status.setTextColor(ui.text);
+        status.setBackgroundColor(ui.background);
         status.setGravity(Gravity.CENTER);
         setContentView(status);
         Intent launch = launcherIntent(this);
