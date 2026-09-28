@@ -64,6 +64,17 @@ tasks.register<JavaExec>("scanDex") {
     args(listOfNotNull(apkPath, feature))
 }
 
+tasks.register<JavaExec>("inspectDex") {
+    group = "verification"
+    description = "Deep-inspect specific classes/methods in a stock Messenger APK."
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].output + configurations["testRuntimeClasspath"]
+    mainClass.set("app.hushmessenger.tools.DexInspector")
+    val apkPath = providers.gradleProperty("apkPath").orNull
+    val target = providers.gradleProperty("target").orNull ?: "all"
+    args(listOfNotNull(apkPath, target))
+}
+
 tasks.register<Exec>("verifyReleaseMetadata") {
     group = "verification"
     description = "Check the bundle hash and all public release versions before publication."

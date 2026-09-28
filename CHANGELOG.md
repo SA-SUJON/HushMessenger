@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Unsent indicator for kept messages. When Keep unsent messages is on and a sender removes a message, the preserved message shows "[unsent]" before its text. The keep_unsent hook now extracts the message ID from the revoke intent and records it; a new unsent_indicator hook on the message text wrapper prepends the label for recorded IDs. Hook count now 70 across 25 patches.
 - Open HushMessenger settings from the Menu tab. When Messenger shows the folder grid in the More drawer, a HushMessenger tile opens the settings screen. The patch clones an existing grid item, relabels it and intercepts its click. It hooks two methods: the settings folder item builder (HFb.Ax1) and the grid view holder binder (TxV.CAo, MoreDrawerGenericGridItemViewHolder). The folder grid is server-gated; on accounts where Messenger shows a plain list instead, the entry won't appear. Hook count now 69 across 25 patches.
 - Fixed pre-existing test failures. Updated control count assertions from 20 to 24 across six test classes after four controls (use_system_emoji, allow_screenshot, hide_read_receipts, keep_unsent) were added without matching test updates. Fixed setup summary assertions for the new last_active field in copy_setup output.
 - Dry-run compatibility report (`scripts/CompatReport.java`). Point it at any Messenger APK to see package, version code, ABI and signer, plus PASS/FAIL for all 25 patches with the failing contract. Exits non-zero on any failure, never modifies the APK. Requires JDK 21+ and the smali-dexlib2 and guava JARs.

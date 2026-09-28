@@ -81,6 +81,51 @@ internal fun peopleJewelKeyHolder() = fixtureClass("LX/JTx;", listOf(fixtureMeth
     return-void
 """.trimIndent(), flags = AccessFlags.STATIC.value or AccessFlags.CONSTRUCTOR.value)))
 
+internal fun debugDumperFixture(
+    textGetter: String = "BWo",
+    idGetter: String = "B9d",
+    interfaceType: String = "Lfixture/MessageRow;",
+): MutableClass {
+    val method = fixtureMethod("Lfixture/Dumper;->A02(${interfaceType})Ljava/lang/String;", """
+        const-string v0, "message_id="
+        invoke-interface {p1, v1}, $interfaceType->$idGetter(I)Ljava/lang/String;
+        move-result-object v0
+        const-string v0, "text="
+        invoke-interface {p1, v1}, $interfaceType->$textGetter(I)Ljava/lang/String;
+        move-result-object v0
+        const-string v0, "is_unsent="
+        invoke-interface {p1, v1}, $interfaceType->Btd(I)Z
+        move-result v0
+        return-object v1
+    """.trimIndent(), registers = 4)
+    return fixtureClass("Lfixture/Dumper;", listOf(method))
+}
+
+internal fun messageWrapperFixture(
+    type: String = "Lfixture/MessageWrapper;",
+    interfaceType: String = "Lfixture/MessageRow;",
+    textGetter: String = "BWo",
+): MutableClass {
+    val bwoMethod = fixtureMethod("$type->$textGetter(I)Ljava/lang/String;", """
+        invoke-static {p0, p1}, $type->A00(${type}I)Lfixture/KKn;
+        move-result-object v0
+        invoke-interface {v0}, Lfixture/KKn;->BWn()Ljava/lang/String;
+        move-result-object v0
+        return-object v0
+    """.trimIndent(), registers = 3)
+    val getCountMethod = fixtureMethod("$type->getCount()I", """
+        iget-object v0, p0, $type->A00:Ljava/util/List;
+        invoke-interface {v0}, Ljava/util/List;->size()I
+        move-result v0
+        return v0
+    """.trimIndent(), registers = 2)
+    val fields = listOf(ImmutableField(type, "A00", "Ljava/util/List;", 0, null, null, null))
+    return MutableClass(ImmutableClassDef(type,
+        AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value,
+        "Ljava/lang/Object;", listOf(interfaceType), null, emptySet(), fields,
+        listOf(bwoMethod, getCountMethod)))
+}
+
 internal fun pluginBody(anchor: String, branch: String = "if-eq") = """
     iget-object v0, p0, Lfixture/Gate;->cache:Ljava/lang/Object;
     const/4 v6, 0x1

@@ -23,6 +23,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference as DexMethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue
@@ -41,6 +42,9 @@ private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/communitymessaging/plugins/channelinvite/sharetofacebookbutton/ShareToFacebookButtonImplementation;",
     "Lcom/facebook/messaging/publicchats/plugins/externalsharehscrollbuttons/sharetofacebook/ShareToFacebookHScrollButtonImplementation;",
 )
+
+internal var messageTextGetterName: String = ""
+internal var messageIdGetterName: String = ""
 
 internal val expectedHooks = mapOf(
     "stories" to setOf("LX/1mi;->A00()Z"),
@@ -65,6 +69,7 @@ internal val expectedHooks = mapOf(
     ),
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
+    "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
     "menu_settings" to setOf(
@@ -90,6 +95,28 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
         if (code.none { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == PEOPLE_JEWEL_KEY }) emptyList()
         else code.filter { it.opcode == Opcode.SPUT_OBJECT }.map { (it as ReferenceInstruction).reference.toString() }
     }.toSet()
+    messageTextGetterName = ""
+    messageIdGetterName = ""
+    for (cls in classes) {
+        if (messageTextGetterName.isNotEmpty()) break
+        for (m in cls.methods) {
+            val debugCode = m.implementation?.instructions?.toList() ?: continue
+            val debugStrs = debugCode.mapNotNull { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string }
+            if ("text=" !in debugStrs || "message_id=" !in debugStrs || "is_unsent=" !in debugStrs) continue
+            var lastMarker: String? = null
+            for (insn in debugCode) {
+                val ref = (insn as? ReferenceInstruction)?.reference ?: continue
+                if (ref is StringReference) {
+                    when (ref.string) { "text=" -> lastMarker = "text"; "message_id=" -> lastMarker = "id" }
+                } else if (insn.opcode == Opcode.INVOKE_INTERFACE && ref is DexMethodReference &&
+                    lastMarker != null && ref.returnType == "Ljava/lang/String;" && ref.parameterTypes.size == 1) {
+                    when (lastMarker) { "text" -> messageTextGetterName = ref.name; "id" -> messageIdGetterName = ref.name }
+                    lastMarker = null
+                }
+            }
+            break
+        }
+    }
     for (cls in classes) {
         val original = cls.fields.firstOrNull { it.name == "__redex_internal_original_name" }
             ?.initialValue.let { (it as? StringEncodedValue)?.value }
@@ -131,6 +158,14 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "V" && method.parameterTypes.size == 3 &&
                 method.parameterTypes[0] == "Landroid/content/Intent;" &&
                 strings.any { "ACTION_REVOKE_MESSAGE" in it }) add("keep_unsent")
+            if (messageTextGetterName.isNotEmpty() &&
+                method.name == messageTextGetterName &&
+                method.returnType == "Ljava/lang/String;" && method.parameterTypes == listOf("I") &&
+                AccessFlags.ABSTRACT.isSet(cls.accessFlags) && cls.interfaces.size == 1) {
+                val instanceFields = cls.fields.filter { !AccessFlags.STATIC.isSet(it.accessFlags) }
+                if (instanceFields.size == 1 && instanceFields[0].type == "Ljava/util/List;" &&
+                    cls.methods.any { it.name == "getCount" && it.returnType == "I" && it.parameterTypes.isEmpty() }) add("unsent_indicator")
+            }
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) &&
                 method.parameterTypes == listOf(cls.type) &&
                 strings.any { "SearchAiagentImplementationsKillSwitch" in it }) add("ai_search")
@@ -415,4 +450,46 @@ internal fun MutableMethod.injectMenuSettingsBind() {
     val code = implementation!!.instructions.toList()
     val normalExit = code.indexOfFirst { it.opcode == Opcode.RETURN_VOID }
     addInstructions(normalExit, "invoke-static {v$viewHolderReg}, $SETTINGS->handleMenuItemBound(Ljava/lang/Object;)V")
+}
+
+internal fun MutableMethod.validateKeepUnsent() {
+    validateScratch()
+    if (returnType != "V") throw PatchException("Messenger controls: keep_unsent hook must return void")
+    if (parameterTypes.getOrNull(0) != "Landroid/content/Intent;")
+        throw PatchException("Messenger controls: keep_unsent hook first param must be Intent")
+}
+
+internal fun MutableMethod.injectKeepUnsent() {
+    validateKeepUnsent()
+    addInstructionsWithLabels(0, """
+        invoke-static {}, $SETTINGS->keepUnsent()Z
+        move-result v0
+        if-eqz v0, :stock_behavior
+        const-string v0, "messenger_message_id"
+        invoke-virtual {p1, v0}, Landroid/content/Intent;->getStringExtra(Ljava/lang/String;)Ljava/lang/String;
+        move-result-object v0
+        invoke-static {v0}, $SETTINGS->recordUnsent(Ljava/lang/String;)V
+        return-void
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
+}
+
+internal fun MutableMethod.validateUnsentIndicator() {
+    if (returnType != "Ljava/lang/String;") throw PatchException("Messenger controls: unsent_indicator hook must return String")
+    if (parameterTypes != listOf("I")) throw PatchException("Messenger controls: unsent_indicator hook must take one int param")
+    val code = implementation!!.instructions.toList()
+    if (code.size != 5) throw PatchException("Messenger controls: unsent_indicator hook has ${code.size} instructions, expected 5")
+    if (code[4].opcode != Opcode.RETURN_OBJECT) throw PatchException("Messenger controls: unsent_indicator hook must end with return-object")
+    if (code[0].opcode != Opcode.INVOKE_STATIC) throw PatchException("Messenger controls: unsent_indicator hook must start with invoke-static")
+}
+
+internal fun MutableMethod.injectUnsentIndicator() {
+    validateUnsentIndicator()
+    val code = implementation!!.instructions.toList()
+    val returnIndex = code.indexOfLast { it.opcode == Opcode.RETURN_OBJECT }
+    addInstructions(returnIndex, """
+        invoke-virtual {p0, p1}, $definingClass->$messageIdGetterName(I)Ljava/lang/String;
+        move-result-object p1
+        invoke-static {v0, p1}, $SETTINGS->labelKeptUnsent(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+        move-result-object v0
+    """.trimIndent())
 }

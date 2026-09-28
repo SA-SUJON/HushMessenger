@@ -63,6 +63,30 @@ public final class Settings {
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
 
+    private static final String KEPT_UNSENT_KEY = "kept_unsent_ids";
+
+    public static void recordUnsent(String messageId) {
+        if (messageId == null || messageId.isEmpty()) return;
+        SharedPreferences prefs = preferences;
+        if (prefs == null) return;
+        Set<String> ids = new HashSet<>(prefs.getStringSet(KEPT_UNSENT_KEY, Collections.emptySet()));
+        ids.add(messageId);
+        prefs.edit().putStringSet(KEPT_UNSENT_KEY, ids).apply();
+    }
+
+    public static boolean isKeptUnsent(String messageId) {
+        if (messageId == null) return false;
+        SharedPreferences prefs = preferences;
+        if (prefs == null) return false;
+        return prefs.getStringSet(KEPT_UNSENT_KEY, Collections.emptySet()).contains(messageId);
+    }
+
+    public static String labelKeptUnsent(String text, String messageId) {
+        if (!enabled("keep_unsent") || text == null) return text;
+        if (isKeptUnsent(messageId)) return "[unsent] " + text;
+        return text;
+    }
+
     private static android.graphics.Typeface systemEmoji;
     public static android.graphics.Typeface systemEmojiTypeface() {
         if (!enabled("use_system_emoji")) return null;

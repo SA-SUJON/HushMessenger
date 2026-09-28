@@ -23,6 +23,7 @@ import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue;
@@ -112,6 +113,7 @@ public class CompatReport {
         hooks.put("allow_screenshot", Set.of("LX/N2h;->run()V", "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V"));
         hooks.put("hide_read_receipts", Set.of("LX/AX0;->run()V"));
         hooks.put("keep_unsent", Set.of("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"));
+        hooks.put("unsent_indicator", Set.of("LX/K1Y;->BWo(I)Ljava/lang/String;"));
         hooks.put("ai_search", Set.of("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"));
         hooks.put("emoji_typeface", Set.of("LX/1KV;->A00()Landroid/graphics/Typeface;"));
         hooks.put("people", Set.of("LX/1pm;->A0C()Z", "LX/2Wl;->A04()Z"));
@@ -175,7 +177,7 @@ public class CompatReport {
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts"));
-        PATCHES.put("Keep unsent messages", List.of("keep_unsent"));
+        PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator"));
     }
 
     static String hookId(Method m) {
@@ -239,6 +241,42 @@ public class CompatReport {
                         peopleJewelKeys.add(ri.getReference().toString());
                     }
                 }
+            }
+        }
+
+        String msgTextGetterName = "", msgIdGetterName = "";
+        outer:
+        for (var cls : classes) {
+            for (var m : cls.getMethods()) {
+                var mImpl = m.getImplementation();
+                if (mImpl == null) continue;
+                var mCode = new ArrayList<Instruction>();
+                for (var i : mImpl.getInstructions()) mCode.add(i);
+                boolean hasText = false, hasMsgId = false, hasUnsent = false;
+                for (var i : mCode) {
+                    if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) {
+                        if ("text=".equals(sr.getString())) hasText = true;
+                        if ("message_id=".equals(sr.getString())) hasMsgId = true;
+                        if ("is_unsent=".equals(sr.getString())) hasUnsent = true;
+                    }
+                }
+                if (!hasText || !hasMsgId || !hasUnsent) continue;
+                String lastMarker = null;
+                for (var i : mCode) {
+                    if (!(i instanceof ReferenceInstruction ri)) continue;
+                    var ref = ri.getReference();
+                    if (ref instanceof StringReference sr) {
+                        if ("text=".equals(sr.getString())) lastMarker = "text";
+                        else if ("message_id=".equals(sr.getString())) lastMarker = "id";
+                    } else if (i.getOpcode() == Opcode.INVOKE_INTERFACE && ref instanceof MethodReference mr &&
+                            lastMarker != null && "Ljava/lang/String;".equals(mr.getReturnType()) &&
+                            mr.getParameterTypes().size() == 1) {
+                        if ("text".equals(lastMarker)) msgTextGetterName = mr.getName();
+                        else if ("id".equals(lastMarker)) msgIdGetterName = mr.getName();
+                        lastMarker = null;
+                    }
+                }
+                break outer;
             }
         }
 
@@ -376,6 +414,31 @@ public class CompatReport {
                     "Landroid/content/Intent;".equals(paramTypes.get(0)) &&
                     strings.stream().anyMatch(s -> s.contains("ACTION_REVOKE_MESSAGE"))) {
                     found.get("keep_unsent").add(method);
+                }
+
+                // unsent_indicator
+                if (!msgTextGetterName.isEmpty() &&
+                    method.getName().equals(msgTextGetterName) &&
+                    "Ljava/lang/String;".equals(method.getReturnType()) &&
+                    paramTypes.equals(List.of("I")) &&
+                    AccessFlags.ABSTRACT.isSet(cls.getAccessFlags()) &&
+                    cls.getInterfaces().size() == 1) {
+                    long instanceFieldCount = 0;
+                    boolean hasListField = false;
+                    for (var f : cls.getFields()) {
+                        if (!AccessFlags.STATIC.isSet(f.getAccessFlags())) {
+                            instanceFieldCount++;
+                            if ("Ljava/util/List;".equals(f.getType())) hasListField = true;
+                        }
+                    }
+                    boolean hasGetCount = false;
+                    for (var m : cls.getMethods()) {
+                        if ("getCount".equals(m.getName()) && "I".equals(m.getReturnType()) &&
+                            m.getParameterTypes().isEmpty()) { hasGetCount = true; break; }
+                    }
+                    if (instanceFieldCount == 1 && hasListField && hasGetCount) {
+                        found.get("unsent_indicator").add(method);
+                    }
                 }
 
                 // ai_search
