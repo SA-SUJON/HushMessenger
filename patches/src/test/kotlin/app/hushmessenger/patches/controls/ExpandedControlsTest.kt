@@ -140,7 +140,7 @@ class ExpandedControlsTest {
             (metadata.item(it) as org.w3c.dom.Element).getAttribute("android:name")
         }.toSet())
         assertEquals(1, document.getElementsByTagName("provider").length)
-        assertEquals(1, document.getElementsByTagName("activity").length)
+        assertEquals(2, document.getElementsByTagName("activity").length)
         assertFailsWith<PatchException> { document.addFeature("people") }
     }
 }

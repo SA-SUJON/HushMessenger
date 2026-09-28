@@ -429,7 +429,15 @@ public final class SettingsActivity extends Activity {
     }
 
     private void buildApp(LinearLayout content) {
-        ui.add(content, ui.heading(text.get("appearance")), 4);
+        ui.add(content, ui.heading(text.get("quick_access")), 4);
+        LinearLayout access = ui.panel();
+        ui.add(access, ui.text(text.get("access_help"), 14, ui.muted, false), 0);
+        Button restart = ui.button(text.get("restart"));
+        restart.setTag("restart_messenger");
+        restart.setOnClickListener(view -> startActivity(new Intent(this, RestartActivity.class)));
+        ui.add(access, restart, 14);
+        ui.add(content, access, 12);
+        ui.add(content, ui.heading(text.get("appearance")), 22);
         LinearLayout appearance = ui.panel();
         ui.add(appearance, controlRow("light", text.base("light"), text.base("light_help"), false), 0);
         ui.rule(appearance, 14);

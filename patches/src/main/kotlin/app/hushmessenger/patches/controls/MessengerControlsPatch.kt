@@ -35,12 +35,23 @@ internal fun Document.addSettingsEntry() {
     val filter = activity.child("intent-filter")
     filter.child("action", "name" to "android.intent.action.MAIN")
     filter.child("category", "name" to "android.intent.category.LAUNCHER")
+    application.child("activity", "name" to "app.hushmessenger.extension.RestartActivity",
+        "label" to "Restart Messenger", "exported" to "true", "excludeFromRecents" to "true",
+        "noHistory" to "true", "configChanges" to "orientation|screenSize|keyboardHidden",
+        "theme" to "@android:style/Theme.Material.NoActionBar")
 }
 
 private val settingsResources = resourcePatch(description = "Install HushMessenger settings") {
     execute {
         validateVersionCode(packageMetadata.versionCode)
-        document("AndroidManifest.xml").use { it.addSettingsEntry() }
+        // ARSCLib infers the resource type from the filename, so append to strings.xml.
+        document(SHORTCUT_LABEL_PATH).use { labels ->
+            labels.validateShortcutLabels()
+            document("AndroidManifest.xml").use { manifest ->
+                document(SHORTCUTS_PATH).use { shortcuts -> manifest.addSettingsAccess(shortcuts) }
+            }
+            labels.addShortcutLabels()
+        }
     }
 }
 
@@ -115,7 +126,7 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
     }
     return bytecodePatch(
         name = title,
-        description = "$summary Optional switch in app drawer > HushMessenger settings. Starts off.",
+        description = "$summary Long-press Messenger > Patch controls. Starts off.",
         default = true,
     ) {
         category(group)

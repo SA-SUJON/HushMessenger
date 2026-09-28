@@ -1,10 +1,10 @@
 {
     "NOTE": "Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand.",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "patches": [
         {
             "name": "Allow chat bubbles",
-            "description": "Removes the low-memory eligibility limit on Android 11 and newer. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Removes the low-memory eligibility limit on Android 11 and newer. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Links and bubbles",
             "dependencies": [
@@ -61,7 +61,7 @@
         },
         {
             "name": "Hide AI sticker tools",
-            "description": "Hides the generated-sticker tab and AI sticker suggestions. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the generated-sticker tab and AI sticker suggestions. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [
@@ -118,7 +118,7 @@
         },
         {
             "name": "Hide Chat Moments",
-            "description": "Hides the Chat Moments entry in the menu. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the Chat Moments entry in the menu. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -175,7 +175,7 @@
         },
         {
             "name": "Hide Facebook shortcuts",
-            "description": "Hides Facebook toolbar, profile and sharing shortcuts. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides Facebook toolbar, profile and sharing shortcuts. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -232,7 +232,7 @@
         },
         {
             "name": "Hide Meta AI buttons",
-            "description": "Hides the floating button, toolbar button and AI menu entries. Search stays available. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the floating button, toolbar button and AI menu entries. Search stays available. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -289,7 +289,7 @@
         },
         {
             "name": "Hide People You May Know",
-            "description": "Hides suggested people in the inbox. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides suggested people in the inbox. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -346,7 +346,7 @@
         },
         {
             "name": "Hide Reels badge",
-            "description": "Hides the Reels notification badge. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the Reels notification badge. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -403,7 +403,7 @@
         },
         {
             "name": "Hide avatar stickers",
-            "description": "Hides the avatar tab in the sticker keyboard. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the avatar tab in the sticker keyboard. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [
@@ -460,7 +460,7 @@
         },
         {
             "name": "Hide business reply suggestions",
-            "description": "Hides suggested replies in business conversations. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides suggested replies in business conversations. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -517,7 +517,7 @@
         },
         {
             "name": "Hide business typing suggestions",
-            "description": "Hides business suggestions as you type. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides business suggestions as you type. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -574,7 +574,7 @@
         },
         {
             "name": "Hide chat promotions",
-            "description": "Hides Messenger quick-promotion banners inside conversations. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides Messenger quick-promotion banners inside conversations. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -631,7 +631,7 @@
         },
         {
             "name": "Hide event prompts",
-            "description": "Hides event quick-promotion prompts inside chats. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides event quick-promotion prompts inside chats. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -688,7 +688,7 @@
         },
         {
             "name": "Hide friend request cards",
-            "description": "Hides friend request cards inside the inbox. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides friend request cards inside the inbox. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -745,7 +745,7 @@
         },
         {
             "name": "Hide growth prompts",
-            "description": "Hides the inbox's add-more-people promotion unit. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the inbox's add-more-people promotion unit. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -802,7 +802,7 @@
         },
         {
             "name": "Hide inbox ads",
-            "description": "Filters typed inbox ad items. Live ad removal still needs an affected-account check. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Filters typed inbox ad items. Live ad removal still needs an affected-account check. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -859,7 +859,7 @@
         },
         {
             "name": "Hide inbox promotions",
-            "description": "Hides Messenger quick-promotion banners in the chat list. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides Messenger quick-promotion banners in the chat list. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -916,7 +916,7 @@
         },
         {
             "name": "Hide inbox tabs",
-            "description": "Hides the Home and Channels subtabs. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the Home and Channels subtabs. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -973,7 +973,7 @@
         },
         {
             "name": "Hide stories and notes",
-            "description": "Hides the horizontal tray above chats. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Hides the horizontal tray above chats. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1030,7 +1030,7 @@
         },
         {
             "name": "Hide typing indicator",
-            "description": "Suppresses your outgoing active-typing signal. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Suppresses your outgoing active-typing signal. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -1131,7 +1131,7 @@
         },
         {
             "name": "Open web links externally",
-            "description": "Uses Messenger's external-browser branch for HTTP and HTTPS links. Optional switch in app drawer > HushMessenger settings. Starts off.",
+            "description": "Uses Messenger's external-browser branch for HTTP and HTTPS links. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Links and bubbles",
             "dependencies": [

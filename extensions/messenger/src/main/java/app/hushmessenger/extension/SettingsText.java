@@ -77,7 +77,13 @@ final class SettingsText {
             case "tagline": return "Make Messenger yours.";
             case "open": return "Open";
             case "open_messenger": return "Open Messenger";
-            case "reopen": return "Reopen Messenger after changing inbox controls.";
+            case "reopen": return "Apply inbox changes with App > Restart Messenger.";
+            case "quick_access": return "QUICK ACCESS";
+            case "access_help": return "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from your app drawer.";
+            case "restart": return "Restart Messenger";
+            case "restarting": return "Restarting Messenger...";
+            case "restart_unavailable": return "Couldn't restart. Close Messenger, then open it from your app drawer.";
+            case "restart_save_failed": return "Couldn't save your choices. Messenger wasn't restarted. Try again.";
             case "setup": return "YOUR SETUP";
             case "paused": return "Pause all changes";
             case "search": return "Find a control";
@@ -98,7 +104,7 @@ final class SettingsText {
             case "copy": return "Copy setup";
             case "copy_help": return "Copies app versions and control choices. No account or chat details. Nothing is sent.";
             case "usage": return "USING YOUR CONTROLS";
-            case "save_help": return "Changes save as you go. Reopen Messenger after changing inbox controls.";
+            case "save_help": return "Changes save as you go. Use Restart Messenger after changing inbox controls. Your account stays signed in.";
             case "pause_help": return "Pause keeps your choices and temporarily restores stock behavior.";
             case "account_help": return "Your choices apply to every Messenger account in this installation.";
             case "missing": return "Missing a control?";
