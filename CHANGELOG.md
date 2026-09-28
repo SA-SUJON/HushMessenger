@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add Copy setup to the App tab. It copies app versions and control states only when tapped, excludes account and chat data, and distinguishes saved choices from active controls while paused or unavailable.
+
 ## 0.3.1 (2026-09-27)
 
 - Require both shared permissions to retain signature protection. Check their DEX sites before renaming the manifest permissions.

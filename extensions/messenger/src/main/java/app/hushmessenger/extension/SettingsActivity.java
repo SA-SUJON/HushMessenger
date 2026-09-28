@@ -1,11 +1,18 @@
 package app.hushmessenger.extension;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -426,6 +433,12 @@ public final class SettingsActivity extends Activity {
         infoRow(about, "Version", BuildConfig.VERSION_NAME);
         ui.rule(about, 12);
         infoRow(about, "Installed controls", Integer.toString(installedControls.size()));
+        ui.rule(about, 12);
+        Button copy = ui.button("Copy setup");
+        copy.setTag("copy_setup");
+        copy.setOnClickListener(view -> copySetup());
+        ui.add(about, copy, 8);
+        ui.add(about, ui.text("Copies app versions and control choices. No account or chat details. Nothing is sent.", 13, ui.muted, false), 8);
         ui.add(content, about, 12);
         ui.add(content, ui.heading("USING YOUR CONTROLS"), 22);
         ui.add(content, ui.text("Changes save as you go. Reopen Messenger after changing inbox controls.", 14, ui.muted, false), 16);
@@ -445,6 +458,38 @@ public final class SettingsActivity extends Activity {
         ui.add(content, source, 16);
         ui.add(content, ui.text("GPL-3.0. Includes work from De-Vanced, ReVanced, Doom and Messenger Cleaner.", 12, ui.muted, false), 16);
         ui.add(content, ui.text("Independent of Meta and Morphe.", 12, ui.muted, false), 20);
+    }
+
+    private void copySetup() {
+        try {
+            PackageInfo host = getPackageManager().getPackageInfo(getPackageName(), 0);
+            boolean paused = Settings.preferences.getBoolean("paused", false);
+            StringBuilder summary = new StringBuilder("HushMessenger v").append(BuildConfig.VERSION_NAME)
+                .append("\nHost package: ").append(getPackageName())
+                .append("\nHost version: ").append(host.versionName == null ? "unknown" : host.versionName)
+                .append("\nHost version code: ").append(host.getLongVersionCode())
+                .append("\nAndroid API: ").append(Build.VERSION.SDK_INT)
+                .append("\nPaused: ").append(paused).append("\nControls:\n");
+            for (String[] spec : CONTROLS) {
+                String key = spec[0];
+                boolean installed = Settings.installed.contains(key);
+                boolean selected = Settings.preferences.getBoolean(key, false);
+                summary.append(key).append(": installed=").append(installed)
+                    .append(", selected=").append(selected)
+                    .append(", active=").append(installed && selected && !paused && Settings.available(key)).append('\n');
+            }
+            ClipData clip = ClipData.newPlainText("HushMessenger setup", summary.toString());
+            PersistableBundle extras = new PersistableBundle();
+            extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
+            clip.getDescription().setExtras(extras);
+            ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+            if (clipboard == null) throw new IllegalStateException("Clipboard service unavailable");
+            clipboard.setPrimaryClip(clip);
+            if (Build.VERSION.SDK_INT < 33) Toast.makeText(this, "Setup copied", Toast.LENGTH_SHORT).show();
+        } catch (PackageManager.NameNotFoundException | SecurityException | IllegalStateException error) {
+            android.util.Log.e("HushMessenger", "Can't copy setup", error);
+            Toast.makeText(this, "Couldn't copy setup. Try again.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {
