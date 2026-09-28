@@ -87,6 +87,11 @@ public final class Settings {
         return text;
     }
 
+    public static boolean suppressUnsent(boolean original, String messageId) {
+        if (original && enabled("keep_unsent") && isKeptUnsent(messageId)) return false;
+        return original;
+    }
+
     private static android.graphics.Typeface systemEmoji;
     public static android.graphics.Typeface systemEmojiTypeface() {
         if (!enabled("use_system_emoji")) return null;

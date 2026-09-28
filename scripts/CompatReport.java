@@ -114,6 +114,7 @@ public class CompatReport {
         hooks.put("hide_read_receipts", Set.of("LX/AX0;->run()V"));
         hooks.put("keep_unsent", Set.of("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"));
         hooks.put("unsent_indicator", Set.of("LX/K1Y;->BWo(I)Ljava/lang/String;"));
+        hooks.put("delta_unsent", Set.of("LX/K1Y;->Btd(I)Z"));
         hooks.put("ai_search", Set.of("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"));
         hooks.put("emoji_typeface", Set.of("LX/1KV;->A00()Landroid/graphics/Typeface;"));
         hooks.put("people", Set.of("LX/1pm;->A0C()Z", "LX/2Wl;->A04()Z"));
@@ -177,7 +178,7 @@ public class CompatReport {
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts"));
-        PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator"));
+        PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
     }
 
     static String hookId(Method m) {
@@ -244,7 +245,7 @@ public class CompatReport {
             }
         }
 
-        String msgTextGetterName = "", msgIdGetterName = "";
+        String msgTextGetterName = "", msgIdGetterName = "", msgIsUnsentGetterName = "";
         outer:
         for (var cls : classes) {
             for (var m : cls.getMethods()) {
@@ -268,11 +269,15 @@ public class CompatReport {
                     if (ref instanceof StringReference sr) {
                         if ("text=".equals(sr.getString())) lastMarker = "text";
                         else if ("message_id=".equals(sr.getString())) lastMarker = "id";
+                        else if ("is_unsent=".equals(sr.getString())) lastMarker = "unsent";
                     } else if (i.getOpcode() == Opcode.INVOKE_INTERFACE && ref instanceof MethodReference mr &&
-                            lastMarker != null && "Ljava/lang/String;".equals(mr.getReturnType()) &&
-                            mr.getParameterTypes().size() == 1) {
-                        if ("text".equals(lastMarker)) msgTextGetterName = mr.getName();
-                        else if ("id".equals(lastMarker)) msgIdGetterName = mr.getName();
+                            lastMarker != null && mr.getParameterTypes().size() == 1) {
+                        if ("Ljava/lang/String;".equals(mr.getReturnType())) {
+                            if ("text".equals(lastMarker)) msgTextGetterName = mr.getName();
+                            else if ("id".equals(lastMarker)) msgIdGetterName = mr.getName();
+                        } else if ("Z".equals(mr.getReturnType()) && "unsent".equals(lastMarker)) {
+                            msgIsUnsentGetterName = mr.getName();
+                        }
                         lastMarker = null;
                     }
                 }
@@ -438,6 +443,31 @@ public class CompatReport {
                     }
                     if (instanceFieldCount == 1 && hasListField && hasGetCount) {
                         found.get("unsent_indicator").add(method);
+                    }
+                }
+
+                // delta_unsent
+                if (!msgIsUnsentGetterName.isEmpty() &&
+                    method.getName().equals(msgIsUnsentGetterName) &&
+                    "Z".equals(method.getReturnType()) &&
+                    paramTypes.equals(List.of("I")) &&
+                    AccessFlags.ABSTRACT.isSet(cls.getAccessFlags()) &&
+                    cls.getInterfaces().size() == 1) {
+                    long instanceFieldCount2 = 0;
+                    boolean hasListField2 = false;
+                    for (var f : cls.getFields()) {
+                        if (!AccessFlags.STATIC.isSet(f.getAccessFlags())) {
+                            instanceFieldCount2++;
+                            if ("Ljava/util/List;".equals(f.getType())) hasListField2 = true;
+                        }
+                    }
+                    boolean hasGetCount2 = false;
+                    for (var m : cls.getMethods()) {
+                        if ("getCount".equals(m.getName()) && "I".equals(m.getReturnType()) &&
+                            m.getParameterTypes().isEmpty()) { hasGetCount2 = true; break; }
+                    }
+                    if (instanceFieldCount2 == 1 && hasListField2 && hasGetCount2) {
+                        found.get("delta_unsent").add(method);
                     }
                 }
 

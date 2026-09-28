@@ -45,6 +45,7 @@ private val facebookPlugins = setOf(
 
 internal var messageTextGetterName: String = ""
 internal var messageIdGetterName: String = ""
+internal var messageIsUnsentGetterName: String = ""
 
 internal val expectedHooks = mapOf(
     "stories" to setOf("LX/1mi;->A00()Z"),
@@ -70,6 +71,7 @@ internal val expectedHooks = mapOf(
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
+    "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
     "menu_settings" to setOf(
@@ -97,6 +99,7 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
     }.toSet()
     messageTextGetterName = ""
     messageIdGetterName = ""
+    messageIsUnsentGetterName = ""
     for (cls in classes) {
         if (messageTextGetterName.isNotEmpty()) break
         for (m in cls.methods) {
@@ -107,10 +110,14 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             for (insn in debugCode) {
                 val ref = (insn as? ReferenceInstruction)?.reference ?: continue
                 if (ref is StringReference) {
-                    when (ref.string) { "text=" -> lastMarker = "text"; "message_id=" -> lastMarker = "id" }
+                    when (ref.string) { "text=" -> lastMarker = "text"; "message_id=" -> lastMarker = "id"; "is_unsent=" -> lastMarker = "unsent" }
                 } else if (insn.opcode == Opcode.INVOKE_INTERFACE && ref is DexMethodReference &&
-                    lastMarker != null && ref.returnType == "Ljava/lang/String;" && ref.parameterTypes.size == 1) {
-                    when (lastMarker) { "text" -> messageTextGetterName = ref.name; "id" -> messageIdGetterName = ref.name }
+                    lastMarker != null && ref.parameterTypes.size == 1) {
+                    if (ref.returnType == "Ljava/lang/String;") {
+                        when (lastMarker) { "text" -> messageTextGetterName = ref.name; "id" -> messageIdGetterName = ref.name }
+                    } else if (ref.returnType == "Z" && lastMarker == "unsent") {
+                        messageIsUnsentGetterName = ref.name
+                    }
                     lastMarker = null
                 }
             }
@@ -165,6 +172,14 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 val instanceFields = cls.fields.filter { !AccessFlags.STATIC.isSet(it.accessFlags) }
                 if (instanceFields.size == 1 && instanceFields[0].type == "Ljava/util/List;" &&
                     cls.methods.any { it.name == "getCount" && it.returnType == "I" && it.parameterTypes.isEmpty() }) add("unsent_indicator")
+            }
+            if (messageIsUnsentGetterName.isNotEmpty() &&
+                method.name == messageIsUnsentGetterName &&
+                method.returnType == "Z" && method.parameterTypes == listOf("I") &&
+                AccessFlags.ABSTRACT.isSet(cls.accessFlags) && cls.interfaces.size == 1) {
+                val instanceFields = cls.fields.filter { !AccessFlags.STATIC.isSet(it.accessFlags) }
+                if (instanceFields.size == 1 && instanceFields[0].type == "Ljava/util/List;" &&
+                    cls.methods.any { it.name == "getCount" && it.returnType == "I" && it.parameterTypes.isEmpty() }) add("delta_unsent")
             }
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) &&
                 method.parameterTypes == listOf(cls.type) &&
@@ -491,5 +506,26 @@ internal fun MutableMethod.injectUnsentIndicator() {
         move-result-object p1
         invoke-static {v0, p1}, $SETTINGS->labelKeptUnsent(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
         move-result-object v0
+    """.trimIndent())
+}
+
+internal fun MutableMethod.validateDeltaUnsent() {
+    if (returnType != "Z") throw PatchException("Messenger controls: delta_unsent hook must return boolean")
+    if (parameterTypes != listOf("I")) throw PatchException("Messenger controls: delta_unsent hook must take one int param")
+    val code = implementation!!.instructions.toList()
+    if (code.size != 5) throw PatchException("Messenger controls: delta_unsent hook has ${code.size} instructions, expected 5")
+    if (code[4].opcode != Opcode.RETURN) throw PatchException("Messenger controls: delta_unsent hook must end with return")
+    if (code[0].opcode != Opcode.INVOKE_STATIC) throw PatchException("Messenger controls: delta_unsent hook must start with invoke-static")
+}
+
+internal fun MutableMethod.injectDeltaUnsent() {
+    validateDeltaUnsent()
+    val code = implementation!!.instructions.toList()
+    val returnIndex = code.indexOfLast { it.opcode == Opcode.RETURN }
+    addInstructions(returnIndex, """
+        invoke-virtual {p0, p1}, $definingClass->$messageIdGetterName(I)Ljava/lang/String;
+        move-result-object p1
+        invoke-static {v0, p1}, $SETTINGS->suppressUnsent(ZLjava/lang/String;)Z
+        move-result v0
     """.trimIndent())
 }

@@ -18,7 +18,7 @@ class ControlDiscoveryTest {
     )
 
     private fun completeFixture(): List<MutableClass> {
-        val methods = expectedHooks.filter { it.key != "unsent_indicator" }.flatMap { (key, ids) ->
+        val methods = expectedHooks.filter { it.key != "unsent_indicator" && it.key != "delta_unsent" }.flatMap { (key, ids) ->
             ids.map { id ->
                 if (key == "people_jewel") return@map peopleJewelMethod()
                 val body = when (key) {
@@ -84,7 +84,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(70, found.values.sumOf { it.size })
+        assertEquals(71, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

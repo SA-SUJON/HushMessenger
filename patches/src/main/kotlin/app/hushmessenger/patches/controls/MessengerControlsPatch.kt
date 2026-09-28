@@ -101,6 +101,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "people_jewel" -> method.validatePeopleSection()
             "keep_unsent" -> method.validateKeepUnsent()
             "unsent_indicator" -> method.validateUnsentIndicator()
+            "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateScratch()
             else -> method.validateSwitch()
         }
@@ -120,6 +121,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "hide_read_receipts" -> method.injectSwitch("hideReadReceipts", "0x0")
             "keep_unsent" -> method.injectKeepUnsent()
             "unsent_indicator" -> method.injectUnsentIndicator()
+            "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
             else -> method.injectFeatureSwitch(key)
         }
@@ -207,7 +209,7 @@ val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots",
 @Suppress("unused")
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt so senders can't see when you viewed their message.", "Privacy")
 @Suppress("unused")
-val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator")
+val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 
 @Suppress("unused")
 val menuSettingsPatch = bytecodePatch(

@@ -81,7 +81,7 @@ object CatalogTool {
         require(uiKeys.size == keys.size && uiKeys.toSet() == keys.toSet()) { "Extension control keys differ from patches" }
         require(manifestKeys.size == keys.size && manifestKeys.toSet() == keys.toSet()) { "Manifest capabilities differ from patches" }
         require(declarations.map { it.second }.toSet().size == 24 &&
-            names == declarations.map { it.second }.toSet() + "Install beside Meta apps") { "Built patch names differ from control declarations" }
+            names == declarations.map { it.second }.toSet() + "Install beside Meta apps" + "Open settings from menu") { "Built patch names differ from control declarations" }
     }
 
     @JvmStatic fun main(args: Array<String>) {
@@ -99,7 +99,7 @@ object CatalogTool {
         require(version == properties.getProperty("version")) { "Bundle version differs from source" }
         val patches = loadPatchesFromJar(setOf(bundle))
         val patchNames = patches.map { requireNotNull(it.name) }.toSet()
-        require(patches.size == 25 && patchNames.size == 25) { "Expected 25 distinct visible patches" }
+        require(patches.size == 26 && patchNames.size == 26) { "Expected 26 distinct visible patches but found ${patches.size} (names: ${patchNames.joinToString()})" }
         validateDefinitions(
             root.resolve("patches/src/main/kotlin/app/hushmessenger/patches/controls/MessengerControlsPatch.kt").readText(),
             root.resolve("extensions/messenger/src/main/java/app/hushmessenger/extension/SettingsActivity.java").readText(),
@@ -116,6 +116,6 @@ object CatalogTool {
         else require(published.isFile && Json.parseToJsonElement(published.readText()) == document) {
             "Public catalog differs from the built MPP; run :patches:generatePatchCatalog"
         }
-        println("Catalog ${args[0]} passed: 25 patches, 24 control keys, built bundle $version")
+        println("Catalog ${args[0]} passed: 26 patches, 24 control keys, built bundle $version")
     }
 }
