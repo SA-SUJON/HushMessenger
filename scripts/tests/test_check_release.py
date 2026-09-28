@@ -156,6 +156,16 @@ class ReleaseChecks(unittest.TestCase):
                 ),
                 "download link",
             ),
+            (
+                "README.md",
+                f"https://img.shields.io/badge/version-1.2.3-blue\n[notes](../../releases/tag/v1.2.2)\n{self.digest}  {self.bundle.name}\n",
+                "download link",
+            ),
+            (
+                "README.md",
+                f"https://img.shields.io/badge/version-1.2.3-blue\ngithub.com/sysadmindoc/hushmessenger/releases/download/v1.2.2/x\n{self.digest}  {self.bundle.name}\n",
+                "download link",
+            ),
             ("CHANGELOG.md", "## Unreleased\n\n## 1.2.3 (2026-09-27)\n", "changelog"),
             (
                 "extensions/messenger/build.gradle.kts",
@@ -178,6 +188,7 @@ class ReleaseChecks(unittest.TestCase):
             "README.md",
             "https://img.shields.io/badge/version-1.2.3-blue\n"
             "[Desktop](https://github.com/MorpheApp/morphe-desktop/releases/tag/v1.17.0)\n"
+            "Pair it with hushfacebook-patches-0.1.7.mpp or morphe-patches-1.2.0.\n"
             '<a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v1.2.3">ours</a>\n'
             f"{self.digest}  {self.bundle.name}\n",
         )
