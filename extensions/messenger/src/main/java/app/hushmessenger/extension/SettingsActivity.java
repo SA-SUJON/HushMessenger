@@ -481,6 +481,18 @@ public final class SettingsActivity extends Activity {
         copy.setOnClickListener(view -> copySetup());
         ui.add(about, copy, 8);
         ui.add(about, ui.text(text.get("copy_help"), 13, ui.muted, false), 8);
+        ui.rule(about, 12);
+        Button exportBtn = ui.button(text.get("export"));
+        exportBtn.setTag("export_choices");
+        exportBtn.setOnClickListener(view -> exportChoices());
+        ui.add(about, exportBtn, 8);
+        ui.add(about, ui.text(text.get("export_help"), 13, ui.muted, false), 8);
+        ui.rule(about, 12);
+        Button importBtn = ui.button(text.get("import_choices"));
+        importBtn.setTag("import_choices");
+        importBtn.setOnClickListener(view -> importChoices());
+        ui.add(about, importBtn, 8);
+        ui.add(about, ui.text(text.get("import_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
         ui.add(content, ui.heading(text.get("usage")), 22);
         ui.add(content, ui.text(text.get("save_help"), 14, ui.muted, false), 16);
@@ -535,6 +547,73 @@ public final class SettingsActivity extends Activity {
         } catch (PackageManager.NameNotFoundException | SecurityException | IllegalStateException error) {
             android.util.Log.e("HushMessenger", "Can't copy setup", error);
             feedback(text.get("copy_failed"), Toast.LENGTH_LONG);
+        }
+    }
+
+    private static final String EXPORT_HEADER = "hushmessenger:choices";
+
+    private void exportChoices() {
+        try {
+            StringBuilder export = new StringBuilder(EXPORT_HEADER).append('\n');
+            export.append("paused=").append(Settings.preferences.getBoolean("paused", false)).append('\n');
+            for (String[] spec : CONTROLS) {
+                String key = spec[0];
+                if (Settings.installed.contains(key)) {
+                    export.append(key).append('=').append(Settings.preferences.getBoolean(key, false)).append('\n');
+                }
+            }
+            ClipData clip = ClipData.newPlainText(text.get("clipboard"), export.toString());
+            PersistableBundle extras = new PersistableBundle();
+            extras.putBoolean(Build.VERSION.SDK_INT >= 33 ? ClipDescription.EXTRA_IS_SENSITIVE : "android.content.extra.IS_SENSITIVE", true);
+            clip.getDescription().setExtras(extras);
+            ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+            if (clipboard == null) throw new IllegalStateException("Clipboard unavailable");
+            clipboard.setPrimaryClip(clip);
+            if (Build.VERSION.SDK_INT < 33) feedback(text.get("exported"), Toast.LENGTH_SHORT);
+        } catch (Exception error) {
+            android.util.Log.e("HushMessenger", "Can't export choices", error);
+            feedback(text.get("export_failed"), Toast.LENGTH_LONG);
+        }
+    }
+
+    private void importChoices() {
+        try {
+            ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+            if (clipboard == null || !clipboard.hasPrimaryClip()) {
+                feedback(text.get("import_empty"), Toast.LENGTH_LONG);
+                return;
+            }
+            ClipData clip = clipboard.getPrimaryClip();
+            if (clip == null || clip.getItemCount() == 0) {
+                feedback(text.get("import_empty"), Toast.LENGTH_LONG);
+                return;
+            }
+            CharSequence raw = clip.getItemAt(0).getText();
+            if (raw == null || !raw.toString().startsWith(EXPORT_HEADER)) {
+                feedback(text.get("import_invalid"), Toast.LENGTH_LONG);
+                return;
+            }
+            java.util.Set<String> knownKeys = new java.util.HashSet<>();
+            for (String[] spec : CONTROLS) knownKeys.add(spec[0]);
+            knownKeys.add("paused");
+            SharedPreferences.Editor editor = Settings.preferences.edit();
+            int restored = 0;
+            for (String line : raw.toString().split("\n")) {
+                int eq = line.indexOf('=');
+                if (eq < 1) continue;
+                String key = line.substring(0, eq);
+                String value = line.substring(eq + 1);
+                if (!knownKeys.contains(key)) continue;
+                if (!"true".equals(value) && !"false".equals(value)) continue;
+                editor.putBoolean(key, "true".equals(value));
+                restored++;
+            }
+            editor.apply();
+            feedback(text.count("imported", restored), Toast.LENGTH_SHORT);
+            recreate();
+        } catch (Exception error) {
+            android.util.Log.e("HushMessenger", "Can't import choices", error);
+            feedback(text.get("import_invalid"), Toast.LENGTH_LONG);
         }
     }
 

@@ -117,6 +117,16 @@ final class SettingsText {
             case "clipboard": return "HushMessenger setup";
             case "copied": return "Setup copied";
             case "copy_failed": return "Couldn't copy setup. Try again.";
+            case "export": return "Export choices";
+            case "export_help": return "Copies your control choices to the clipboard. Paste them into another installation's Import to restore.";
+            case "exported": return "Choices exported";
+            case "export_failed": return "Couldn't export. Try again.";
+            case "import_choices": return "Import choices";
+            case "import_help": return "Reads choices from the clipboard. Copy an export first.";
+            case "imported_one": return "Restored %d choice";
+            case "imported_many": return "Restored %d choices";
+            case "import_empty": return "Nothing to import. Export choices first, then paste them here.";
+            case "import_invalid": return "Not a valid HushMessenger export. Copy your export to the clipboard and try again.";
             case "changes_paused": return "Changes paused";
             case "changes_resumed": return "Changes resumed";
             case "safe_mode": return "Safe mode";
