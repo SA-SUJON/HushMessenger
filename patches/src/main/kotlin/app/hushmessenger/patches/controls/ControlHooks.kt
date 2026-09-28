@@ -67,6 +67,10 @@ internal val expectedHooks = mapOf(
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
+    "menu_settings" to setOf(
+        "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
+        "LX/TxV;->CAo(LX/4jw;I)V",
+    ),
 ) + pluginGates.mapValues { it.value.methods }
 
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
@@ -133,6 +137,12 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "Landroid/graphics/Typeface;" && method.parameterTypes.isEmpty() &&
                 !AccessFlags.STATIC.isSet(method.accessFlags) &&
                 "FacebookEmojiTypefaceProviderImpl" in strings) add("emoji_typeface")
+            if (method.returnType == "Ljava/util/ArrayList;" && method.parameterTypes.size == 1 &&
+                !AccessFlags.STATIC.isSet(method.accessFlags) &&
+                strings.any { "settingsfolder.folderitem.SettingsFolderItem" in it }) add("menu_settings")
+            if (method.returnType == "V" && method.parameterTypes.size == 2 &&
+                method.parameterTypes[1] == "I" && !AccessFlags.STATIC.isSet(method.accessFlags) &&
+                strings.contains("Unknown ViewHolder")) add("menu_settings")
         }
     }
     return found
@@ -375,4 +385,34 @@ internal fun MutableMethod.injectPeopleSection() {
     // The later site goes first so index 12 still names the preference branch.
     addInstructions(20, "invoke-static {v0}, $SETTINGS->keepPeopleSection(Z)Z\nmove-result v0")
     addInstructions(12, "invoke-static {v0}, $SETTINGS->hidePeopleSection(Z)Z\nmove-result v0")
+}
+
+internal fun MutableMethod.validateMenuSettingsAdd() {
+    val code = implementation!!.instructions.toList()
+    val returns = code.count { it.opcode == Opcode.RETURN_OBJECT }
+    if (returns != 1) throw PatchException("Messenger controls: menu settings item builder has $returns exits, expected 1")
+    if (returnType != "Ljava/util/ArrayList;") throw PatchException("Messenger controls: menu settings item builder returns $returnType")
+}
+
+internal fun MutableMethod.injectMenuSettingsAdd() {
+    validateMenuSettingsAdd()
+    val code = implementation!!.instructions.toList()
+    val ret = code.indexOfLast { it.opcode == Opcode.RETURN_OBJECT }
+    val retReg = (code[ret] as OneRegisterInstruction).registerA
+    addInstructions(ret, "invoke-static {v$retReg}, $SETTINGS->addMenuSettingsEntry(Ljava/util/ArrayList;)V")
+}
+
+internal fun MutableMethod.validateMenuSettingsBind() {
+    val code = implementation!!.instructions.toList()
+    if (code.none { it.opcode == Opcode.RETURN_VOID }) throw PatchException("Messenger controls: menu settings binder has no normal exit")
+    if (returnType != "V") throw PatchException("Messenger controls: menu settings binder returns $returnType")
+}
+
+internal fun MutableMethod.injectMenuSettingsBind() {
+    validateMenuSettingsBind()
+    val paramWords = parameterTypes.sumOf { if (it == "J" || it == "D") 2 else 1 } + 1
+    val viewHolderReg = implementation!!.registerCount - paramWords + 1
+    val code = implementation!!.instructions.toList()
+    val normalExit = code.indexOfFirst { it.opcode == Opcode.RETURN_VOID }
+    addInstructions(normalExit, "invoke-static {v$viewHolderReg}, $SETTINGS->handleMenuItemBound(Ljava/lang/Object;)V")
 }

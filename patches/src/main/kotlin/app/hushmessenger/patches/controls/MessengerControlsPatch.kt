@@ -59,9 +59,9 @@ private val settingsResources = resourcePatch(description = "Install HushMesseng
     }
 }
 
-private var discoveredControls: Map<String, List<Method>> = emptyMap()
+internal var discoveredControls: Map<String, List<Method>> = emptyMap()
 
-private val settingsExtension = bytecodePatch(description = "Load HushMessenger runtime controls") {
+internal val settingsExtension = bytecodePatch(description = "Load HushMessenger runtime controls") {
     dependsOn(settingsResources)
     extendWith("extensions/messenger.mpe")
     execute {
@@ -205,3 +205,26 @@ val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots",
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt so senders can't see when you viewed their message.", "Privacy")
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone. Your own unsend ability may be limited while active.", "Privacy")
+
+@Suppress("unused")
+val menuSettingsPatch = bytecodePatch(
+    name = "Open settings from menu",
+    description = "Adds a HushMessenger entry to the Menu tab grid. Always on.",
+    default = true,
+) {
+    category("Navigation")
+    compatibleWith(MessengerTarget.COMPATIBILITY)
+    dependsOn(settingsExtension)
+    execute {
+        validateControls(discoveredControls, setOf("menu_settings"))
+        val methods = discoveredControls.getValue("menu_settings")
+        val addMethod = methods.single { it.returnType == "Ljava/util/ArrayList;" }
+        val bindMethod = methods.single { it.returnType == "V" }
+        mutableClassDefBy(addMethod.definingClass).methods
+            .single { it.hookId() == addMethod.hookId() }
+            .injectMenuSettingsAdd()
+        mutableClassDefBy(bindMethod.definingClass).methods
+            .single { it.hookId() == bindMethod.hookId() }
+            .injectMenuSettingsBind()
+    }
+}

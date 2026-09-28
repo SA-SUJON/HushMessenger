@@ -25,8 +25,8 @@ class ExpandedControlsTest {
         val patches = Class.forName("app.hushmessenger.patches.controls.MessengerControlsPatchKt").methods
             .filter { it.name.startsWith("get") && it.returnType == BytecodePatch::class.java }
             .map { it.invoke(null) as BytecodePatch }.filter { it.name != null }
-        assertEquals(20, patches.size)
-        assertEquals(20, patches.map { it.name }.toSet().size)
+        assertEquals(25, patches.size)
+        assertEquals(25, patches.map { it.name }.toSet().size)
         val shared = patches.map { it.dependencies.filterIsInstance<BytecodePatch>().single() }.toSet()
         assertEquals(1, shared.size)
         assertNull(shared.single().name)

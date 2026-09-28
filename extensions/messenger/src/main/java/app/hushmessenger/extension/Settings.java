@@ -96,5 +96,91 @@ public final class Settings {
         return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) || original;
     }
 
+    @SuppressWarnings("unchecked")
+    public static void addMenuSettingsEntry(ArrayList list) {
+        try {
+            if (list == null || list.isEmpty()) return;
+            Object original = list.get(0);
+            Object clone = shallowClone(original);
+            if (clone == null) return;
+            for (Class<?> c = clone.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                java.lang.reflect.Field f;
+                try { f = c.getDeclaredField("A00"); } catch (NoSuchFieldException ignored) { continue; }
+                if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+                f.setAccessible(true);
+                Object sub = f.get(clone);
+                if (sub == null) continue;
+                java.lang.reflect.Field label;
+                try { label = sub.getClass().getDeclaredField("A05"); } catch (NoSuchFieldException ignored) { continue; }
+                if (label.getType() != String.class) continue;
+                Object subClone = shallowClone(sub);
+                if (subClone == null) continue;
+                label.setAccessible(true);
+                label.set(subClone, "HushMessenger");
+                f.set(clone, subClone);
+                list.add(clone);
+                return;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("HushMessenger", "addMenuSettingsEntry failed", e);
+        }
+    }
+
+    public static void handleMenuItemBound(Object viewHolder) {
+        try {
+            java.lang.reflect.Field textField = viewHolder.getClass().getDeclaredField("A06");
+            textField.setAccessible(true);
+            Object tv = textField.get(viewHolder);
+            if (!(tv instanceof android.widget.TextView)) return;
+            CharSequence text = ((android.widget.TextView) tv).getText();
+            if (!"HushMessenger".equals(text != null ? text.toString() : null)) return;
+            java.lang.reflect.Field viewField = null;
+            for (Class<?> c = viewHolder.getClass(); c != null; c = c.getSuperclass()) {
+                try { viewField = c.getDeclaredField("A0I"); break; }
+                catch (NoSuchFieldException ignored) {}
+            }
+            if (viewField == null) return;
+            viewField.setAccessible(true);
+            android.view.View itemView = (android.view.View) viewField.get(viewHolder);
+            if (itemView == null) return;
+            itemView.setOnClickListener(v -> {
+                android.content.Context ctx = v.getContext();
+                android.content.Intent intent = new android.content.Intent();
+                intent.setClassName(ctx.getPackageName(), "app.hushmessenger.extension.SettingsActivity");
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(intent);
+            });
+        } catch (Exception e) {
+            android.util.Log.e("HushMessenger", "handleMenuItemBound failed", e);
+        }
+    }
+
+    private static java.lang.reflect.Method allocateMethod;
+    private static Object unsafeInstance;
+
+    private static Object shallowClone(Object src) {
+        try {
+            if (allocateMethod == null) {
+                Class<?> u = Class.forName("sun.misc.Unsafe");
+                java.lang.reflect.Field f = u.getDeclaredField("theUnsafe");
+                f.setAccessible(true);
+                unsafeInstance = f.get(null);
+                allocateMethod = u.getMethod("allocateInstance", Class.class);
+            }
+            Object dst = allocateMethod.invoke(unsafeInstance, src.getClass());
+            for (Class<?> c = src.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                for (java.lang.reflect.Field f : c.getDeclaredFields()) {
+                    if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+                    f.setAccessible(true);
+                    f.set(dst, f.get(src));
+                }
+            }
+            return dst;
+        } catch (Exception e) {
+            android.util.Log.e("HushMessenger", "shallowClone failed", e);
+            return null;
+        }
+    }
+
     private Settings() { }
 }

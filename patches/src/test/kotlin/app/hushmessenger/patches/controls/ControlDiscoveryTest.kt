@@ -43,6 +43,9 @@ class ControlDiscoveryTest {
                     "keep_unsent" -> "const-string v0, \"com.facebook.stella.ipc.messenger.ACTION_REVOKE_MESSAGE\"\nreturn-void"
                     "ai_search" -> "const-string v0, \"com.facebook.messaging.search.aiagent.plugins.implementations.SearchAiagentImplementationsKillSwitch\"\nconst/4 v0, 0x1\nreturn v0"
                     "emoji_typeface" -> "const-string v0, \"FacebookEmojiTypefaceProviderImpl\"\nconst/4 v0, 0x0\nreturn-object v0"
+                    "menu_settings" -> if (id.contains("ArrayList"))
+                        "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
+                    else "const-string v0, \"Unknown ViewHolder\"\nreturn-void"
                     "bubbles" -> """
                         sget v0, Landroid/os/Build${'$'}VERSION;->SDK_INT:I
                         const/4 v1, 0x0
@@ -81,7 +84,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(67, found.values.sumOf { it.size })
+        assertEquals(69, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 
