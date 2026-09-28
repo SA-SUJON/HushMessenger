@@ -19,6 +19,7 @@ public class SettingsPreviewTest {
     @Before public void reset() {
         Settings.initialize(RuntimeEnvironment.getApplication());
         Settings.preferences.edit().clear().commit();
+        CrashGuard.resetForTests();
     }
 
     @Test public void previewDisclosesItsLimitsOnBothPagesAndNeverReportsActiveHostControls() {
@@ -37,7 +38,7 @@ public class SettingsPreviewTest {
                 .getPrimaryClip().getItemAt(0).getText().toString();
             assertTrue(summary.contains("Mode: UI preview. Does not change Messenger.\n"));
             // The mode belongs to the header, not the list of controls below it.
-            assertTrue(summary.contains("\nPaused: false\nMode: UI preview. Does not change Messenger.\nControls:\n"));
+            assertTrue(summary.contains("\nPaused: false\nSafe mode: false\nMode: UI preview. Does not change Messenger.\nControls:\n"));
             assertTrue(summary.contains("people: installed=true, selected=true, active=false\n"));
             assertFalse(summary.contains("active=true"));
         }

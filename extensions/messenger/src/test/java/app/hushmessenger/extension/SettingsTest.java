@@ -21,6 +21,7 @@ public class SettingsTest {
     @Before public void reset() {
         Settings.initialize(RuntimeEnvironment.getApplication());
         Settings.preferences.edit().clear().commit();
+        CrashGuard.resetForTests();
     }
 
     @Test public void allControlsPreserveStockUntilEnabled() {

@@ -36,7 +36,8 @@ public final class Settings {
 
     public static boolean enabled(String key) {
         SharedPreferences prefs = preferences;
-        return installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false) && prefs.getBoolean(key, false);
+        return installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
+                && !CrashGuard.isSafeMode() && prefs.getBoolean(key, false);
     }
 
     public static boolean hideStories() { return enabled("stories"); }

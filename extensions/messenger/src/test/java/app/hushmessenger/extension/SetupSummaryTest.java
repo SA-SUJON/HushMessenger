@@ -24,6 +24,7 @@ public class SetupSummaryTest {
     @Before public void reset() {
         Settings.initialize(RuntimeEnvironment.getApplication());
         Settings.preferences.edit().clear().commit();
+        CrashGuard.resetForTests();
         RuntimeEnvironment.getApplication().getSystemService(ClipboardManager.class).clearPrimaryClip();
     }
 
@@ -60,10 +61,10 @@ public class SetupSummaryTest {
             assertTrue(text.contains("\nHost package: " + activity.getPackageName() + "\n"));
             assertTrue(text.contains("\nHost version: 580.0.0.49.91\n"));
             assertTrue(text.contains("\nHost version code: " + ((7L << 32) | 346013387L) + "\n"));
-            assertTrue(text.contains("\nAndroid API: " + Build.VERSION.SDK_INT + "\nPaused: false\n"));
+            assertTrue(text.contains("\nAndroid API: " + Build.VERSION.SDK_INT + "\nPaused: false\nSafe mode: false\n"));
             assertTrue(text.contains("people: installed=true, selected=true, active=true\n"));
             assertTrue(text.contains("stories: installed=false, selected=true, active=false\n"));
-            assertEquals(27, text.split("\n").length);
+            assertEquals(28, text.split("\n").length);
             assertFalse(text.contains("private-"));
             assertFalse(text.contains("account-secret"));
             assertFalse(text.contains("account_id"));
@@ -99,7 +100,7 @@ public class SetupSummaryTest {
             root.findViewWithTag("tab_app").performClick();
             root.findViewWithTag("copy_setup").performClick();
             String paused = clipboard.getPrimaryClip().getItemAt(0).getText().toString();
-            assertTrue(paused.contains("\nPaused: true\n"));
+            assertTrue(paused.contains("\nPaused: true\nSafe mode: false\n"));
             assertTrue(paused.contains("bubbles: installed=true, selected=true, active=false\n"));
             assertTrue(paused.contains("people: installed=true, selected=true, active=false\n"));
             assertFalse(paused.contains("active=true"));

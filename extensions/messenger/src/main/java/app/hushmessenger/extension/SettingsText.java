@@ -118,6 +118,8 @@ final class SettingsText {
             case "copy_failed": return "Couldn't copy setup. Try again.";
             case "changes_paused": return "Changes paused";
             case "changes_resumed": return "Changes resumed";
+            case "safe_mode": return "Safe mode";
+            case "safe_mode_help": return "Messenger crashed several times in a row, so all controls were turned off. Your choices are still saved. Tap Resume to turn them back on.";
             case "enabled_one": return "%d control enabled";
             case "enabled_many": return "%d controls enabled";
             case "saved_one": return "%d saved choice. Turn pause off to resume.";

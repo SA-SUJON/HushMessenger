@@ -431,6 +431,7 @@ public final class SettingsActivity extends Activity {
         control.setOnCheckedChangeListener((button, checked) -> {
             if (binding) return;
             Settings.preferences.edit().putBoolean(key, checked).apply();
+            if ("paused".equals(key) && !checked && CrashGuard.isSafeMode()) CrashGuard.clearSafeMode();
             updateSetup();
             feedback("paused".equals(key) ? text.get(checked ? "changes_paused" : "changes_resumed")
                 : text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT);
@@ -501,12 +502,14 @@ public final class SettingsActivity extends Activity {
         try {
             PackageInfo host = getPackageManager().getPackageInfo(getPackageName(), 0);
             boolean paused = Settings.preferences.getBoolean("paused", false);
+            boolean safeMode = CrashGuard.isSafeMode();
             StringBuilder summary = new StringBuilder("HushMessenger v").append(BuildConfig.VERSION_NAME)
                 .append("\nHost package: ").append(getPackageName())
                 .append("\nHost version: ").append(host.versionName == null ? "unknown" : host.versionName)
                 .append("\nHost version code: ").append(host.getLongVersionCode())
                 .append("\nAndroid API: ").append(Build.VERSION.SDK_INT)
-                .append("\nPaused: ").append(paused).append('\n');
+                .append("\nPaused: ").append(paused)
+                .append("\nSafe mode: ").append(safeMode).append('\n');
             if (Settings.preview) summary.append("Mode: UI preview. Does not change Messenger.\n");
             summary.append("Controls:\n");
             for (String[] spec : CONTROLS) {
@@ -515,7 +518,7 @@ public final class SettingsActivity extends Activity {
                 boolean selected = Settings.preferences.getBoolean(key, false);
                 summary.append(key).append(": installed=").append(installed)
                     .append(", selected=").append(selected)
-                    .append(", active=").append(!Settings.preview && installed && selected && !paused && Settings.available(key)).append('\n');
+                    .append(", active=").append(!Settings.preview && installed && selected && !paused && !safeMode && Settings.available(key)).append('\n');
             }
             ClipData clip = ClipData.newPlainText(text.get("clipboard"), summary.toString());
             PersistableBundle extras = new PersistableBundle();
@@ -567,9 +570,18 @@ public final class SettingsActivity extends Activity {
             saved++;
             if (Settings.available(spec[0])) enabled++;
         }
+        boolean safeMode = CrashGuard.isSafeMode();
         boolean paused = Settings.preferences.getBoolean("paused", false);
-        enabledCount.setText(paused ? text.get("changes_paused") : text.count("enabled", enabled));
-        setupNote.setText(paused ? text.count("saved", saved) : text.get("saved"));
+        if (safeMode) {
+            enabledCount.setText(text.get("safe_mode"));
+            setupNote.setText(text.get("safe_mode_help"));
+        } else if (paused) {
+            enabledCount.setText(text.get("changes_paused"));
+            setupNote.setText(text.count("saved", saved));
+        } else {
+            enabledCount.setText(text.count("enabled", enabled));
+            setupNote.setText(text.get("saved"));
+        }
     }
 
     private void filterControls(String query) {
