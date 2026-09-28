@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Three new privacy controls (off by default, under a new Privacy group):
+  - Allow screenshots: removes FLAG_SECURE and disables screenshot detection in vanish mode and E2EE chats (hooks SecureWindowUtils and ScreenshotContentObserver).
+  - Hide read receipts: blocks the outgoing read-receipt runnable so senders don't see when you viewed their message (hooks ReadThreadManager).
+  - Keep unsent messages: intercepts incoming message-revoke intents so messages other people remove stay visible locally (hooks ACTION_REVOKE_MESSAGE handler). No unsent indicator is shown; the message just stays. Delta sync after a restart may still apply the server's unsent state.
+- DexScanner tooling and scanDex Gradle task for hook anchor discovery in stock APKs.
 - Crash-loop safe mode: if Messenger exits abnormally three times within a minute after starting, all controls turn off automatically while keeping saved choices. The settings screen shows safe mode is active and why, and Resume clears it. Uses ApplicationExitInfo on API 30+ with a crash-marker fallback for older devices.
 - The shortcuts XML is now found by scanning APK entries instead of expecting a fixed file name. Variant 346013442 stores it at res/eve.xml instead of res/los.xml; the patch now works with either.
 - Other apps can no longer restart Messenger. Restart Messenger used to accept a request from any app on the phone, which could close Messenger at any moment, even during a call. The long-press shortcut and the App tab button still work.
