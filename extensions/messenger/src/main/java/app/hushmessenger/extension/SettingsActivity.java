@@ -76,6 +76,7 @@ public final class SettingsActivity extends Activity {
         {"business_suggestions", "Hide business typing suggestions", "Hides business suggestions as you type.", "conversations"},
         {"event_prompts", "Hide event prompts", "Hides event quick-promotion prompts inside chats.", "conversations"},
         {"typing", "Hide typing indicator", "Stops your outgoing active-typing signal. Messages and read receipts are separate.", "conversations"},
+        {"use_system_emoji", "Use system emoji", "Renders emoji with your phone's own font instead of Messenger's built-in set.", "conversations"},
         {"external_browser", "Open web links externally", "Uses your default browser for HTTP and HTTPS links. Other link types keep their original behavior.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
         {"allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "privacy"},

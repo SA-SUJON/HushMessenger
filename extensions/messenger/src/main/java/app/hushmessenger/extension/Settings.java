@@ -53,6 +53,16 @@ public final class Settings {
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
 
+    private static android.graphics.Typeface systemEmoji;
+    public static android.graphics.Typeface systemEmojiTypeface() {
+        if (!enabled("use_system_emoji")) return null;
+        if (systemEmoji != null) return systemEmoji;
+        try {
+            systemEmoji = android.graphics.Typeface.createFromFile("/system/fonts/NotoColorEmoji.ttf");
+        } catch (Exception ignored) { }
+        return systemEmoji;
+    }
+
     /** Null means return the exact original list. Only typed ad rows are removed. */
     public static List<?> filterInboxAds(List<?> items) {
         if (!enabled("ads") || items == null || items.isEmpty()) return null;

@@ -99,6 +99,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "browser" -> method.validateBrowserPreference()
             "ads" -> method.validateAdFilter()
             "people_jewel" -> method.validatePeopleSection()
+            "emoji_typeface" -> method.validateScratch()
             else -> method.validateSwitch()
         }
     }
@@ -116,6 +117,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "allow_screenshot" -> method.injectSwitch("allowScreenshot", "0x0")
             "hide_read_receipts" -> method.injectSwitch("hideReadReceipts", "0x0")
             "keep_unsent" -> method.injectSwitch("keepUnsent", "0x0")
+            "emoji_typeface" -> method.injectEmojiTypeface()
             else -> method.injectFeatureSwitch(key)
         }
     }
@@ -195,6 +197,8 @@ val suppressTypingPatch = controlPatch("typing", "Hide typing indicator", "Suppr
 val externalBrowserPatch = controlPatch("external_browser", "Open web links externally", "Uses Messenger's external-browser branch for HTTP and HTTPS links.", "Links and bubbles", "browser")
 @Suppress("unused")
 val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Removes the low-memory eligibility limit on Android 11 and newer.", "Links and bubbles")
+@Suppress("unused")
+val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "Renders emoji with the phone's own font instead of Messenger's.", "Conversations", "emoji_typeface")
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "Privacy")
 @Suppress("unused")

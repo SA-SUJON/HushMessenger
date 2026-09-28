@@ -42,6 +42,7 @@ class ControlDiscoveryTest {
                     "subtabs", "typing", "allow_screenshot", "hide_read_receipts" -> "return-void"
                     "keep_unsent" -> "const-string v0, \"ACTION_REVOKE_MESSAGE\"\nreturn-void"
                     "ai_search" -> "const-string v0, \"SearchAiagentImplementationsKillSwitch\"\nconst/4 v0, 0x1\nreturn v0"
+                    "emoji_typeface" -> "const-string v0, \"FacebookEmojiTypefaceProviderImpl\"\nconst/4 v0, 0x0\nreturn-object v0"
                     "bubbles" -> """
                         sget v0, Landroid/os/Build${'$'}VERSION;->SDK_INT:I
                         const/4 v1, 0x0
@@ -80,7 +81,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(66, found.values.sumOf { it.size })
+        assertEquals(67, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

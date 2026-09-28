@@ -66,6 +66,7 @@ internal val expectedHooks = mapOf(
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
+    "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
 ) + pluginGates.mapValues { it.value.methods }
 
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
@@ -129,6 +130,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) &&
                 method.parameterTypes == listOf(cls.type) &&
                 "SearchAiagentImplementationsKillSwitch" in strings) add("ai_search")
+            if (method.returnType == "Landroid/graphics/Typeface;" && method.parameterTypes.isEmpty() &&
+                !AccessFlags.STATIC.isSet(method.accessFlags) &&
+                "FacebookEmojiTypefaceProviderImpl" in strings) add("emoji_typeface")
         }
     }
     return found
@@ -253,6 +257,19 @@ internal fun MutableMethod.validateSwitch() {
     if (returnType != "V" && returnType != "Z" && !returnType.startsWith("L")) {
         throw PatchException("Unexpected hook return type: $returnType")
     }
+}
+
+internal fun MutableMethod.injectEmojiTypeface() {
+    validateScratch()
+    if (returnType != "Landroid/graphics/Typeface;") {
+        throw PatchException("Expected Typeface return for emoji hook: ${hookId()}")
+    }
+    addInstructionsWithLabels(0, """
+        invoke-static {}, $SETTINGS->systemEmojiTypeface()Landroid/graphics/Typeface;
+        move-result-object v0
+        if-eqz v0, :stock_behavior
+        return-object v0
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
 }
 
 internal fun MutableMethod.validateSubtabs() {

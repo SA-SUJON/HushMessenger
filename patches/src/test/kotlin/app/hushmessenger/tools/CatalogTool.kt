@@ -77,10 +77,10 @@ object CatalogTool {
                 it.getAttribute("android:name").removePrefix("hush.feature.")
             }
         val keys = declarations.map { it.first }
-        require(keys.size == 23 && keys.distinct().size == keys.size) { "Expected 23 distinct patch control keys" }
+        require(keys.size == 24 && keys.distinct().size == keys.size) { "Expected 24 distinct patch control keys" }
         require(uiKeys.size == keys.size && uiKeys.toSet() == keys.toSet()) { "Extension control keys differ from patches" }
         require(manifestKeys.size == keys.size && manifestKeys.toSet() == keys.toSet()) { "Manifest capabilities differ from patches" }
-        require(declarations.map { it.second }.toSet().size == 23 &&
+        require(declarations.map { it.second }.toSet().size == 24 &&
             names == declarations.map { it.second }.toSet() + "Install beside Meta apps") { "Built patch names differ from control declarations" }
     }
 
@@ -99,7 +99,7 @@ object CatalogTool {
         require(version == properties.getProperty("version")) { "Bundle version differs from source" }
         val patches = loadPatchesFromJar(setOf(bundle))
         val patchNames = patches.map { requireNotNull(it.name) }.toSet()
-        require(patches.size == 24 && patchNames.size == 24) { "Expected 24 distinct visible patches" }
+        require(patches.size == 25 && patchNames.size == 25) { "Expected 25 distinct visible patches" }
         validateDefinitions(
             root.resolve("patches/src/main/kotlin/app/hushmessenger/patches/controls/MessengerControlsPatch.kt").readText(),
             root.resolve("extensions/messenger/src/main/java/app/hushmessenger/extension/SettingsActivity.java").readText(),
@@ -116,6 +116,6 @@ object CatalogTool {
         else require(published.isFile && Json.parseToJsonElement(published.readText()) == document) {
             "Public catalog differs from the built MPP; run :patches:generatePatchCatalog"
         }
-        println("Catalog ${args[0]} passed: 24 patches, 23 control keys, built bundle $version")
+        println("Catalog ${args[0]} passed: 25 patches, 24 control keys, built bundle $version")
     }
 }
