@@ -1,17 +1,11 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/version-0.3.0-0084FF" alt="Version 0.3.0"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.1"><img src="https://img.shields.io/badge/version-0.3.1-0084FF" alt="Version 0.3.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
   <img src="https://img.shields.io/badge/status-preview-8A2BE2" alt="Preview release">
-</p>
-
-<p align="center">
-  <a href="https://ko-fi.com/X8K126YVER">
-    <img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi" />
-  </a>
 </p>
 
 # HushMessenger
@@ -30,7 +24,7 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It offers 21 sele
 3. **Check the source.** The HushMessenger card should show **21 patches**. Open **Patches** to browse the catalog. When preparing Messenger, use **Choose patches** to select individual features. Select all for every optional control plus `Install beside Meta apps`. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend; mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.3.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop fetched v0.3.0 and listed all 21 entries. Phone source verification last covered v0.2.0 on S22 (Manager 1.32.0) and S25 (1.33.0-dev.3). The [latest phone refreshes](Roadmap_Blocked.md#settings-source-refresh) are waiting for available isolated sessions. Both stock Messenger installations stayed intact. An earlier clean Manager emulator check covered local import. The phone behavior warning above still applies.
+For a local source, download [`patches-0.3.1.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.1) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL; the command below lists its 21 entries. Phone source verification last covered v0.2.0 on S22 (Manager 1.32.0) and S25 (1.33.0-dev.3). Phone refreshes are waiting for available isolated sessions. Both stock Messenger installations stayed intact. An earlier clean Manager emulator check covered local import. The phone behavior warning above still applies.
 
 ### If something doesn't work
 
@@ -43,15 +37,17 @@ The S22's stock Messenger 580 has a **Hide suggestions** action in the `People y
 
 ### Check a signed APK before installation
 
-The repository includes a read-only certificate check. It uses Android's `apksigner` to verify the candidate and installed APKs, compares the complete signer sets for the phone's Android version, and checks who owns the candidate's declared permissions. Source-stamp certificates aren't treated as app signers. It also catches version downgrades.
+The repository includes a read-only installation check. It uses Android's `apksigner` to verify the candidate and installed APKs, compares the complete signer sets for the phone's Android version, and checks who owns the candidate's declared permissions. It checks every Android user for an existing installation. Source-stamp certificates aren't treated as app signers. It also catches version downgrades and checks the APK's arm64 libraries against the phone's memory page size.
 
 Use Python 3.11 or newer, JDK 21, Android SDK Build Tools (tested with 36.1.0), and an authorized ADB connection. Run this from the repository with the phone's exact serial from `adb devices`:
 
 ```powershell
-python scripts/check_install.py --apk .\messenger-signed.apk --serial YOUR_PHONE_SERIAL --build-tools "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0" --java "$env:JAVA_HOME\bin\java.exe"
+python scripts/check_install.py --apk .\messenger-signed.apk --stock-apk .\messenger-stock.apk --serial YOUR_PHONE_SERIAL --build-tools "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0" --java "$env:JAVA_HOME\bin\java.exe"
 ```
 
-Exit `0` means no certificate or downgrade conflict was found. Exit `1` reports a conflict; exit `2` means the check couldn't finish. Different current certificates aren't approved through a possible rotation lineage. The check reads user 0's installed base APKs into a temporary directory, then deletes those local copies. It doesn't install, uninstall, clear data or change phone settings.
+The optional `--stock-apk` argument compares native library names and decompressed bytes against the exact stock hash listed below. Without it, the check reports that preservation hasn't been checked. Compressed libraries are allowed when Android extracts them; libraries loaded directly from the APK must also have aligned ZIP entries.
+
+Exit `0` means the certificate, downgrade and native-library checks passed. Exit `1` reports a signer or downgrade conflict; exit `2` means a required check couldn't pass or finish. Different current certificates aren't approved through a possible rotation lineage. The check reads installed base APKs into a temporary directory, then deletes those local copies. It doesn't install, uninstall, clear data or change phone settings.
 
 A successful check doesn't establish cross-app login, provider access or Messenger startup. Run it before planning an installation, and keep the installed app's data intact when it reports a conflict. See [Android's signing tool reference](https://developer.android.com/tools/apksigner).
 
@@ -102,11 +98,11 @@ The new inbox ad filter checks a current list-processing path instead of the abs
 
 Each control is a separate patch. They share one settings extension, and manifest metadata records which controls were installed. Selecting one control only edits its hooks; omitted controls have no active switches. Saved preferences remain available if you select the feature again later.
 
-The full set checks 57 hook methods across both supported APKs. New plugin gates must retain their expected enable/disable branch, and the tab, browser and ad-filter edits check their specific instruction sites. A missing or ambiguous target stops patching. The settings provider is private; its launcher accepts no external commands to change preferences.
+The full set checks 57 hook methods across both supported APKs. Plugin gates must retain their expected enable/disable branch and return constants. The tab, browser and ad-filter edits check their specific instruction sites. Each control validates every target before editing its first method, and its settings entry is recorded only after success. A missing or ambiguous target stops that control. The settings provider is private; its launcher accepts no external commands to change preferences.
 
 ### Install beside Meta apps
 
-The patch renames Messenger's two shared Meta signature permissions in declarations, requests, guarded components and six DEX string loads. It stops if those sites differ from the tested APK. It doesn't address Messenger's other cross-app signer checks, so Facebook login and account switching remain on the [roadmap](ROADMAP.md).
+The patch renames Messenger's two shared Meta signature permissions in declarations, requests, guarded components and six DEX string loads. It requires the original signature protection level and checks DEX sites before changing the manifest. It stops if those sites differ from the tested APK. Messenger's other cross-app signer checks, Facebook login and account switching still need separate verification.
 
 Morphe groups these builds under one version name, so it may list the patch for another 580 APK. The patch checks the version code before changing anything and rejects builds other than `346013387` and `346013440`.
 
@@ -133,11 +129,11 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 ## Verification and build
 
-The local suite has 26 Kotlin tests, 20 Android unit tests and 11 Python certificate tests. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Android lint and release builds run locally.
+The local suite has 39 Kotlin tests, 35 Android unit tests and 29 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and eight existing warnings.
 
-Morphe Desktop 1.17.0 applied all 21 patches to private copies of both supported APKs, and Android verified their v3 signatures. Two clean release builds produced the same bundle checksum. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
+Morphe Desktop 1.17.0 applied all 21 patches to private copies of both supported APKs, and Android verified their v3 signatures. Two clean release builds produced the same bundle checksum. Both rebuilt APKs preserved all 13 compressed arm64 libraries, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output; continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
 
-The v0.3.0 settings extension was exercised as a standalone release build on an isolated S22 display. Both pages and themes were compared with the [design references](concepts/settings/0.3.0). Search recovery, category filters, pause, a narrow 320 dp layout and saved choices across an update passed. Automated checks also cover 200% text and theme recreation. These checks verify the settings UI. The Messenger features still need signed-in before/after checks on affected screens.
+The v0.3.1 settings extension was exercised as a standalone release build on an isolated S22 display. Both pages and themes were compared with the [design references](concepts/settings/0.3.0). Search recovery, category filters, pause and saved choices across an update passed. A headless Android 16 emulator also checked 320 by 360 dp and 640 by 360 dp windows at 200% text, including keyboard-visible search in both themes. Automated checks cover API 28 and 36, state restoration and accessible actions. These checks verify the settings UI. The Messenger features still need signed-in before/after checks on affected screens.
 
 The earlier v0.1.0 diagnostic copy verified hiding and restoring stories and notes, the Facebook toolbar shortcut and the Meta AI floating button. That copy needed a private package-name adjustment and skipped encrypted-history restoration. It does not establish that an original-package installation works. Typing suppression, subtabs, bubbles, live ads and full chat behavior remain unverified.
 
@@ -160,23 +156,30 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The output is `patches/build/libs/patches-0.3.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.3.1.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency; clean builds from the same source produce the same bundle checksum.
 
 ### Check the bundle
 
-The [v0.3.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.0) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.3.1 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.3.1) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
-23a9d89e67552e1e2e169b338cdb54909d7b48760f2a2bd153abb2feed37ae0d  patches-0.3.0.mpp
+4237294480109d0a1c8b8a4e6e2280ee05530be5780d664167de499d7f532ce8  patches-0.3.1.mpp
 ```
 
 Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.
 
 ## Research and credits
 
-[RESEARCH.md](RESEARCH.md) compares Messenger patches in Morphe, ReVanced, De-Vanced and other projects. [Roadmap_Blocked.md](Roadmap_Blocked.md) tracks the remaining phone checks, missing fixtures and proposed patches. [Hushfeed](https://github.com/SysAdminDoc/hushfeed) is another Hush patch project.
+The [research snapshot](https://github.com/SysAdminDoc/HushMessenger/blob/015654380957d775f95b9f1c7871e91452d6216a/RESEARCH.md) compares Messenger patches in Morphe, ReVanced, De-Vanced and other projects. The remaining checks are summarized below. [Hushfeed](https://github.com/SysAdminDoc/hushfeed) is another Hush patch project.
 
 HushMessenger starts from the [Morphe patches template](https://github.com/MorpheApp/morphe-patches-template). Messenger hook definitions come from [De-Vanced](https://github.com/RookieEnough/De-Vanced), including its ReVanced contributions, and [Doom's patches](https://github.com/rushiranpise/morphe-patches). The typed ad-filter approach follows [Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed), with its MIT notice retained. The bubble eligibility anchor originated in [ChatHeadEnabler](https://github.com/NeonOrbit/ChatHeadEnabler). The permission approach is adapted from [Hushfacebook's shared-permission patch](https://github.com/SysAdminDoc/Hushfacebook/blob/15b8e9ed9315464a3e2d1a821b4e26ad47bbc28c/patches/src/main/kotlin/app/morphe/patches/facebook/coexist/SharedPermissions.kt). Source is under [GPL-3.0](LICENSE); see [NOTICE](NOTICE). HushMessenger is independent of Meta and Morphe.
+
+## Remaining checks
+
+- Original-package startup, encrypted-history recovery and cross-app account behavior still need a faithful signed-in reproduction. The stock apps remain installed on the test phones.
+- [Issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1) reports Messenger 580 build `346013370`, which isn't one of the two validated APKs. Its exact original APK is needed before adding support.
+- Live ad removal, typing suppression, bubbles, calls and patched message delivery remain unverified. Structural APK checks don't establish those behaviors.
+- Phone source refreshes need isolated access. The S25 is disconnected, and Manager is active on the S22's main display.
 
 <p align="center">
   <a href="https://ko-fi.com/X8K126YVER"><img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi"></a>

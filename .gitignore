@@ -20,3 +20,7 @@ gradle.local.properties
 .claude/
 CLAUDE.md
 CODEX_CHANGELOG.md
+*.md
+!README.md
+!CHANGELOG.md
+.ruff_cache/

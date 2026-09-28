@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-09-27)
 
 - Require both shared permissions to retain signature protection. Check their DEX sites before renaming the manifest permissions.
 - Validate every method in a control before editing it, then publish its settings capability only after success. Reject changed browser parameters and plugin return constants.
@@ -11,6 +11,10 @@
 - Reject incomplete or conflicting certificate, permission and package records during the installation check. Include apps installed in other Android profiles.
 - Check arm64 libraries, ELF page alignment and Android's native extraction rules. The optional `--stock-apk` argument verifies that a rebuild preserves the tested stock libraries.
 - Return clear errors for missing inputs, tool timeouts, corrupt compressed native libraries and malformed changed-APK reports. Read wrapped dependency errors and keep temporary APK cleanup on failure.
+
+- Pass 103 local tests. Android lint reports no errors and the same eight warnings as the baseline.
+- Rebuild both supported APKs with all 21 patches, verify their v3 signatures and preserve every native library. Two clean bundle builds produce the same checksum.
+- Exercise both settings pages and themes on an isolated S22 display. Check small windows, 200% text and keyboard-visible search on a headless Android 16 emulator.
 
 ## 0.3.0 (2026-09-27)
 
