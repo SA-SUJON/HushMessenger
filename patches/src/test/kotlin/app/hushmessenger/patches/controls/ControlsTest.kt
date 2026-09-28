@@ -5,7 +5,10 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
@@ -83,6 +86,34 @@ class ControlsTest {
         assertEquals("HushMessenger settings", (activities.item(1) as org.w3c.dom.Element).getAttribute("android:label"))
         assertEquals("android.intent.category.LAUNCHER", (document.getElementsByTagName("category").item(0) as org.w3c.dom.Element).getAttribute("android:name"))
         assertFailsWith<PatchException> { document.addSettingsEntry() }
+    }
+
+    @Test fun notificationsSuggestionsJoinTheStockHiddenPreferenceBeforeItsBranch() {
+        val reader = peopleJewelMethod()
+        val original = reader.implementation!!.instructions.toList()
+        reader.injectPeopleSection()
+        val code = reader.implementation!!.instructions.toList()
+        assertEquals(original.take(12), code.take(12))
+        assertEquals("$SETTINGS->hidePeopleSection(Z)Z", (code[12] as ReferenceInstruction).reference.toString())
+        assertEquals(listOf(1, 0), (code[12] as FiveRegisterInstruction).let { listOf(it.registerCount, it.registerC) })
+        assertEquals(Opcode.MOVE_RESULT, code[13].opcode)
+        assertEquals(0, (code[13] as OneRegisterInstruction).registerA)
+        assertEquals(original.drop(12), code.drop(14))
+        // The stock branch still skips to the original "not hidden" return.
+        val branch = code.take(14).sumOf { it.codeUnits } + (code[14] as OffsetInstruction).codeOffset
+        assertEquals(code.dropLast(1).sumOf { it.codeUnits }, branch)
+    }
+
+    @Test fun changedNotificationsSuggestionsReaderFailsBeforeEditing() {
+        for (changed in listOf(
+            peopleJewelMethod(resultRegister = "v3"),
+            peopleJewelMethod(key = "LX/JTx;->A00:LX/1BL;"),
+            peopleJewelMethod(flags = AccessFlags.PUBLIC.value),
+        )) {
+            val before = changed.implementation!!.instructions.toList()
+            assertFailsWith<PatchException> { changed.injectPeopleSection() }
+            assertEquals(before, changed.implementation!!.instructions.toList())
+        }
     }
 
     @Test fun browserInjectionRejectsStaticMethodsBeforeUsingTheWrongUriParameter() {

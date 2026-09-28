@@ -29,6 +29,8 @@ import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue
 internal const val SETTINGS = "Lapp/hushmessenger/extension/Settings;"
 internal const val AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/InboxAdsItem;"
 internal const val IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;"
+internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z"
+private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -55,6 +57,7 @@ internal val expectedHooks = mapOf(
     "bubbles" to setOf("LX/2ZW;->A00()Z"),
     "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
     "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
+    "people_jewel" to setOf("LX/HAR;->A01(LX/HAR;)Z"),
 ) + pluginGates.mapValues { it.value.methods }
 
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
@@ -68,6 +71,12 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 it.returnType == IMMUTABLE_LIST && AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags)
         }
     }
+    // Static fields initialized from the Notifications tab's own "hide suggestions" preference key.
+    val peopleJewelKeys = classes.flatMap { cls ->
+        val code = cls.methods.singleOrNull { it.name == "<clinit>" }?.implementation?.instructions?.toList().orEmpty()
+        if (code.none { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == PEOPLE_JEWEL_KEY }) emptyList()
+        else code.filter { it.opcode == Opcode.SPUT_OBJECT }.map { (it as ReferenceInstruction).reference.toString() }
+    }.toSet()
     for (cls in classes) {
         val original = cls.fields.firstOrNull { it.name == "__redex_internal_original_name" }
             ?.initialValue.let { (it as? StringEncodedValue)?.value }
@@ -100,6 +109,8 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (gate && refs.any { it.toString() == "Landroid/os/Build\$VERSION;->SDK_INT:I" } &&
                 refs.any { it.toString() == "Landroid/app/ActivityManager;->isLowRamDevice()Z" }) add("bubbles")
             if (method.returnType == "Z" && strings.containsAll(setOf("iab_skipped_reason", "user_prefers_external"))) add("browser")
+            if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type) &&
+                refs.any { it.toString() in peopleJewelKeys } && refs.any { it.toString() == PREFERENCE_GETTER }) add("people_jewel")
         }
     }
     return found
@@ -276,4 +287,31 @@ internal fun MutableMethod.injectBrowserPreference() {
     validateBrowserPreference()
     // p1 is Uri (v7). Use the same stock preference branch, preserving surrounding handling.
     addInstructions(63, "invoke-static {v0, p1}, $SETTINGS->preferExternalBrowser(ZLandroid/net/Uri;)Z\nmove-result v0")
+}
+
+/** The Notifications tab reads its stock "section hidden" preference into v0, then branches on it. */
+internal fun MutableMethod.validatePeopleSection() {
+    val code = implementation!!.instructions
+    val key = code.getOrNull(8)
+    val default = code.getOrNull(9)
+    val getter = code.getOrNull(10) as? FiveRegisterInstruction
+    if (!AccessFlags.STATIC.isSet(accessFlags) || returnType != "Z" || parameterTypes != listOf(definingClass) ||
+        implementation!!.registerCount != 6 ||
+        key?.opcode != Opcode.SGET_OBJECT || (key as? OneRegisterInstruction)?.registerA != 0 ||
+        (key as? ReferenceInstruction)?.reference.toString() != "LX/JTx;->A01:LX/1BL;" ||
+        default?.opcode != Opcode.CONST_4 || (default as? OneRegisterInstruction)?.registerA != 4 ||
+        (default as? WideLiteralInstruction)?.wideLiteral != 0L ||
+        code.getOrNull(10)?.opcode != Opcode.INVOKE_INTERFACE ||
+        (code[10] as? ReferenceInstruction)?.reference.toString() != PREFERENCE_GETTER ||
+        getter?.registerCount != 3 || getter.registerC != 1 || getter.registerD != 0 || getter.registerE != 4 ||
+        code.getOrNull(11)?.opcode != Opcode.MOVE_RESULT || (code[11] as? OneRegisterInstruction)?.registerA != 0 ||
+        code.getOrNull(12)?.opcode != Opcode.IF_EQZ || (code[12] as? OneRegisterInstruction)?.registerA != 0) {
+        throw PatchException("Messenger controls: the Notifications tab suggestions setting no longer matches the tested build")
+    }
+}
+
+internal fun MutableMethod.injectPeopleSection() {
+    validatePeopleSection()
+    // Treat an enabled control like Messenger's own hide choice, so its loader skips the section.
+    addInstructions(12, "invoke-static {v0}, $SETTINGS->hidePeopleSection(Z)Z\nmove-result v0")
 }

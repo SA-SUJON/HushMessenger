@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+
+- Hide People You May Know now also clears the suggestions on Messenger's Notifications tab and the block after the last chat. It uses Messenger's own "hide this section" setting, so pausing HushMessenger or turning the switch off brings the suggestions back. Checked on the S25: the Notifications tab lost its suggestions, they returned while paused, and chats and notifications still showed. The end-of-list block didn't appear on that account, so it's covered by build checks only.
 ## 0.4.1 (2026-09-27)
 
 - Long-press Messenger for Patch controls or Restart Messenger. Keep the app-drawer settings entry and cover Messenger's alternate icons.

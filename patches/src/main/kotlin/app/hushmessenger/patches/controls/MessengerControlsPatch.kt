@@ -94,6 +94,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "subtabs" -> method.validateSubtabs()
             "browser" -> method.validateBrowserPreference()
             "ads" -> method.validateAdFilter()
+            "people_jewel" -> method.validatePeopleSection()
             else -> method.validateSwitch()
         }
     }
@@ -102,6 +103,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "subtabs" -> method.injectSubtabs()
             "browser" -> method.injectBrowserPreference()
             "ads" -> method.injectAdFilter()
+            "people_jewel" -> method.injectPeopleSection()
             "stories" -> method.injectSwitch("hideStories", "0x0")
             "facebook" -> method.injectSwitch("hideFacebook", "0x0")
             "ai_menu", "ai_fab", "ai_toolbar" -> method.injectSwitch("hideMetaAi", "0x0")
@@ -149,7 +151,7 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
 @Suppress("unused")
 val hideInboxAdsPatch = controlPatch("ads", "Hide inbox ads", "Filters typed inbox ad items. Live ad removal still needs an affected-account check.", "Inbox")
 @Suppress("unused")
-val hidePeoplePatch = controlPatch("people", "Hide People You May Know", "Hides suggested people in the inbox.", "Inbox")
+val hidePeoplePatch = controlPatch("people", "Hide People You May Know", "Hides suggested people in chats and on the Notifications tab.", "Inbox", "people", "people_list_end", "people_jewel")
 @Suppress("unused")
 val hideFriendRequestsPatch = controlPatch("friend_requests", "Hide friend request cards", "Hides friend request cards inside the inbox.", "Inbox")
 @Suppress("unused")

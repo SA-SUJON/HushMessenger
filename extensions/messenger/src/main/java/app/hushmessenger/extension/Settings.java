@@ -43,6 +43,7 @@ public final class Settings {
     public static boolean hideFacebook() { return enabled("facebook"); }
     public static boolean hideMetaAi() { return enabled("meta_ai"); }
     public static boolean showSubtabs(boolean original) { return original && !enabled("subtabs"); }
+    public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean suppressTyping() { return enabled("typing"); }
     static boolean available(String key) { return !"bubbles".equals(key) || Build.VERSION.SDK_INT >= 30; }
     public static boolean enableBubbles() { return available("bubbles") && enabled("bubbles"); }

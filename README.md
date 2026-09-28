@@ -63,7 +63,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Patch / switch | What it changes |
 | --- | --- |
 | Hide inbox ads | Experimental filter for Messenger's typed inbox ad cards. Live removal isn't verified yet. |
-| Hide People You May Know | Removes suggested people from the inbox. |
+| Hide People You May Know | Removes suggested people from chats, the end of the chat list and the Notifications tab. |
 | Hide friend request cards | Hides inbox cards without accepting or rejecting requests. |
 | Hide growth prompts | Removes the inbox's add-more-people promotion unit. |
 | Hide inbox promotions | Hides quick-promotion banners in the chat list. |

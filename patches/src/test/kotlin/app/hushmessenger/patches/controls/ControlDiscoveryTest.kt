@@ -18,6 +18,7 @@ class ControlDiscoveryTest {
     private fun completeFixture(): List<MutableClass> {
         val methods = expectedHooks.flatMap { (key, ids) ->
             ids.map { id ->
+                if (key == "people_jewel") return@map peopleJewelMethod()
                 val body = when (key) {
                     in pluginGates -> pluginBody(pluginGates.getValue(key).anchors.first())
                     "stories" -> """
@@ -69,14 +70,27 @@ class ControlDiscoveryTest {
         } + listOf(fixtureClass(AD_ITEM), fixtureClass(IMMUTABLE_LIST, listOf(
             fixtureMethod("$IMMUTABLE_LIST->copyOf(Ljava/util/Collection;)$IMMUTABLE_LIST",
                 "const/4 v0, 0x0\nreturn-object v0", flags = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value),
-        )))
+        )), peopleJewelKeyHolder())
     }
 
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(57, found.values.sumOf { it.size })
+        assertEquals(60, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
+    }
+
+    @Test fun notificationsSuggestionsReaderNeedsTheStockKeyAndGetter() {
+        val withoutKey = findControls(completeFixture().filter { it.type != "LX/JTx;" })
+        assertTrue(withoutKey.getValue("people_jewel").isEmpty())
+        validateControls(withoutKey, setOf("people", "people_list_end"))
+        for (changed in listOf(
+            peopleJewelMethod(flags = AccessFlags.PUBLIC.value),
+            peopleJewelMethod(key = "LX/JTx;->A00:LX/1BL;"),
+        )) {
+            val fixture = completeFixture().filter { it.type != "LX/HAR;" } + fixtureClass("LX/HAR;", listOf(changed))
+            assertTrue(findControls(fixture).getValue("people_jewel").isEmpty())
+        }
     }
 
     @Test fun duplicateAndMissingAnchorsFailAfterActualDiscovery() {
