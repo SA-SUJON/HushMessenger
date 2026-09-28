@@ -2,9 +2,11 @@ package app.hushmessenger.patches.controls
 
 import app.hushmessenger.patches.MessengerTarget
 import app.hushmessenger.patches.coexist.validateVersionCode
+import app.morphe.patcher.patch.BytecodePatch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import com.android.tools.smali.dexlib2.iface.Method
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -55,47 +57,80 @@ private val settingsExtension = bytecodePatch {
     finalize { discoveredControls = emptyMap() }
 }
 
-internal fun Document.addFeature(key: String) {
+private fun Document.requireFeatureAbsent(key: String): Element {
     val application = getElementsByTagName("application").item(0) as Element
     val name = "hush.feature.$key"
     val metadata = application.getElementsByTagName("meta-data")
     if ((0 until metadata.length).any { (metadata.item(it) as Element).getAttribute("android:name") == name }) {
         throw PatchException("HushMessenger: $key is already installed. Start with the stock APK.")
     }
+    return application
+}
+
+internal fun Document.addFeature(key: String) {
+    val application = requireFeatureAbsent(key)
     application.appendChild(createElement("meta-data").apply {
-        setAttribute("android:name", name)
+        setAttribute("android:name", "hush.feature.$key")
         setAttribute("android:value", "true")
     })
 }
 
-private fun controlPatch(key: String, title: String, summary: String, group: String, vararg hooks: String) = bytecodePatch(
-    name = title,
-    description = "$summary Optional switch in app drawer > HushMessenger settings. Starts off.",
-    default = true,
-) {
-    category(group)
-    compatibleWith(MessengerTarget.COMPATIBILITY)
-    dependsOn(settingsExtension, resourcePatch {
+internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>>) {
+    // A multi-method control must pass every contract before its first edit.
+    for ((hook, selectedMethods) in methods) for (method in selectedMethods) {
+        if (hook in pluginGates) method.validatePluginGate()
+        when (hook) {
+            "subtabs" -> method.validateSubtabs()
+            "browser" -> method.validateBrowserPreference()
+            "ads" -> method.validateAdFilter()
+            else -> method.validateSwitch()
+        }
+    }
+    for ((hook, selectedMethods) in methods) for (method in selectedMethods) {
+        when (hook) {
+            "subtabs" -> method.injectSubtabs()
+            "browser" -> method.injectBrowserPreference()
+            "ads" -> method.injectAdFilter()
+            "stories" -> method.injectSwitch("hideStories", "0x0")
+            "facebook" -> method.injectSwitch("hideFacebook", "0x0")
+            "ai_menu", "ai_fab", "ai_toolbar" -> method.injectSwitch("hideMetaAi", "0x0")
+            "typing" -> method.injectSwitch("suppressTyping", "0x0")
+            "bubbles" -> method.injectSwitch("enableBubbles", "0x1")
+            else -> method.injectFeatureSwitch(key)
+        }
+    }
+}
+
+private fun controlPatch(key: String, title: String, summary: String, group: String, vararg hooks: String): BytecodePatch {
+    var applied = false
+    val featureResources = resourcePatch {
         dependsOn(settingsResources)
-        execute { document("AndroidManifest.xml").use { it.addFeature(key) } }
-    })
-    execute {
-        val selected = hooks.toSet().ifEmpty { setOf(key) }
-        validateControls(discoveredControls, selected)
-        for (hook in selected) for (original in discoveredControls.getValue(hook)) {
-            val method = mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
-            if (hook in pluginGates) method.validatePluginGate()
-            when (hook) {
-                "subtabs" -> method.injectSubtabs()
-                "browser" -> method.injectBrowserPreference()
-                "ads" -> method.injectAdFilter()
-                "stories" -> method.injectSwitch("hideStories", "0x0")
-                "facebook" -> method.injectSwitch("hideFacebook", "0x0")
-                "ai_menu", "ai_fab", "ai_toolbar" -> method.injectSwitch("hideMetaAi", "0x0")
-                "typing" -> method.injectSwitch("suppressTyping", "0x0")
-                "bubbles" -> method.injectSwitch("enableBubbles", "0x1")
-                else -> method.injectFeatureSwitch(key)
+        execute {
+            applied = false
+            document("AndroidManifest.xml").use { it.requireFeatureAbsent(key) }
+        }
+        finalize {
+            if (applied) document("AndroidManifest.xml").use { it.addFeature(key) }
+        }
+    }
+    return bytecodePatch(
+        name = title,
+        description = "$summary Optional switch in app drawer > HushMessenger settings. Starts off.",
+        default = true,
+    ) {
+        category(group)
+        compatibleWith(MessengerTarget.COMPATIBILITY)
+        dependsOn(settingsExtension, featureResources)
+        execute {
+            val selected = hooks.toSet().ifEmpty { setOf(key) }
+            validateControls(discoveredControls, selected)
+            val methods = selected.associateWith { hook ->
+                discoveredControls.getValue(hook).map { original ->
+                    mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
+                }
             }
+            injectControl(key, methods)
+            applied = true
         }
     }
 }

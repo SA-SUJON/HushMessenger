@@ -8,6 +8,7 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
 import java.io.ByteArrayInputStream
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.*
@@ -82,5 +83,28 @@ class ControlsTest {
         assertEquals("HushMessenger settings", (activities.item(1) as org.w3c.dom.Element).getAttribute("android:label"))
         assertEquals("android.intent.category.LAUNCHER", (document.getElementsByTagName("category").item(0) as org.w3c.dom.Element).getAttribute("android:name"))
         assertFailsWith<PatchException> { document.addSettingsEntry() }
+    }
+
+    @Test fun browserInjectionRejectsStaticMethodsBeforeUsingTheWrongUriParameter() {
+        val browser = MutableMethod(ImmutableMethod(
+            "Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;", "A0L",
+            listOf("Landroid/net/Uri;", "Lcom/facebook/auth/usersession/FbUserSession;")
+                .map { ImmutableMethodParameter(it, null, null) },
+            "Z", AccessFlags.PUBLIC.value or AccessFlags.STATIC.value, null, null,
+            ImmutableMethodImplementation(9, emptyList(), null, null),
+        )).apply {
+            addInstructionsWithLabels(0, "nop\n".repeat(60) + """
+                sget-object v0, LX/1D1;->A1U:LX/1BK;
+                invoke-interface {v1, v0, v3}, Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z
+                move-result v0
+                if-eqz v0, :stock
+                return v0
+                :stock
+                return v0
+            """.trimIndent())
+        }
+        val before = browser.implementation!!.instructions.toList()
+        assertFailsWith<PatchException> { browser.injectBrowserPreference() }
+        assertEquals(before, browser.implementation!!.instructions.toList())
     }
 }

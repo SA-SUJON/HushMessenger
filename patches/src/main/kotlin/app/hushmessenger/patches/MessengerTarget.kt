@@ -30,6 +30,7 @@ internal object MessengerTarget {
         targets = listOf(
             AppTarget(
                 version = VERSION,
+                versionCodes = null,
                 minSdk = MIN_SDK,
                 description = "Arm64 builds 346013387 and 346013440; checked again during patching",
             ),

@@ -137,6 +137,8 @@ internal fun MutableMethod.validatePluginGate() {
     val first = code.firstOrNull() as? TwoRegisterInstruction
     val enabled = code.getOrNull(1)
     val disabled = code.getOrNull(2)
+    val enabledRegister = (enabled as? OneRegisterInstruction)?.registerA
+    val disabledRegister = (disabled as? OneRegisterInstruction)?.registerA
     val tail = code.takeLast(5)
     val cache = tail.getOrNull(0) as? TwoRegisterInstruction
     val compare = tail.getOrNull(2) as? TwoRegisterInstruction
@@ -144,6 +146,15 @@ internal fun MutableMethod.validatePluginGate() {
         first.registerB != implementation!!.registerCount - 1 ||
         enabled?.opcode != Opcode.CONST_4 || (enabled as? WideLiteralInstruction)?.wideLiteral != 1L ||
         disabled?.opcode != Opcode.CONST_4 || (disabled as? WideLiteralInstruction)?.wideLiteral != 0L ||
+        enabledRegister !in 2 until implementation!!.registerCount - 1 ||
+        disabledRegister !in 2 until implementation!!.registerCount - 1 || enabledRegister == disabledRegister ||
+        code.drop(3).any { instruction ->
+            val destination = (instruction as? OneRegisterInstruction)?.registerA
+            instruction.opcode.setsRegister() && destination != null &&
+                (destination == enabledRegister || destination == disabledRegister ||
+                    (instruction.opcode.setsWideRegister() &&
+                        (destination + 1 == enabledRegister || destination + 1 == disabledRegister)))
+        } ||
         tail.map { it.opcode } != listOf(Opcode.IGET_OBJECT, Opcode.SGET_OBJECT, Opcode.IF_EQ, Opcode.RETURN, Opcode.RETURN) ||
         cache?.registerA != 1 || cache.registerB != first.registerB ||
         (tail[0] as? ReferenceInstruction)?.reference != (code[0] as? ReferenceInstruction)?.reference ||
@@ -157,13 +168,18 @@ internal fun MutableMethod.validatePluginGate() {
 }
 
 /** Wrap both exits, including direct branches to a return. v5 stays intact on the inactive path. */
-internal fun MutableMethod.injectAdFilter() {
+internal fun MutableMethod.validateAdFilter(): List<Int> {
     val code = implementation!!.instructions
     val exits = code.indices.filter { code[it].opcode == Opcode.RETURN_OBJECT }
     if (implementation!!.registerCount != 24 || code.size != 935 || exits != listOf(916, 931) ||
         exits.any { (code[it] as? OneRegisterInstruction)?.registerA != 5 }) {
         throw PatchException("Messenger controls: the inbox ad filter exits differ from the tested build")
     }
+    return exits
+}
+
+internal fun MutableMethod.injectAdFilter() {
+    val exits = validateAdFilter()
     for (index in exits.reversed()) {
         replaceInstruction(index, "invoke-static {v5}, $SETTINGS->filterInboxAds(Ljava/util/List;)Ljava/util/List;")
         addInstructionsWithLabels(index + 1, """
@@ -187,12 +203,11 @@ internal fun MutableMethod.validateScratch() {
 }
 
 internal fun MutableMethod.injectSwitch(getter: String, result: String) {
-    validateScratch()
+    validateSwitch()
     val returnCode = when (returnType) {
         "V" -> "return-void"
         "Z" -> "const/4 v0, $result\nreturn v0"
         else -> {
-            if (!returnType.startsWith("L")) throw PatchException("Unexpected hook return type: $returnType")
             "const/4 v0, 0x0\nreturn-object v0"
         }
     }
@@ -204,7 +219,14 @@ internal fun MutableMethod.injectSwitch(getter: String, result: String) {
     """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
 }
 
-internal fun MutableMethod.injectSubtabs() {
+internal fun MutableMethod.validateSwitch() {
+    validateScratch()
+    if (returnType != "V" && returnType != "Z" && !returnType.startsWith("L")) {
+        throw PatchException("Unexpected hook return type: $returnType")
+    }
+}
+
+internal fun MutableMethod.validateSubtabs() {
     val instructions = implementation!!.instructions
     val literal = instructions.getOrNull(2)
     val supplier = instructions.getOrNull(0) as? TwoRegisterInstruction
@@ -223,13 +245,19 @@ internal fun MutableMethod.injectSubtabs() {
         (instructions[3] as? ReferenceInstruction)?.reference.toString() != "Ljava/util/concurrent/atomic/AtomicBoolean;->set(Z)V") {
         throw PatchException("Messenger controls: inbox tabs no longer use the checked visibility flag")
     }
+}
+
+internal fun MutableMethod.injectSubtabs() {
+    validateSubtabs()
     addInstructions(3, "invoke-static {v0}, $SETTINGS->showSubtabs(Z)Z\nmove-result v0")
 }
 
-internal fun MutableMethod.injectBrowserPreference() {
+internal fun MutableMethod.validateBrowserPreference() {
     val instructions = implementation!!.instructions
     val getter = instructions.getOrNull(61) as? FiveRegisterInstruction
-    if (instructions.getOrNull(60)?.opcode != Opcode.SGET_OBJECT ||
+    if (AccessFlags.STATIC.isSet(accessFlags) ||
+        parameterTypes != listOf("Landroid/net/Uri;", "Lcom/facebook/auth/usersession/FbUserSession;") ||
+        returnType != "Z" || instructions.getOrNull(60)?.opcode != Opcode.SGET_OBJECT ||
         (instructions[60] as? OneRegisterInstruction)?.registerA != 0 ||
         instructions.getOrNull(61)?.opcode != Opcode.INVOKE_INTERFACE ||
         getter?.registerCount != 3 || getter.registerC != 1 || getter.registerD != 0 || getter.registerE != 3 ||
@@ -242,6 +270,10 @@ internal fun MutableMethod.injectBrowserPreference() {
         (instructions[63] as? OneRegisterInstruction)?.registerA != 0 || implementation!!.registerCount != 9) {
         throw PatchException("Messenger controls: external-browser preference no longer matches the tested build")
     }
+}
+
+internal fun MutableMethod.injectBrowserPreference() {
+    validateBrowserPreference()
     // p1 is Uri (v7). Use the same stock preference branch, preserving surrounding handling.
     addInstructions(63, "invoke-static {v0, p1}, $SETTINGS->preferExternalBrowser(ZLandroid/net/Uri;)Z\nmove-result v0")
 }

@@ -118,6 +118,7 @@ internal fun validateVersionCode(versionCode: String) {
 internal fun Document.renameSharedPermissions() {
     val mentions = sharedNames.associateWith { mutableListOf<org.w3c.dom.Attr>() }
     val declarations = sharedNames.associateWith { 0 }.toMutableMap()
+    val protectionLevels = mutableMapOf<String, String>()
     val roles = sharedNames.associateWith { mutableMapOf<String, Int>() }
     val guardOwners = sharedNames.associateWith { mutableMapOf<String, MutableSet<String>>() }
     val renamedNames = sharedNames.map(::renamed).toSet()
@@ -141,12 +142,19 @@ internal fun Document.renameSharedPermissions() {
             }
             if (element.tagName == "permission" && attr.nodeName.substringAfter(':') == "name") {
                 declarations[attr.value] = declarations.getValue(attr.value) + 1
+                protectionLevels[attr.value] = element.getAttribute("android:protectionLevel")
             }
         }
     }
     for (name in sharedNames) {
         if (declarations.getValue(name) != 1) {
             throw unsupportedApk("the manifest must declare $name exactly once")
+        }
+        val level = protectionLevels.getValue(name).trim()
+        val numericLevel = if (level.startsWith("0x", ignoreCase = true)) level.substring(2).toLongOrNull(16)
+            else level.toLongOrNull()
+        if (level != "signature" && numericLevel != 2L) {
+            throw unsupportedApk("the protection level for $name must remain signature (0x2)")
         }
         val actual = mentions.getValue(name).size
         val expected = expectedManifestMentions.getValue(name)
@@ -163,7 +171,15 @@ internal fun Document.renameSharedPermissions() {
     mentions.values.flatten().forEach { it.value = renamed(it.value) }
 }
 
+private val validatePermissionBytecode = bytecodePatch {
+    execute {
+        validateVersionCode(packageMetadata.versionCode)
+        checkedPermissionMethods()
+    }
+}
+
 private val renameManifest = resourcePatch {
+    dependsOn(validatePermissionBytecode)
     execute {
         validateVersionCode(packageMetadata.versionCode)
         document("AndroidManifest.xml").use { it.renameSharedPermissions() }
@@ -204,7 +220,7 @@ private fun MutableMethod.renameSharedNames(): Int {
     return sites.size
 }
 
-private fun BytecodePatchContext.renameDexNames(): Int {
+private fun BytecodePatchContext.checkedPermissionMethods(): List<MutableMethod> {
     val classes = dexNames.flatMap { classDefByStrings(it, StringComparisonType.EQUALS) }
         .map { it.type }.distinct()
     val methods = classes.flatMap { type ->
@@ -216,6 +232,11 @@ private fun BytecodePatchContext.renameDexNames(): Int {
         } ?: emptyList()
     }
     validateDexSites(sites)
+    return methods
+}
+
+private fun BytecodePatchContext.renameDexNames(): Int {
+    val methods = checkedPermissionMethods()
     val renamed = methods.sumOf { it.renameSharedNames() }
     if (renamed != expectedDexSites.size || methods.any { it.hasSharedName() }) {
         throw PatchException("$PATCH_NAME: not all permission loads were renamed")

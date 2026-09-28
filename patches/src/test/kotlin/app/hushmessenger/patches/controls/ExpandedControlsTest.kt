@@ -81,6 +81,29 @@ class ExpandedControlsTest {
         }
     }
 
+    @Test fun pluginPolarityConstantsCannotAliasOrBeOverwritten() {
+        val body = """
+            iget-object v0, p0, Lfixture/Gate;->cache:Ljava/lang/Object;
+            const/4 v6, 0x1
+            const/4 v5, 0x0
+            iget-object v1, p0, Lfixture/Gate;->cache:Ljava/lang/Object;
+            sget-object v0, LX/1dj;->A03:Ljava/lang/Object;
+            if-eq v1, v0, :disabled
+            return v6
+            :disabled
+            return v5
+        """.trimIndent()
+        for (changed in listOf(
+            body.replace("v5", "v6"),
+            body.replace("iget-object v1", "const/4 v6, 0x0\niget-object v1"),
+            body.replace("iget-object v1", "const-wide/16 v4, 0x0\niget-object v1"),
+        )) {
+            assertFailsWith<PatchException> {
+                method("Lfixture/Gate;", "gate", 8, "Z", changed).validatePluginGate()
+            }
+        }
+    }
+
     @Test fun adExitReplacementCoversIncomingBranchesAndPreservesTheOriginalResultRegister() {
         val body = "goto/16 :first_exit\n" + "nop\n".repeat(915) + ":first_exit\nreturn-object v5\n" +
             "nop\n".repeat(14) + "return-object v5\n" + "nop\n".repeat(3)

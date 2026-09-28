@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Require both shared permissions to retain signature protection. Check their DEX sites before renaming the manifest permissions.
+- Validate every method in a control before editing it, then publish its settings capability only after success. Reject changed browser parameters and plugin return constants.
+- Keep both supported build codes visible in Morphe's compatibility description.
+
 ## 0.3.0 (2026-09-27)
 
 - Redesign settings with separate Controls and App tabs, compact grouped rows and category filters.

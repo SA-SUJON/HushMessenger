@@ -38,7 +38,10 @@ class InstallBesideMetaAppsPatchTest {
         val root = document.createElement("manifest")
         document.appendChild(root)
         fun add(tag: String, attribute: String, value: String) {
-            root.appendChild(document.createElement(tag).apply { setAttribute("android:$attribute", value) })
+            root.appendChild(document.createElement(tag).apply {
+                setAttribute("android:$attribute", value)
+                if (tag == "permission") setAttribute("android:protectionLevel", "signature")
+            })
         }
         fun addGuards(permission: String) {
             for ((tag, owners) in expectedGuardOwners.getValue(permission)) {
@@ -64,6 +67,42 @@ class InstallBesideMetaAppsPatchTest {
         return (0 until elements.length).flatMap { index ->
             val attributes = elements.item(index).attributes
             (0 until attributes.length).map { attributes.item(it).nodeValue }
+        }
+    }
+
+    @Test
+    fun rejectsWeakenedOrChangedProtectionBeforeRenamingAnySite() {
+        for (level in listOf("", "normal", "dangerous", "signature|privileged", "0", "1", "0x12", "malformed")) {
+            val document = manifest()
+            val declarations = document.getElementsByTagName("permission")
+            for (i in 0 until declarations.length) {
+                (declarations.item(i) as Element).setAttribute("android:protectionLevel", "signature")
+            }
+            (declarations.item(1) as Element).setAttribute("android:protectionLevel", level)
+            val before = values(document)
+
+            val failure = assertFailsWith<PatchException>("Accepted protection level '$level'") {
+                document.renameSharedPermissions()
+            }
+
+            assertContains(failure.message.orEmpty(), "protection level")
+            assertActionable(failure)
+            assertEquals(before, values(document))
+        }
+    }
+
+    @Test
+    fun acceptsEquivalentSignatureEncodingsWithoutChangingTheirFlags() {
+        for (level in listOf("signature", "2", "0x2", "0x00000002", "0X00000002")) {
+            val document = manifest()
+            val declarations = document.getElementsByTagName("permission")
+            for (i in 0 until declarations.length) {
+                (declarations.item(i) as Element).setAttribute("android:protectionLevel", level)
+            }
+            document.renameSharedPermissions()
+            for (i in 0 until declarations.length) {
+                assertEquals(level, (declarations.item(i) as Element).getAttribute("android:protectionLevel"))
+            }
         }
     }
 
