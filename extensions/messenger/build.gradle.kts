@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 extension {
     name = "extensions/messenger.mpe"
 }
@@ -21,3 +23,8 @@ dependencies {
 }
 
 dependencyLocking { lockAllConfigurations() }
+
+tasks.withType<Test>().configureEach {
+    // Robolectric's API 36 file-descriptor bridge needs this JDK 21 export.
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+}

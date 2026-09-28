@@ -41,7 +41,8 @@ public final class Settings {
     public static boolean hideMetaAi() { return enabled("meta_ai"); }
     public static boolean showSubtabs(boolean original) { return original && !enabled("subtabs"); }
     public static boolean suppressTyping() { return enabled("typing"); }
-    public static boolean enableBubbles() { return Build.VERSION.SDK_INT >= 30 && enabled("bubbles"); }
+    static boolean available(String key) { return !"bubbles".equals(key) || Build.VERSION.SDK_INT >= 30; }
+    public static boolean enableBubbles() { return available("bubbles") && enabled("bubbles"); }
 
     /** Null means return the exact original list. Only typed ad rows are removed. */
     public static List<?> filterInboxAds(List<?> items) {

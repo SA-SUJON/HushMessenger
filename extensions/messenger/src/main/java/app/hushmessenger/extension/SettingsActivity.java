@@ -3,9 +3,13 @@ package app.hushmessenger.extension;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -23,8 +27,14 @@ import java.util.Locale;
 public final class SettingsActivity extends Activity {
     private SettingsUi ui;
     private LinearLayout controlsPage, appPage;
+    private LinearLayout header, brand, controlsContent, appContent;
     private ScrollView controlsScroll, appScroll;
+    private TextView reminder;
     private EditText search;
+    private boolean compact, scrollHeader, binding, lightTheme, recreatingTheme;
+    private int restoreControlsScroll = -1, restoreAppScroll = -1;
+    private final List<Switch> switches = new ArrayList<>();
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> refreshChoices();
     private String category = "All", page = "Controls";
     private final List<View> controlRows = new ArrayList<>();
     private final List<String[]> installedControls = new ArrayList<>();
@@ -61,6 +71,7 @@ public final class SettingsActivity extends Activity {
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {
         Settings.initialize(this);
         boolean light = Settings.preferences.getBoolean("light", false);
+        lightTheme = light;
         setTheme(light ? android.R.style.Theme_Material_Light_NoActionBar : android.R.style.Theme_Material_NoActionBar);
         super.onCreate(state);
         ui = new SettingsUi(this, light);
@@ -72,8 +83,32 @@ public final class SettingsActivity extends Activity {
         if (state != null) {
             page = state.getString("page", "Controls");
             category = state.getString("category", "All");
+            restoreControlsScroll = state.getInt("controls_scroll");
+            restoreAppScroll = state.getInt("app_scroll");
         }
-        LinearLayout root = ui.column();
+        LinearLayout root = new LinearLayout(this) {
+            private int availableHeight = -1;
+            private boolean revealSearch;
+
+            @Override protected void onMeasure(int width, int height) {
+                int nextHeight = View.MeasureSpec.getSize(height) - getPaddingTop() - getPaddingBottom();
+                if (nextHeight != availableHeight) {
+                    availableHeight = nextHeight;
+                    revealSearch = search != null && search.hasFocus();
+                }
+                adaptToHeight(nextHeight);
+                super.onMeasure(width, height);
+            }
+
+            @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+                super.onLayout(changed, left, top, right, bottom);
+                if (!revealSearch) return;
+                revealSearch = false;
+                if (search.hasFocus() && search.isShown())
+                    search.requestRectangleOnScreen(new Rect(0, 0, search.getWidth(), search.getHeight()), false);
+            }
+        };
+        root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(ui.background);
         root.setFocusableInTouchMode(true);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -85,33 +120,107 @@ public final class SettingsActivity extends Activity {
         buildHeader(root);
         controlsPage = ui.column();
         controlsPage.setTag("controls_page");
+        controlsPage.setAccessibilityPaneTitle("Controls");
         root.addView(controlsPage, new LinearLayout.LayoutParams(-1, 0, 1));
         controlsScroll = scrollPage(controlsPage);
-        LinearLayout controls = pageContent(controlsScroll);
-        buildControls(controls);
-        TextView reminder = ui.text("Reopen Messenger after changing inbox controls.", 12, ui.muted, false);
+        controlsContent = pageContent(controlsScroll);
+        buildControls(controlsContent);
+        reminder = ui.text("Reopen Messenger after changing inbox controls.", 12, ui.muted, false);
         reminder.setPadding(ui.dp(24), ui.dp(12), ui.dp(24), ui.dp(16));
         ui.add(controlsPage, reminder, 0);
         appPage = ui.column();
         appPage.setTag("app_page");
+        appPage.setAccessibilityPaneTitle("App");
         root.addView(appPage, new LinearLayout.LayoutParams(-1, 0, 1));
         appScroll = scrollPage(appPage);
-        buildApp(pageContent(appScroll));
+        appContent = pageContent(appScroll);
+        buildApp(appContent);
         search.setText(state == null ? "" : state.getString("query", ""));
+        if (state != null) {
+            int length = search.length();
+            search.setSelection(Math.max(0, Math.min(length, state.getInt("selection_start", length))),
+                Math.max(0, Math.min(length, state.getInt("selection_end", length))));
+        }
         filterControls(search.getText().toString());
         showPage(page);
         updateSetup();
         if (state != null) {
-            controlsScroll.post(() -> controlsScroll.scrollTo(0, state.getInt("controls_scroll")));
-            appScroll.post(() -> appScroll.scrollTo(0, state.getInt("app_scroll")));
+            String focused = state.getString("focused_control");
+            if (focused != null) root.post(() -> {
+                View target = root.findViewWithTag(focused);
+                if (target != null && target.isShown()) target.requestFocus();
+            });
         }
     }
 
+    @Override protected void onStart() {
+        super.onStart();
+        Settings.preferences.registerOnSharedPreferenceChangeListener(preferenceListener);
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        refreshChoices();
+    }
+
+    @Override protected void onStop() {
+        Settings.preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener);
+        super.onStop();
+    }
+
+    private void refreshChoices() {
+        if (lightTheme != Settings.preferences.getBoolean("light", false)) {
+            if (!recreatingTheme) {
+                recreatingTheme = true;
+                recreate();
+            }
+            return;
+        }
+        binding = true;
+        try {
+            for (Switch control : switches) control.setChecked(Settings.preferences.getBoolean((String) control.getTag(), false));
+        } finally { binding = false; }
+        updateSetup();
+    }
+
+    private void adaptToHeight(int height) {
+        if (header == null || reminder == null || appContent == null || height <= 0) return;
+        boolean next = height < ui.dp(480);
+        // Let focused content use the full viewport when the keyboard leaves little room.
+        boolean nextScrollHeader = height < ui.dp(160);
+        if (compact == next && scrollHeader == nextScrollHeader) return;
+        compact = next;
+        scrollHeader = nextScrollHeader;
+        header.setPadding(ui.dp(scrollHeader ? 4 : 24), ui.dp(compact ? 8 : 50), ui.dp(scrollHeader ? 4 : 24), 0);
+        placeBrand();
+        placeHeader();
+        ((ViewGroup) reminder.getParent()).removeView(reminder);
+        reminder.setPadding(ui.dp(compact ? 4 : 24), ui.dp(12), ui.dp(compact ? 4 : 24), ui.dp(16));
+        ui.add(compact ? controlsContent : controlsPage, reminder, 0);
+    }
+
+    private void placeBrand() {
+        if (brand == null || appContent == null) return;
+        LinearLayout parent = compact ? ("App".equals(page) ? appContent : controlsContent) : header;
+        if (brand.getParent() == parent) return;
+        ((ViewGroup) brand.getParent()).removeView(brand);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.bottomMargin = ui.dp(compact ? 24 : 0);
+        parent.addView(brand, 0, params);
+    }
+
+    private void placeHeader() {
+        LinearLayout parent = scrollHeader ? ("App".equals(page) ? appContent : controlsContent) : (LinearLayout) controlsPage.getParent();
+        if (header.getParent() == parent) return;
+        ((ViewGroup) header.getParent()).removeView(header);
+        parent.addView(header, 0, new LinearLayout.LayoutParams(-1, -2));
+    }
+
     private void buildHeader(LinearLayout root) {
-        LinearLayout header = ui.column();
+        header = ui.column();
         header.setPadding(ui.dp(24), ui.dp(50), ui.dp(24), 0);
         ui.add(root, header, 0);
-        LinearLayout brand = ui.row();
+        brand = ui.row();
         if (ui.largeText) brand.setOrientation(LinearLayout.VERTICAL);
         LinearLayout wordmark = ui.column();
         TextView title = ui.text("HushMessenger", 28, ui.text, true);
@@ -126,7 +235,7 @@ public final class SettingsActivity extends Activity {
         open.setPadding(ui.dp(12), ui.dp(8), ui.dp(12), ui.dp(8));
         open.setOnClickListener(view -> openMessenger());
         LinearLayout.LayoutParams openParams = new LinearLayout.LayoutParams(ui.largeText ? -2 : ui.dp(68), -2);
-        openParams.leftMargin = ui.dp(ui.largeText ? 0 : 12);
+        openParams.setMarginStart(ui.dp(ui.largeText ? 0 : 12));
         openParams.topMargin = ui.dp(ui.largeText ? 12 : 0);
         brand.addView(open, openParams);
         ui.add(header, brand, 0);
@@ -150,6 +259,16 @@ public final class SettingsActivity extends Activity {
     private ScrollView scrollPage(LinearLayout parent) {
         ScrollView view = new ScrollView(this);
         view.setFillViewport(true);
+        view.addOnLayoutChangeListener((changed, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (!view.isShown() || view.getHeight() == 0) return;
+            if (view == controlsScroll && restoreControlsScroll >= 0) {
+                view.scrollTo(0, restoreControlsScroll);
+                restoreControlsScroll = -1;
+            } else if (view == appScroll && restoreAppScroll >= 0) {
+                view.scrollTo(0, restoreAppScroll);
+                restoreAppScroll = -1;
+            }
+        });
         parent.addView(view, new LinearLayout.LayoutParams(-1, 0, 1));
         return view;
     }
@@ -196,7 +315,7 @@ public final class SettingsActivity extends Activity {
                 filterControls(search.getText().toString());
             });
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1);
-            if (!categories.isEmpty()) params.leftMargin = ui.dp(8);
+            if (!categories.isEmpty()) params.setMarginStart(ui.dp(8));
             filters.addView(button, params);
             categories.add(button);
         }
@@ -249,6 +368,8 @@ public final class SettingsActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private LinearLayout controlRow(String key, String title, String description, boolean divided) {
+        boolean available = Settings.available(key);
+        if (!available) description += " Unavailable on this Android version. Your choice is kept.";
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -260,7 +381,7 @@ public final class SettingsActivity extends Activity {
             badge.setBackground(ui.shape(ui.warningSurface, 0, 4));
             badge.setPadding(ui.dp(6), ui.dp(3), ui.dp(6), ui.dp(3));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
-            params.leftMargin = ui.dp(ui.largeText ? 0 : 8);
+            params.setMarginStart(ui.dp(ui.largeText ? 0 : 8));
             titleLine.addView(badge, params);
         }
         ui.add(labels, titleLine, 0);
@@ -268,15 +389,19 @@ public final class SettingsActivity extends Activity {
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         Switch control = ui.toggle(key, title, ("ads".equals(key) ? "Experimental. " : "") + description, Settings.preferences.getBoolean(key, false));
         LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ui.dp(48), -2);
-        switchParams.leftMargin = ui.dp(12);
+        switchParams.setMarginStart(ui.dp(12));
         row.addView(control, switchParams);
+        switches.add(control);
+        control.setEnabled(available);
         control.setOnCheckedChangeListener((button, checked) -> {
+            if (binding) return;
             Settings.preferences.edit().putBoolean(key, checked).apply();
             updateSetup();
             Toast.makeText(this, title + (checked ? " on" : " off"), Toast.LENGTH_SHORT).show();
-            if ("light".equals(key)) recreate();
+            if ("light".equals(key)) refreshChoices();
         });
-        row.setOnClickListener(view -> control.toggle());
+        row.setOnClickListener(view -> { if (control.isEnabled()) control.toggle(); });
+        row.setEnabled(available);
         row.setFocusable(false);
         row.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.setBackground(ui.interactive(ui.background, 0, 0));
@@ -305,6 +430,7 @@ public final class SettingsActivity extends Activity {
         ui.add(content, ui.heading("USING YOUR CONTROLS"), 22);
         ui.add(content, ui.text("Changes save as you go. Reopen Messenger after changing inbox controls.", 14, ui.muted, false), 16);
         ui.add(content, ui.text("Pause keeps your choices and temporarily restores stock behavior.", 14, ui.muted, false), 14);
+        ui.add(content, ui.text("Your choices apply to every Messenger account in this installation.", 14, ui.muted, false), 14);
         LinearLayout help = ui.panel();
         help.setBackground(ui.shape(ui.infoSurface, ui.infoBorder, 8));
         ui.add(help, ui.text("Missing a control?", 16, ui.accent, true), 0);
@@ -330,9 +456,16 @@ public final class SettingsActivity extends Activity {
     }
 
     private void showPage(String name) {
+        if ("App".equals(name) && search.hasFocus()) {
+            search.clearFocus();
+            ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(search.getWindowToken(), 0);
+            tabs.get(1).requestFocus();
+        }
         page = name;
         controlsPage.setVisibility("Controls".equals(page) ? View.VISIBLE : View.GONE);
         appPage.setVisibility("App".equals(page) ? View.VISIBLE : View.GONE);
+        placeBrand();
+        placeHeader();
         for (int i = 0; i < tabs.size(); i++) {
             Button tab = tabs.get(i);
             boolean selected = tab.getText().toString().equals(page);
@@ -345,11 +478,14 @@ public final class SettingsActivity extends Activity {
 
     private void updateSetup() {
         if (enabledCount == null) return;
-        int enabled = 0;
-        for (String key : Settings.installed) if (Settings.preferences.getBoolean(key, false)) enabled++;
+        int enabled = 0, saved = 0;
+        for (String[] spec : installedControls) if (Settings.preferences.getBoolean(spec[0], false)) {
+            saved++;
+            if (Settings.available(spec[0])) enabled++;
+        }
         boolean paused = Settings.preferences.getBoolean("paused", false);
         enabledCount.setText(paused ? "Changes paused" : enabled + (enabled == 1 ? " control enabled" : " controls enabled"));
-        setupNote.setText(paused ? enabled + (enabled == 1 ? " saved choice. Turn pause off to resume." : " saved choices. Turn pause off to resume.") : "Your choices are saved automatically.");
+        setupNote.setText(paused ? saved + (saved == 1 ? " saved choice. Turn pause off to resume." : " saved choices. Turn pause off to resume.") : "Your choices are saved automatically.");
     }
 
     private void filterControls(String query) {
@@ -388,8 +524,12 @@ public final class SettingsActivity extends Activity {
         state.putString("page", page);
         state.putString("category", category);
         state.putString("query", search.getText().toString());
-        state.putInt("controls_scroll", controlsScroll.getScrollY());
-        state.putInt("app_scroll", appScroll.getScrollY());
+        state.putInt("selection_start", search.getSelectionStart());
+        state.putInt("selection_end", search.getSelectionEnd());
+        View focused = getCurrentFocus();
+        if (focused != null && focused.getTag() instanceof String) state.putString("focused_control", (String) focused.getTag());
+        state.putInt("controls_scroll", restoreControlsScroll >= 0 ? restoreControlsScroll : controlsScroll.getScrollY());
+        state.putInt("app_scroll", restoreAppScroll >= 0 ? restoreAppScroll : appScroll.getScrollY());
         super.onSaveInstanceState(state);
     }
 

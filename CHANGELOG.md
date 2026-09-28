@@ -5,6 +5,9 @@
 - Require both shared permissions to retain signature protection. Check their DEX sites before renaming the manifest permissions.
 - Validate every method in a control before editing it, then publish its settings capability only after success. Reject changed browser parameters and plugin return constants.
 - Keep both supported build codes visible in Morphe's compatibility description.
+- Keep controls reachable in short windows with large text by moving the branding and reminder into the scroll area. Let navigation scroll when the keyboard leaves very little room. Preserve the normal portrait layout.
+- Restore search selection and each page's scroll position, refresh switches when returning to settings, and keep focus on visible controls.
+- Explain bubble availability on Android 9 and 10 without discarding the saved choice. Add accessible page names, correct right-to-left spacing and explain that choices apply to every account in the installation.
 - Reject incomplete or conflicting certificate, permission and package records during the installation check. Include apps installed in other Android profiles.
 - Check arm64 libraries, ELF page alignment and Android's native extraction rules. The optional `--stock-apk` argument verifies that a rebuild preserves the tested stock libraries.
 - Return clear errors for missing inputs, tool timeouts, corrupt compressed native libraries and malformed changed-APK reports. Read wrapped dependency errors and keep temporary APK cleanup on failure.
