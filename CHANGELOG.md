@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Other apps can no longer restart Messenger. Restart Messenger used to accept a request from any app on the phone, which could close Messenger at any moment, even during a call. The long-press shortcut and the App tab button still work.
+- The search field now reads back what you typed with a screen reader. The selected filter keeps a visible focus ring, and switches that can't work on your Android version look unavailable.
+- Quick toggles no longer stack up old messages. Pause now says "Changes paused" or "Changes resumed".
+- The selected filter in the light theme is filled like it is in the dark theme. The search cursor uses the app's blue and the restart screen follows your theme. The header now lines up with the cards.
+- The title stays on one line at large text sizes on older Android versions, and very long pasted searches are trimmed.
+- In the right-to-left test language, headings and descriptions now line up on the right instead of running into their counts.
+- The README links the two APKMirror builds that work, since six look alike on that page. The Install beside Meta apps description no longer says signed builds don't open chats.
+- Release checks compare every README link to this project's own releases, and the permission failure check says when Morphe Desktop never started. Pass 162 local tests.
+
 ## 0.4.2 (2026-09-28)
 
 - Hide People You May Know now also clears the suggestions on Messenger's Notifications tab and the block after the last chat. It takes the same path as Messenger's own Hide option, even on accounts where Meta turns that option off from its servers, and it never changes Messenger's settings. Pausing HushMessenger or turning the switch off brings the suggestions back. Checked on the S25: the Notifications tab lost its suggestions, they returned while paused, and chats and notifications still showed. The end-of-list block and the server override didn't apply to that account, so they're covered by build checks only.
