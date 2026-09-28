@@ -126,10 +126,10 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 method.returnType == "V") add("allow_screenshot")
             if (method.returnType == "V" && method.parameterTypes.size == 3 &&
                 method.parameterTypes[0] == "Landroid/content/Intent;" &&
-                "ACTION_REVOKE_MESSAGE" in strings) add("keep_unsent")
+                strings.any { "ACTION_REVOKE_MESSAGE" in it }) add("keep_unsent")
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) &&
                 method.parameterTypes == listOf(cls.type) &&
-                "SearchAiagentImplementationsKillSwitch" in strings) add("ai_search")
+                strings.any { "SearchAiagentImplementationsKillSwitch" in it }) add("ai_search")
             if (method.returnType == "Landroid/graphics/Typeface;" && method.parameterTypes.isEmpty() &&
                 !AccessFlags.STATIC.isSet(method.accessFlags) &&
                 "FacebookEmojiTypefaceProviderImpl" in strings) add("emoji_typeface")

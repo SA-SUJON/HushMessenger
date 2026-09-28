@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Dry-run compatibility report (`scripts/CompatReport.java`). Point it at any Messenger APK to see package, version code, ABI and signer, plus PASS/FAIL for all 25 patches with the failing contract. Exits non-zero on any failure, never modifies the APK. Requires JDK 21+ and the smali-dexlib2 and guava JARs.
+- Fixed hook discovery for the AI search and keep-unsent controls. Both used exact string matching (`"SearchAiagentImplementationsKillSwitch"`, `"ACTION_REVOKE_MESSAGE"`) but the APK carries fully qualified names. Switched to substring matching in both the Kotlin production code and the Java compat tool. Unit test fixtures updated to use the real APK strings.
 - Three new privacy controls (off by default, under a new Privacy group):
   - Allow screenshots: removes FLAG_SECURE and disables screenshot detection in vanish mode and E2EE chats (hooks SecureWindowUtils and ScreenshotContentObserver).
   - Hide read receipts: blocks the outgoing read-receipt runnable so senders don't see when you viewed their message (hooks ReadThreadManager).
