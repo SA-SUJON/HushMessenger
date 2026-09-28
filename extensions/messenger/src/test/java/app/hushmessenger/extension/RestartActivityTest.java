@@ -63,6 +63,11 @@ public class RestartActivityTest {
                 SettingsUi ui = new SettingsUi(screen.get(), light);
                 assertEquals(ui.background, ((android.graphics.drawable.ColorDrawable) status.getBackground()).getColor());
                 assertEquals(ui.text, status.getCurrentTextColor());
+                // From API 35 enforced edge-to-edge ignores bar colors; the full-window status view shows behind them.
+                if (android.os.Build.VERSION.SDK_INT < 35) {
+                    assertEquals(ui.background, screen.get().getWindow().getStatusBarColor());
+                    assertEquals(ui.background, screen.get().getWindow().getNavigationBarColor());
+                }
             }
         }
         Settings.preferences.edit().clear().commit();

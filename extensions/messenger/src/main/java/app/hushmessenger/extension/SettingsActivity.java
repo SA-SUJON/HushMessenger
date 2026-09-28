@@ -55,7 +55,8 @@ public final class SettingsActivity extends Activity {
     private final List<View> tabLines = new ArrayList<>();
     private TextView searchStatus, enabledCount, setupNote;
     private LinearLayout emptyState;
-    private Toast toast;
+    // Process-wide so a page recreated by the theme switch can still replace the last toast.
+    private static Toast toast;
     static final String[][] CONTROLS = {
         {"ads", "Hide inbox ads", "Supported inbox ad cards. Live removal isn't verified yet.", "inbox"},
         {"people", "Hide People You May Know", "Removes suggested people from chats and Notifications.", "inbox"},
@@ -634,10 +635,10 @@ public final class SettingsActivity extends Activity {
         feedback(text.get("open_help"), Toast.LENGTH_LONG);
     }
 
-    /** One toast at a time: toasts queued by quick toggles would outlive the switch they describe. */
+    /** One toast at a time, built on the app context so no destroyed page is kept alive. */
     private void feedback(String message, int length) {
         if (toast != null) toast.cancel();
-        toast = Toast.makeText(this, message, length);
+        toast = Toast.makeText(getApplicationContext(), message, length);
         toast.show();
     }
 

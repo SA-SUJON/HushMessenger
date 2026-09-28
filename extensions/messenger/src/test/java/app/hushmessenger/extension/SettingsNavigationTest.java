@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,6 +15,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowToast;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
@@ -56,6 +58,18 @@ public class SettingsNavigationTest {
                 assertEquals(1, wordmark.getMaxLines());
                 assertEquals(TextView.AUTO_SIZE_TEXT_TYPE_UNIFORM, wordmark.getAutoSizeTextType());
             }
+        }
+    }
+
+    @Test public void theRecreatedPageReplacesTheThemeSwitchToast() {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            ((Switch) screen.get().getWindow().getDecorView().findViewWithTag("light")).performClick();
+            Toast themeToast = ShadowToast.getLatestToast();
+            assertEquals("Light theme on", ShadowToast.getTextOfLatestToast());
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            ((Switch) screen.get().getWindow().getDecorView().findViewWithTag("people")).performClick();
+            assertTrue(Shadows.shadowOf(themeToast).isCancelled());
+            assertEquals("Hide People You May Know on", ShadowToast.getTextOfLatestToast());
         }
     }
 
