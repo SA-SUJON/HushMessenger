@@ -124,6 +124,9 @@ public class SettingsLocaleTest {
                     ViewGroup row = (ViewGroup) control.getParent();
                     assertEquals(View.LAYOUT_DIRECTION_RTL, row.getLayoutDirection());
                     assertEquals(12, row.getChildAt(0).getLeft() - control.getRight());
+                    // Full-width text aligns to the mirrored start instead of guessing LTR from English letters.
+                    assertEquals(View.TEXT_DIRECTION_RTL, ((TextView) root.findViewWithTag("search_status")).getTextDirection());
+                    assertEquals(View.TEXT_DIRECTION_RTL, ((TextView) root.findViewWithTag("wordmark")).getTextDirection());
                 }
                 String spoken = root.findViewWithTag("people").getContentDescription().toString();
                 String visibleTitle = spoken.substring(0, spoken.indexOf(". "));

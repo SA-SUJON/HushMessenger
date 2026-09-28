@@ -123,6 +123,8 @@ public final class SettingsActivity extends Activity {
         };
         root.setOrientation(LinearLayout.VERTICAL);
         root.setLayoutDirection(text.layoutDirection());
+        // Mirrored text starts with an override mark, so first-strong detection would align it left.
+        if (text.layoutDirection() == View.LAYOUT_DIRECTION_RTL) root.setTextDirection(View.TEXT_DIRECTION_RTL);
         root.setBackgroundColor(ui.background);
         root.setFocusableInTouchMode(true);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
