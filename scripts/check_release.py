@@ -129,7 +129,11 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
         "README artifact checksum differs from built bundle",
     )
     for advertised in re.findall(
-        r"(?:releases/(?:tag|download)/v|patches-)(\d+\.\d+\.\d+)(?=[/).\s])", readme
+        # Only this repository's release links, in Markdown or HTML form; a link to
+        # another project's release (Morphe Desktop, for example) is not ours to pin.
+        r"(?:SysAdminDoc/HushMessenger/releases/(?:tag|download)/v|\bpatches-)"
+        r"(\d+\.\d+\.\d+)(?!\.?\d)",
+        readme,
     ):
         require(advertised == version, "README download link differs from source")
     headings = re.findall(

@@ -148,6 +148,14 @@ class ReleaseChecks(unittest.TestCase):
                 f"https://img.shields.io/badge/version-1.2.3-blue\n{'0' * 64}  {self.bundle.name}\n",
                 "checksum",
             ),
+            (
+                "README.md",
+                (
+                    '<a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v1.2.2">'
+                    f'<img src="https://img.shields.io/badge/version-1.2.3-blue"></a>\n{self.digest}  {self.bundle.name}\n'
+                ),
+                "download link",
+            ),
             ("CHANGELOG.md", "## Unreleased\n\n## 1.2.3 (2026-09-27)\n", "changelog"),
             (
                 "extensions/messenger/build.gradle.kts",
@@ -164,6 +172,16 @@ class ReleaseChecks(unittest.TestCase):
             ):
                 release.verify(self.root)
             self.write(path, original)
+
+    def test_readme_may_link_another_projects_release(self):
+        self.write(
+            "README.md",
+            "https://img.shields.io/badge/version-1.2.3-blue\n"
+            "[Desktop](https://github.com/MorpheApp/morphe-desktop/releases/tag/v1.17.0)\n"
+            '<a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v1.2.3">ours</a>\n'
+            f"{self.digest}  {self.bundle.name}\n",
+        )
+        self.assertIn("Release metadata passed", release.verify(self.root))
 
     def test_cli_rejects_malformed_or_missing_evidence_without_traceback(self):
         for invalid in ['{"version": "1", "version": "2"}', "[]", "{"]:

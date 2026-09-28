@@ -154,6 +154,12 @@ class ChangedApkChecks(unittest.TestCase):
                 ):
                     if case in {"valid", "wrapped-reason"}:
                         self.assertEqual(checker.check(args), 0)
+                    elif case == "missing-report":
+                        # Desktop that never started must say so, not point at a deleted temp file.
+                        with self.assertRaisesRegex(
+                            RuntimeError, "without writing a patch report"
+                        ):
+                            checker.check(args)
                     else:
                         with self.assertRaises(
                             (

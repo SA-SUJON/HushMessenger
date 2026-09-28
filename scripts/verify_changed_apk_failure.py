@@ -72,8 +72,14 @@ def check(args: argparse.Namespace) -> int:
             timeout=300,
             check=False,
         )
-        report = json.loads(report_path.read_text(encoding="utf-8"))
         log = run.stdout + run.stderr
+        if not report_path.is_file():
+            # Java failing to start Desktop (bad jar path, old JDK) never writes a report.
+            print(log[-4000:])
+            raise RuntimeError(
+                f"Desktop exited {run.returncode} without writing a patch report"
+            )
+        report = json.loads(report_path.read_text(encoding="utf-8"))
         if not isinstance(report, dict):
             raise TypeError("Desktop did not write a patch result object")
         failed = report.get("failedPatches")
