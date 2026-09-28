@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Crash-loop safe mode: if Messenger exits abnormally three times within a minute after starting, all controls turn off automatically while keeping saved choices. The settings screen shows safe mode is active and why, and Resume clears it. Uses ApplicationExitInfo on API 30+ with a crash-marker fallback for older devices.
 - The shortcuts XML is now found by scanning APK entries instead of expecting a fixed file name. Variant 346013442 stores it at res/eve.xml instead of res/los.xml; the patch now works with either.
 - Other apps can no longer restart Messenger. Restart Messenger used to accept a request from any app on the phone, which could close Messenger at any moment, even during a call. The long-press shortcut and the App tab button still work.
 - The search field now reads back what you typed with a screen reader. The selected filter keeps a visible focus ring, and switches that can't work on your Android version look unavailable.
