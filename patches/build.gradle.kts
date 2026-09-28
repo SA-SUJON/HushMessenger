@@ -1,3 +1,4 @@
+import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.jvm.tasks.Jar
 
 group = "com.sysadmindoc.hushmessenger"
@@ -27,7 +28,11 @@ tasks.test {
 
 tasks.named<Jar>("jar") {
     manifest.attributes["Timestamp"] = providers.gradleProperty("bundleTimestampMillis").get()
-    from(listOf(rootProject.file("LICENSE"), rootProject.file("NOTICE"))) { into("META-INF") }
+    from(listOf(rootProject.file("LICENSE"), rootProject.file("NOTICE"))) {
+        into("META-INF")
+        // Git writes LF or CRLF depending on the checkout; the bundle bytes must not.
+        filter(mapOf("eol" to FixCrLfFilter.CrLf.newInstance("lf")), FixCrLfFilter::class.java)
+    }
 }
 
 dependencyLocking {
