@@ -65,6 +65,7 @@ internal val expectedHooks = mapOf(
     ),
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
+    "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
 ) + pluginGates.mapValues { it.value.methods }
 
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
@@ -125,6 +126,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "V" && method.parameterTypes.size == 3 &&
                 method.parameterTypes[0] == "Landroid/content/Intent;" &&
                 "ACTION_REVOKE_MESSAGE" in strings) add("keep_unsent")
+            if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) &&
+                method.parameterTypes == listOf(cls.type) &&
+                "SearchAiagentImplementationsKillSwitch" in strings) add("ai_search")
         }
     }
     return found

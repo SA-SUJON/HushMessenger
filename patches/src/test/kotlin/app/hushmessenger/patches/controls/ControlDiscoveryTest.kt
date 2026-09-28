@@ -41,6 +41,7 @@ class ControlDiscoveryTest {
                     "ai_fab" -> "const-string v0, \"AiFabComponent\"\nconst/4 v0, 0x0\nreturn-object v0"
                     "subtabs", "typing", "allow_screenshot", "hide_read_receipts" -> "return-void"
                     "keep_unsent" -> "const-string v0, \"ACTION_REVOKE_MESSAGE\"\nreturn-void"
+                    "ai_search" -> "const-string v0, \"SearchAiagentImplementationsKillSwitch\"\nconst/4 v0, 0x1\nreturn v0"
                     "bubbles" -> """
                         sget v0, Landroid/os/Build${'$'}VERSION;->SDK_INT:I
                         const/4 v1, 0x0
@@ -63,7 +64,7 @@ class ControlDiscoveryTest {
                     """.trimIndent()
                     else -> error("Missing synthetic resolver fixture for $key")
                 }
-                val staticGate = key in pluginGates && !id.substringAfter('(').startsWith(')')
+                val staticGate = (key in pluginGates || key == "ai_search") && !id.substringAfter('(').startsWith(')')
                 fixtureMethod(id, body, flags = AccessFlags.PUBLIC.value or
                     if (staticGate) AccessFlags.STATIC.value else 0)
             }
@@ -79,7 +80,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(64, found.values.sumOf { it.size })
+        assertEquals(66, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 
