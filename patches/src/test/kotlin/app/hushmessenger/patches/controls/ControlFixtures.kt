@@ -38,10 +38,12 @@ internal fun fixtureClass(type: String, methods: List<Method> = emptyList(), ori
 
 internal const val PEOPLE_JEWEL_HOOK = "LX/HAR;->A01(LX/HAR;)Z"
 
-/** The first 13 instructions match both supported APKs; the tail stands in for the list reset. */
+/** Instructions 0-20 match both supported APKs; one instruction stands in for the list reset. */
 internal fun peopleJewelMethod(
     key: String = "LX/JTx;->A01:LX/1BL;",
     resultRegister: String = "v0",
+    serverFlag: String = "72344235860374863L",
+    serverTarget: String = ":shown",
     flags: Int = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value,
 ) = fixtureMethod(PEOPLE_JEWEL_HOOK, """
     iget-object v0, p0, LX/HAR;->A07:LX/17Z;
@@ -57,6 +59,16 @@ internal fun peopleJewelMethod(
     invoke-interface {v1, v0, v4}, $PREFERENCE_GETTER
     move-result $resultRegister
     if-eqz v0, :shown
+    iget-object v0, p0, LX/HAR;->A06:LX/17Z;
+    invoke-static {v0}, LX/17Z;->A0I(LX/17Z;)V
+    invoke-static {v2, v4}, LX/1Aa;->A07(Ljava/lang/Object;I)LX/4nI;
+    move-result-object v2
+    const-wide v0, $serverFlag
+    invoke-static {v2, v0, v1}, LX/16z;->A1Z(Ljava/lang/Object;J)Z
+    move-result v0
+    if-nez v0, $serverTarget
+    iget-object v3, p0, LX/HAR;->A0F:LX/WZw;
+    :hidden
     const/4 v0, 0x1
     return v0
     :shown

@@ -16,6 +16,7 @@ import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
@@ -289,14 +290,38 @@ internal fun MutableMethod.injectBrowserPreference() {
     addInstructions(63, "invoke-static {v0, p1}, $SETTINGS->preferExternalBrowser(ZLandroid/net/Uri;)Z\nmove-result v0")
 }
 
-/** The Notifications tab reads its stock "section hidden" preference into v0, then branches on it. */
+/** Instruction index a branch lands on, or -1 when it doesn't start an instruction. */
+internal fun List<Instruction>.branchTarget(index: Int): Int {
+    val offset = (getOrNull(index) as? OffsetInstruction)?.codeOffset ?: return -1
+    val target = take(index).sumOf { it.codeUnits } + offset
+    var address = 0
+    forEachIndexed { i, instruction -> if (address == target) return i; address += instruction.codeUnits }
+    return -1
+}
+
+/**
+ * The Notifications tab reads its stock "section hidden" preference into v0 and branches on it. A hidden
+ * section is still shown when a server flag (v0 at index 19) is on; both branches land on the final false return.
+ */
 internal fun MutableMethod.validatePeopleSection() {
-    val code = implementation!!.instructions
+    val code = implementation!!.instructions.toList()
     val key = code.getOrNull(8)
     val default = code.getOrNull(9)
     val getter = code.getOrNull(10) as? FiveRegisterInstruction
+    val flag = code.getOrNull(17)
+    val last = code.lastIndex
     if (!AccessFlags.STATIC.isSet(accessFlags) || returnType != "Z" || parameterTypes != listOf(definingClass) ||
         implementation!!.registerCount != 6 ||
+        flag?.opcode != Opcode.CONST_WIDE || (flag as? OneRegisterInstruction)?.registerA != 0 ||
+        (flag as? WideLiteralInstruction)?.wideLiteral != 72344235860374863L ||
+        code.getOrNull(18)?.opcode != Opcode.INVOKE_STATIC ||
+        (code[18] as? ReferenceInstruction)?.reference.toString() != "LX/16z;->A1Z(Ljava/lang/Object;J)Z" ||
+        code.getOrNull(19)?.opcode != Opcode.MOVE_RESULT || (code[19] as? OneRegisterInstruction)?.registerA != 0 ||
+        code.getOrNull(20)?.opcode != Opcode.IF_NEZ || (code[20] as? OneRegisterInstruction)?.registerA != 0 ||
+        code.branchTarget(12) != last || code.branchTarget(20) != last ||
+        code[last].opcode != Opcode.RETURN || (code[last] as? OneRegisterInstruction)?.registerA != 4 ||
+        code[last - 1].opcode != Opcode.RETURN || (code[last - 1] as? OneRegisterInstruction)?.registerA != 0 ||
+        code[last - 2].opcode != Opcode.CONST_4 || (code[last - 2] as? WideLiteralInstruction)?.wideLiteral != 1L ||
         key?.opcode != Opcode.SGET_OBJECT || (key as? OneRegisterInstruction)?.registerA != 0 ||
         (key as? ReferenceInstruction)?.reference.toString() != "LX/JTx;->A01:LX/1BL;" ||
         default?.opcode != Opcode.CONST_4 || (default as? OneRegisterInstruction)?.registerA != 4 ||
@@ -312,6 +337,8 @@ internal fun MutableMethod.validatePeopleSection() {
 
 internal fun MutableMethod.injectPeopleSection() {
     validatePeopleSection()
-    // Treat an enabled control like Messenger's own hide choice, so its loader skips the section.
+    // An enabled control ignores the server override, then counts as Messenger's own hide choice.
+    // The later site goes first so index 12 still names the preference branch.
+    addInstructions(20, "invoke-static {v0}, $SETTINGS->keepPeopleSection(Z)Z\nmove-result v0")
     addInstructions(12, "invoke-static {v0}, $SETTINGS->hidePeopleSection(Z)Z\nmove-result v0")
 }

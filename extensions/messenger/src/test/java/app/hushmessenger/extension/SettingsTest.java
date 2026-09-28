@@ -62,11 +62,15 @@ public class SettingsTest {
     @Test public void peopleSectionKeepsMessengersOwnHideChoiceAndPauses() {
         assertFalse(Settings.hidePeopleSection(false));
         assertTrue(Settings.hidePeopleSection(true));
+        assertTrue(Settings.keepPeopleSection(true));
+        assertFalse(Settings.keepPeopleSection(false));
         Settings.preferences.edit().putBoolean("people", true).apply();
         assertTrue(Settings.hidePeopleSection(false));
+        assertFalse(Settings.keepPeopleSection(true));
         Settings.preferences.edit().putBoolean("paused", true).apply();
         assertFalse(Settings.hidePeopleSection(false));
         assertTrue(Settings.hidePeopleSection(true));
+        assertTrue(Settings.keepPeopleSection(true));
     }
 
     @Test public void pauseRestoresBrowserAndSubtabsExactly() {

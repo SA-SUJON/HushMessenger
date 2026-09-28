@@ -88,20 +88,25 @@ class ControlsTest {
         assertFailsWith<PatchException> { document.addSettingsEntry() }
     }
 
-    @Test fun notificationsSuggestionsJoinTheStockHiddenPreferenceBeforeItsBranch() {
+    @Test fun notificationsSuggestionsJoinTheStockPreferenceAndSkipTheServerOverride() {
         val reader = peopleJewelMethod()
         val original = reader.implementation!!.instructions.toList()
         reader.injectPeopleSection()
         val code = reader.implementation!!.instructions.toList()
+        fun assertSwitch(index: Int, method: String) {
+            assertEquals("$SETTINGS->$method(Z)Z", (code[index] as ReferenceInstruction).reference.toString())
+            assertEquals(listOf(1, 0), (code[index] as FiveRegisterInstruction).let { listOf(it.registerCount, it.registerC) })
+            assertEquals(Opcode.MOVE_RESULT, code[index + 1].opcode)
+            assertEquals(0, (code[index + 1] as OneRegisterInstruction).registerA)
+        }
         assertEquals(original.take(12), code.take(12))
-        assertEquals("$SETTINGS->hidePeopleSection(Z)Z", (code[12] as ReferenceInstruction).reference.toString())
-        assertEquals(listOf(1, 0), (code[12] as FiveRegisterInstruction).let { listOf(it.registerCount, it.registerC) })
-        assertEquals(Opcode.MOVE_RESULT, code[13].opcode)
-        assertEquals(0, (code[13] as OneRegisterInstruction).registerA)
-        assertEquals(original.drop(12), code.drop(14))
-        // The stock branch still skips to the original "not hidden" return.
-        val branch = code.take(14).sumOf { it.codeUnits } + (code[14] as OffsetInstruction).codeOffset
-        assertEquals(code.dropLast(1).sumOf { it.codeUnits }, branch)
+        assertSwitch(12, "hidePeopleSection")
+        assertEquals(original.subList(12, 20), code.subList(14, 22))
+        assertSwitch(22, "keepPeopleSection")
+        assertEquals(original.drop(20), code.drop(24))
+        // Both stock branches still skip to the original "not hidden" return.
+        assertEquals(code.lastIndex, code.branchTarget(14))
+        assertEquals(code.lastIndex, code.branchTarget(24))
     }
 
     @Test fun changedNotificationsSuggestionsReaderFailsBeforeEditing() {
@@ -109,6 +114,8 @@ class ControlsTest {
             peopleJewelMethod(resultRegister = "v3"),
             peopleJewelMethod(key = "LX/JTx;->A00:LX/1BL;"),
             peopleJewelMethod(flags = AccessFlags.PUBLIC.value),
+            peopleJewelMethod(serverFlag = "0x1L"),
+            peopleJewelMethod(serverTarget = ":hidden"),
         )) {
             val before = changed.implementation!!.instructions.toList()
             assertFailsWith<PatchException> { changed.injectPeopleSection() }
