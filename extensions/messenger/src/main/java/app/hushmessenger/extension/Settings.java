@@ -125,6 +125,7 @@ public final class Settings {
         return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) || original;
     }
 
+    /** Appends a HushMessenger copy of the Menu tab's Settings folder row (one title String per row). */
     @SuppressWarnings("unchecked")
     public static void addMenuSettingsEntry(ArrayList list) {
         try {
@@ -132,26 +133,53 @@ public final class Settings {
             Object original = list.get(0);
             Object clone = shallowClone(original);
             if (clone == null) return;
-            for (Class<?> c = clone.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-                java.lang.reflect.Field f;
-                try { f = c.getDeclaredField("A00"); } catch (NoSuchFieldException ignored) { continue; }
+            java.lang.reflect.Field title = null;
+            for (java.lang.reflect.Field f : original.getClass().getDeclaredFields()) {
                 if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
                 f.setAccessible(true);
-                Object sub = f.get(clone);
-                if (sub == null) continue;
-                java.lang.reflect.Field label;
-                try { label = sub.getClass().getDeclaredField("A05"); } catch (NoSuchFieldException ignored) { continue; }
-                if (label.getType() != String.class) continue;
-                Object subClone = shallowClone(sub);
-                if (subClone == null) continue;
-                label.setAccessible(true);
-                label.set(subClone, "HushMessenger");
-                f.set(clone, subClone);
-                list.add(clone);
-                return;
+                if (f.getType() == String.class) {
+                    if (title != null) return;
+                    title = f;
+                } else if (f.getType() == Integer.class) {
+                    f.set(clone, null);
+                } else if (f.getType().getName().endsWith("DrawerFolderKey")) {
+                    // Folder keys compare by identity, so a copy keeps this row from acting as Settings.
+                    Object key = f.get(original);
+                    Object copy = key == null ? null : shallowClone(key);
+                    if (copy == null) return;
+                    f.set(clone, copy);
+                }
             }
+            if (title == null) return;
+            title.set(clone, "HushMessenger");
+            list.add(clone);
         } catch (Exception e) {
             android.util.Log.e("HushMessenger", "addMenuSettingsEntry failed", e);
+        }
+    }
+
+    /** Opens settings for the HushMessenger folder row and returns null; other rows come back unchanged. */
+    public static Object drawerFolderClicked(Object item) {
+        if (item == null) return null;
+        try {
+            Context context = null;
+            boolean ours = false;
+            for (java.lang.reflect.Field f : item.getClass().getDeclaredFields()) {
+                if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+                f.setAccessible(true);
+                Object value = f.get(item);
+                if (value instanceof Context) context = (Context) value;
+                else if ("HushMessenger".equals(value)) ours = true;
+            }
+            if (!ours || context == null) return item;
+            android.content.Intent intent = new android.content.Intent();
+            intent.setClassName(context.getPackageName(), "app.hushmessenger.extension.SettingsActivity");
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            return null;
+        } catch (Exception e) {
+            android.util.Log.e("HushMessenger", "drawerFolderClicked failed", e);
+            return item;
         }
     }
 

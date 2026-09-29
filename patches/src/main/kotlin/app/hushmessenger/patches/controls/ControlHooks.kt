@@ -33,6 +33,7 @@ internal const val AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/I
 internal const val IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;"
 internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z"
 private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
+internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -78,6 +79,7 @@ internal val expectedHooks = mapOf(
         "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
         "LX/TxV;->CAo(LX/4jw;I)V",
         "LX/Txc;->A0I(Ljava/util/List;)V",
+        "LX/Jwp;->onClick(Landroid/view/View;)V",
     ),
 ) + pluginGates.mapValues { it.value.methods }
 
@@ -220,6 +222,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "V" && method.parameterTypes.size == 2 &&
                 method.parameterTypes[1] == "I" && !AccessFlags.STATIC.isSet(method.accessFlags) &&
                 strings.contains("Unknown ViewHolder")) add("menu_settings")
+            if (method.name == "onClick" && method.returnType == "V" &&
+                method.parameterTypes == listOf("Landroid/view/View;") &&
+                DRAWER_FOLDER_SELECTED in strings) add("menu_settings")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -523,6 +528,41 @@ internal fun MutableMethod.injectMenuDrawerAdd() {
     addInstructions(0, """
         invoke-static {p1}, $SETTINGS->addMenuDrawerEntry(Ljava/util/List;)Ljava/util/List;
         move-result-object p1
+    """.trimIndent())
+}
+
+/** The Settings folder builder creates exactly one class: the Menu tab's folder row. */
+internal fun MutableMethod.menuFolderItemType(): String {
+    val types = implementation!!.instructions.filter { it.opcode == Opcode.NEW_INSTANCE }
+        .map { ((it as ReferenceInstruction).reference as TypeReference).type }.toSet()
+    return types.singleOrNull()
+        ?: throw PatchException("Messenger controls: menu settings item builder creates ${types.size} types, expected 1")
+}
+
+/** Messenger casts the tapped folder row just before its folder-selected trace section starts. */
+internal fun MutableMethod.menuFolderCastIndex(folderItemType: String): Int {
+    if (returnType != "V") throw PatchException("Messenger controls: drawer folder click returns $returnType")
+    val code = implementation!!.instructions.toList()
+    val marker = code.indexOfFirst { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == DRAWER_FOLDER_SELECTED }
+    val casts = code.indices.filter { index ->
+        index < marker && marker - index <= 12 && code[index].opcode == Opcode.CHECK_CAST &&
+            ((code[index] as ReferenceInstruction).reference as TypeReference).type == folderItemType
+    }
+    return casts.singleOrNull()
+        ?: throw PatchException("Messenger controls: drawer folder click has ${casts.size} row casts before its marker, expected 1")
+}
+
+internal fun MutableMethod.injectMenuFolderClick(folderItemType: String) {
+    val cast = menuFolderCastIndex(folderItemType)
+    val row = (getInstruction(cast) as OneRegisterInstruction).registerA
+    // Null means the HushMessenger row opened settings; any other row continues with Messenger's handling.
+    addInstructionsWithLabels(cast + 1, """
+        invoke-static/range {v$row .. v$row}, $SETTINGS->drawerFolderClicked(Ljava/lang/Object;)Ljava/lang/Object;
+        move-result-object v$row
+        if-nez v$row, :hush_folder_row
+        return-void
+        :hush_folder_row
+        check-cast v$row, $folderItemType
     """.trimIndent())
 }
 

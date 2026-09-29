@@ -1,6 +1,7 @@
 package app.hushmessenger.extension;
 
 import android.net.Uri;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
@@ -115,6 +116,71 @@ public class SettingsTest {
             Switch stories = controller.get().getWindow().getDecorView().findViewWithTag("stories");
             assertTrue(stories.isChecked());
         }
+    }
+
+    /** Shaped like Messenger 580's Menu tab folder row: context, identity key, badge and one title. */
+    static final class FakeDrawerFolderKey {
+        final String name;
+        FakeDrawerFolderKey(String name) { this.name = name; }
+    }
+
+    static final class FolderRow {
+        final Context context;
+        final FakeDrawerFolderKey key;
+        final Integer badge;
+        final String title;
+        FolderRow(Context context, FakeDrawerFolderKey key, Integer badge, String title) {
+            this.context = context;
+            this.key = key;
+            this.badge = badge;
+            this.title = title;
+        }
+    }
+
+    static final class TwoTitleRow {
+        final String first = "Settings";
+        final String second = "Subtitle";
+    }
+
+    @Test public void menuSettingsRowCopiesTheFolderRowWithItsOwnKeyAndNoBadge() {
+        var application = RuntimeEnvironment.getApplication();
+        FakeDrawerFolderKey key = new FakeDrawerFolderKey("settings");
+        FolderRow settings = new FolderRow(application, key, 3, "Settings");
+        java.util.ArrayList<Object> rows = new java.util.ArrayList<>(java.util.List.of(settings));
+        Settings.addMenuSettingsEntry(rows);
+        assertEquals(2, rows.size());
+        assertSame(settings, rows.get(0));
+        assertEquals("Settings", settings.title);
+        assertEquals(Integer.valueOf(3), settings.badge);
+        FolderRow hush = (FolderRow) rows.get(1);
+        assertEquals("HushMessenger", hush.title);
+        assertNull(hush.badge);
+        assertSame(application, hush.context);
+        assertNotSame(key, hush.key);
+        assertEquals("settings", hush.key.name);
+    }
+
+    @Test public void menuSettingsRowLeavesListsItCannotLabelAlone() {
+        java.util.ArrayList<Object> rows = new java.util.ArrayList<>(java.util.List.of(new TwoTitleRow()));
+        Settings.addMenuSettingsEntry(rows);
+        assertEquals(1, rows.size());
+        java.util.ArrayList<Object> empty = new java.util.ArrayList<>();
+        Settings.addMenuSettingsEntry(empty);
+        assertTrue(empty.isEmpty());
+        Settings.addMenuSettingsEntry(null);
+    }
+
+    @Test public void onlyTheHushFolderRowOpensSettings() {
+        var application = RuntimeEnvironment.getApplication();
+        FolderRow settings = new FolderRow(application, new FakeDrawerFolderKey("settings"), null, "Settings");
+        assertSame(settings, Settings.drawerFolderClicked(settings));
+        assertNull(Shadows.shadowOf(application).getNextStartedActivity());
+        FolderRow hush = new FolderRow(application, new FakeDrawerFolderKey("settings"), null, "HushMessenger");
+        assertNull(Settings.drawerFolderClicked(hush));
+        Intent launched = Shadows.shadowOf(application).getNextStartedActivity();
+        assertEquals(SettingsActivity.class.getName(), launched.getComponent().getClassName());
+        assertEquals(application.getPackageName(), launched.getComponent().getPackageName());
+        assertTrue((launched.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
     }
 
     @Test public void messengerButtonOpensItsLauncherTaskInsteadOfTheSettingsTask() {

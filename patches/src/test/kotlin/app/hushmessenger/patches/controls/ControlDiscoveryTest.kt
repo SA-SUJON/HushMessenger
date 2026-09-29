@@ -47,6 +47,7 @@ class ControlDiscoveryTest {
                         id.contains("ArrayList") ->
                             "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
                         id.contains("Ljava/util/List;") -> "return-void"
+                        id.contains("onClick") -> "const-string v0, \"$DRAWER_FOLDER_SELECTED\"\nreturn-void"
                         else -> "const-string v0, \"Unknown ViewHolder\"\nreturn-void"
                     }
                     "bubbles" -> """
@@ -91,7 +92,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(72, found.values.sumOf { it.size })
+        assertEquals(73, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 
