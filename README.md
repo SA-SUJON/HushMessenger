@@ -59,7 +59,7 @@ After installing Messenger with any optional HushMessenger control, **long-press
 
 You can also open **app drawer > HushMessenger settings**, or tap the **HushMessenger** row right under Settings in Messenger's **Menu** tab. Inside settings, **App > Restart Messenger** provides the same restart action. It saves the latest choices before restarting the main app process. If saving fails, you'll see an error and Messenger stays open. Restarting doesn't clear app data.
 
-The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use **Find a control** to search within the selected category. The setup panel shows how many controls are enabled and whether changes are paused. Only features selected when patching appear here. Each switch starts off, and **Pause all changes** restores stock behavior without forgetting your choices. Use **Restart Messenger** after changing inbox options.
+The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use **Find a control** to search within the selected category. The setup panel shows how many controls are enabled and whether changes are paused. Only features selected when patching appear here. Each switch starts off, and **Pause all changes** restores stock behavior without forgetting your choices. A switch that's on shows when it last changed something since Messenger started. **Nothing to change yet** only means that screen or event hasn't come up yet, like a link you haven't tapped or a business chat you haven't opened. Use **Restart Messenger** after changing inbox options.
 
 | Patch / switch | What it changes |
 | --- | --- |

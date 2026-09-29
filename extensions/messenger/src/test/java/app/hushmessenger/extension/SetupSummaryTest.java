@@ -106,6 +106,30 @@ public class SetupSummaryTest {
         }
     }
 
+    @Test public void usageLabelShowsOnlyForSwitchesThatAreOnAndSaysWhetherTheyWereUsed() throws Exception {
+        installedFeatures("people", "stories");
+        Settings.preferences.edit().putBoolean("people", true).putBoolean("stories", false).commit();
+        Settings.activeAt.clear();
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            View root = screen.get().getWindow().getDecorView();
+            android.widget.TextView people = root.findViewWithTag("active_people");
+            android.widget.TextView stories = root.findViewWithTag("active_stories");
+            assertEquals(View.VISIBLE, people.getVisibility());
+            assertEquals("Nothing to change yet since restart", people.getText().toString());
+            // An off switch has nothing to report, and turning it on shows its label.
+            assertEquals(View.GONE, stories.getVisibility());
+            ((android.widget.Switch) root.findViewWithTag("stories")).setChecked(true);
+            assertEquals(View.VISIBLE, stories.getVisibility());
+            ((android.widget.Switch) root.findViewWithTag("stories")).setChecked(false);
+            assertEquals(View.GONE, stories.getVisibility());
+        }
+        assertTrue(Settings.enabled("people"));
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            android.widget.TextView people = screen.get().getWindow().getDecorView().findViewWithTag("active_people");
+            assertEquals("Used just now", people.getText().toString());
+        }
+    }
+
     @Test public void pauseAndAndroidEligibilityAreSeparateFromSavedChoices() throws Exception {
         installedFeatures("bubbles", "people");
         Settings.preferences.edit().putBoolean("bubbles", true).putBoolean("people", true).putBoolean("paused", true).commit();
