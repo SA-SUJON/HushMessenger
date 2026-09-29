@@ -15,7 +15,7 @@ internal fun Document.addSettingsEntry() {
     val applications = getElementsByTagName("application")
     if (applications.length != 1) throw PatchException("Messenger controls: expected one application")
     val application = applications.item(0) as Element
-    for (tag in listOf("activity", "provider")) {
+    for (tag in listOf("activity", "activity-alias", "provider")) {
         val nodes = getElementsByTagName(tag)
         for (i in 0 until nodes.length) {
             if ((nodes.item(i) as Element).getAttribute("android:name").startsWith("app.hushmessenger.extension.")) {
@@ -29,10 +29,14 @@ internal fun Document.addSettingsEntry() {
     }
     application.child("provider", "name" to "app.hushmessenger.extension.SettingsProvider",
         "authorities" to "com.facebook.orca.hush.settings", "exported" to "false")
-    val activity = application.child("activity", "name" to "app.hushmessenger.extension.SettingsActivity",
+    application.child("activity", "name" to "app.hushmessenger.extension.SettingsActivity",
         "label" to "HushMessenger settings", "exported" to "true",
         "icon" to "@android:drawable/ic_menu_preferences", "taskAffinity" to "app.hushmessenger.settings")
-    val filter = activity.child("intent-filter")
+    // The app drawer entry is an alias, so settings can hide it while the shortcuts and Menu tab row keep working.
+    val launcher = application.child("activity-alias", "name" to "app.hushmessenger.extension.SettingsLauncher",
+        "targetActivity" to "app.hushmessenger.extension.SettingsActivity", "label" to "HushMessenger settings",
+        "icon" to "@android:drawable/ic_menu_preferences", "exported" to "true")
+    val filter = launcher.child("intent-filter")
     filter.child("action", "name" to "android.intent.action.MAIN")
     filter.child("category", "name" to "android.intent.category.LAUNCHER")
     // Launcher shortcuts start it as Messenger itself, so no other app needs a way to kill the process.

@@ -5,6 +5,7 @@ import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -84,8 +85,30 @@ public final class SettingsActivity extends Activity {
         {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited.", "privacy"},
     };
 
+    static final String DRAWER_ALIAS = "app.hushmessenger.extension.SettingsLauncher";
+
+    /**
+     * Shows or hides the app drawer entry, an alias of this screen that only a patched Messenger has.
+     * The screen itself stays enabled for the long-press shortcut and the Menu tab row.
+     */
+    static void applyDrawerIcon(Context context, boolean hidden) {
+        PackageManager packages = context.getPackageManager();
+        ComponentName alias = new ComponentName(context.getPackageName(), DRAWER_ALIAS);
+        try {
+            boolean disabled = packages.getComponentEnabledSetting(alias) == PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+            if (hidden != disabled) {
+                packages.setComponentEnabledSetting(alias, hidden ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                    : PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP);
+            }
+        } catch (IllegalArgumentException | SecurityException missing) {
+            android.util.Log.w("HushMessenger", "Can't change the app drawer icon", missing);
+        }
+    }
+
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {
         Settings.initialize(this);
+        // Keep the drawer icon in step with the saved choice, for example after Import.
+        applyDrawerIcon(this, Settings.preferences.getBoolean("hide_drawer_icon", false));
         boolean light = Settings.preferences.getBoolean("light", false);
         lightTheme = light;
         setTheme(light ? android.R.style.Theme_Material_Light_NoActionBar : android.R.style.Theme_Material_NoActionBar);
@@ -453,6 +476,7 @@ public final class SettingsActivity extends Activity {
             feedback("paused".equals(key) ? text.get(checked ? "changes_paused" : "changes_resumed")
                 : text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT);
             if ("light".equals(key)) refreshChoices();
+            if ("hide_drawer_icon".equals(key)) applyDrawerIcon(this, checked);
         });
         row.setOnClickListener(view -> { if (control.isEnabled()) control.toggle(); });
         row.setEnabled(available);
@@ -479,6 +503,9 @@ public final class SettingsActivity extends Activity {
         restart.setTag("restart_messenger");
         restart.setOnClickListener(view -> startActivity(new Intent(this, RestartActivity.class)));
         ui.add(access, restart, 14);
+        ui.rule(access, 14);
+        ui.add(access, controlRow("hide_drawer_icon", text.base("hide_drawer_icon"),
+            text.base(Settings.installed.contains("menu_row") ? "hide_drawer_icon_help_menu" : "hide_drawer_icon_help"), false), 14);
         ui.add(content, access, 12);
         ui.add(content, ui.heading(text.get("appearance")), 22);
         LinearLayout appearance = ui.panel();

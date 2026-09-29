@@ -130,6 +130,34 @@ public class SetupSummaryTest {
         }
     }
 
+    @Test public void hidingTheDrawerIconDisablesOnlyTheLauncherAlias() throws Exception {
+        installedFeatures("people");
+        var app = RuntimeEnvironment.getApplication();
+        PackageManager packages = app.getPackageManager();
+        var alias = new android.content.ComponentName(app.getPackageName(), SettingsActivity.DRAWER_ALIAS);
+        var screenComponent = new android.content.ComponentName(app.getPackageName(), SettingsActivity.class.getName());
+        Shadows.shadowOf(packages).addActivityIfNotPresent(alias);
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            View root = screen.get().getWindow().getDecorView();
+            root.findViewWithTag("tab_app").performClick();
+            android.widget.Switch hide = root.findViewWithTag("hide_drawer_icon");
+            assertFalse(hide.isChecked());
+            assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
+            hide.setChecked(true);
+            assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
+            assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(screenComponent));
+            assertTrue(Settings.preferences.getBoolean("hide_drawer_icon", false));
+            hide.setChecked(false);
+            assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
+        }
+        // A saved choice is applied again when settings open, for example after Import.
+        Settings.preferences.edit().putBoolean("hide_drawer_icon", true).commit();
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
+        }
+        Settings.preferences.edit().putBoolean("hide_drawer_icon", false).commit();
+    }
+
     @Test public void pauseAndAndroidEligibilityAreSeparateFromSavedChoices() throws Exception {
         installedFeatures("bubbles", "people");
         Settings.preferences.edit().putBoolean("bubbles", true).putBoolean("people", true).putBoolean("paused", true).commit();
