@@ -215,6 +215,20 @@ val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receip
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 
+private var menuRowApplied = false
+
+// Lets the settings screen mention the Menu tab row only on builds that have it.
+private val menuRowResources = resourcePatch(description = "Record HushMessenger capability: menu_row") {
+    dependsOn(settingsResources)
+    execute {
+        menuRowApplied = false
+        document("AndroidManifest.xml").use { it.requireFeatureAbsent("menu_row") }
+    }
+    finalize {
+        if (menuRowApplied) document("AndroidManifest.xml").use { it.addFeature("menu_row") }
+    }
+}
+
 @Suppress("unused")
 val menuSettingsPatch = bytecodePatch(
     name = "Open settings from menu",
@@ -223,7 +237,7 @@ val menuSettingsPatch = bytecodePatch(
 ) {
     category("Navigation")
     compatibleWith(MessengerTarget.COMPATIBILITY)
-    dependsOn(settingsExtension)
+    dependsOn(settingsExtension, menuRowResources)
     execute {
         validateControls(discoveredControls, setOf("menu_settings"))
         val methods = discoveredControls.getValue("menu_settings")
@@ -244,5 +258,6 @@ val menuSettingsPatch = bytecodePatch(
             .single { it.hookId() == drawerMethod.hookId() }
             .injectMenuDrawerAdd()
         clickTarget.injectMenuFolderClick(folderItemType)
+        menuRowApplied = true
     }
 }

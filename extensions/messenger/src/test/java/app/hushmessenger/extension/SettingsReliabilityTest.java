@@ -163,6 +163,34 @@ public class SettingsReliabilityTest {
         }
     }
 
+    @Test @Config(sdk = {28, 36}) public void quickAccessTextWithTheMenuRowStaysWholeAtLargeText() throws Exception {
+        var app = RuntimeEnvironment.getApplication();
+        var info = app.getPackageManager().getPackageInfo(app.getPackageName(), android.content.pm.PackageManager.GET_META_DATA);
+        info.applicationInfo.metaData.putBoolean("hush.feature.menu_row", true);
+        Shadows.shadowOf(app.getPackageManager()).installPackage(info);
+        RuntimeEnvironment.setFontScale(2f);
+        // A short window only has to keep every line; a phone-sized one shows the whole card text.
+        for (int[] size : new int[][] {{320, 360}, {411, 891}}) for (boolean light : new boolean[] {false, true}) {
+            RuntimeEnvironment.setQualifiers("w" + size[0] + "dp-h" + size[1] + "dp-mdpi");
+            Settings.preferences.edit().putBoolean("light", light).commit();
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                View root = layout(screen.get(), size[0], size[1]);
+                root.findViewWithTag("tab_app").performClick();
+                layout(screen.get(), size[0], size[1]);
+                TextView help = root.findViewWithTag("access_help");
+                assertTrue(help.getText().toString().contains("Menu tab"));
+                assertEquals(0, help.getLayout().getEllipsisCount(help.getLineCount() - 1));
+                assertEquals(help.getLayout().getHeight(), help.getHeight() - help.getPaddingTop() - help.getPaddingBottom());
+                if (size[1] > 360) {
+                    Rect visible = new Rect();
+                    assertTrue(help.getGlobalVisibleRect(visible));
+                    assertEquals(help.getHeight(), visible.height());
+                }
+                assertReachable(screen.get(), root.findViewWithTag("restart_messenger"), size[0], size[1]);
+            }
+        }
+    }
+
     @Test @Config(sdk = {28, 36}) public void keyboardSizedWindowKeepsSearchReadableAndRestoresNavigation() {
         RuntimeEnvironment.setQualifiers("w320dp-h360dp-mdpi");
         RuntimeEnvironment.setFontScale(2f);

@@ -81,6 +81,7 @@ final class SettingsText {
             case "reopen": return "Apply inbox changes with App > Restart Messenger.";
             case "quick_access": return "QUICK ACCESS";
             case "access_help": return "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from your app drawer.";
+            case "access_help_menu": return "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from Messenger's Menu tab or your app drawer.";
             case "restart": return "Restart Messenger";
             case "restarting": return "Restarting Messenger...";
             case "restart_unavailable": return "Couldn't restart. Close Messenger, then open it from your app drawer.";

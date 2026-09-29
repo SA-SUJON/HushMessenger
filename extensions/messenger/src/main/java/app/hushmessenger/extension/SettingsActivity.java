@@ -465,7 +465,10 @@ public final class SettingsActivity extends Activity {
     private void buildApp(LinearLayout content) {
         ui.add(content, ui.heading(text.get("quick_access")), 4);
         LinearLayout access = ui.panel();
-        ui.add(access, ui.text(text.get("access_help"), 14, ui.muted, false), 0);
+        // The Menu tab row is its own patch, recorded as menu_row only when it applied.
+        TextView accessHelp = ui.text(text.get(Settings.installed.contains("menu_row") ? "access_help_menu" : "access_help"), 14, ui.muted, false);
+        accessHelp.setTag("access_help");
+        ui.add(access, accessHelp, 0);
         Button restart = ui.button(text.get("restart"));
         restart.setTag("restart_messenger");
         restart.setOnClickListener(view -> startActivity(new Intent(this, RestartActivity.class)));

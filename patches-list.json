@@ -1318,6 +1318,19 @@
                             "dependencies": []
                         }
                     ]
+                },
+                {
+                    "type": "ResourcePatch",
+                    "name": null,
+                    "description": "Record HushMessenger capability: menu_row",
+                    "dependencies": [
+                        {
+                            "type": "ResourcePatch",
+                            "name": null,
+                            "description": "Install HushMessenger settings",
+                            "dependencies": []
+                        }
+                    ]
                 }
             ],
             "compatiblePackages": [

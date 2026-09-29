@@ -7,6 +7,7 @@ None of this is in a release yet. It'll ship together in the next one.
 ### Changed and fixed
 
 - A Facebook patched with the same key as Messenger, such as Hushfacebook, is no longer turned away when it asks Messenger for its shared message keys. Messenger used to refuse it because its certificate wasn't Meta's. Now, while that Facebook is the app calling Messenger and its current signing key is exactly the one Messenger carries, Messenger checks it the way it checks Meta's own Facebook, so Meta's rules still decide what it may read. Any other app, a Facebook signed with a different key, and a Messenger that still carries Meta's key all get the old answer. Copy setup counts each outcome. Tests cover each case. Facebook hasn't made that call on the test phone since the change, so it hasn't been seen working there yet.
+- The App tab's Quick access card now mentions the HushMessenger row in Messenger's Menu tab, on builds that have it. The text stays whole at twice the normal text size in both themes.
 
 ## 0.5.0 (2026-09-28)
 

@@ -92,6 +92,20 @@ public class SetupSummaryTest {
         }
     }
 
+    @Test public void quickAccessNamesTheMenuTabOnlyWhenTheRowWasPatchedIn() throws Exception {
+        for (boolean menuRow : new boolean[] {false, true}) {
+            if (menuRow) installedFeatures("people", "menu_row"); else installedFeatures("people");
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                View root = screen.get().getWindow().getDecorView();
+                root.findViewWithTag("tab_app").performClick();
+                String text = ((android.widget.TextView) root.findViewWithTag("access_help")).getText().toString();
+                assertEquals(menuRow, text.contains("Menu tab"));
+                assertTrue(text.contains("app drawer"));
+                assertTrue(text.contains("Patch controls"));
+            }
+        }
+    }
+
     @Test public void pauseAndAndroidEligibilityAreSeparateFromSavedChoices() throws Exception {
         installedFeatures("bubbles", "people");
         Settings.preferences.edit().putBoolean("bubbles", true).putBoolean("people", true).putBoolean("paused", true).commit();
