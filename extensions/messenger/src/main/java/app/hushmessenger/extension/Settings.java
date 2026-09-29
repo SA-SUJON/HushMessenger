@@ -17,12 +17,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Runtime switches default to the original Messenger behavior. */
 public final class Settings {
     static volatile SharedPreferences preferences;
+    static volatile Context appContext;
     static volatile Set<String> installed = Collections.emptySet();
     static boolean preview;
     static final ConcurrentHashMap<String, Long> activeAt = new ConcurrentHashMap<>();
 
     public static void initialize(Context context) {
-        preferences = context.getApplicationContext().getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
+        appContext = context.getApplicationContext();
+        preferences = appContext.getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
         Set<String> features = new HashSet<>();
         preview = false;
         try {

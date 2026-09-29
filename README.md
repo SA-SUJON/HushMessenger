@@ -126,7 +126,9 @@ If you patch both Messenger and [Hushfacebook](https://github.com/SysAdminDoc/Hu
 
 ### Restore screens on re-signed builds
 
-Always on. Messenger compares its own signing certificate with Meta's, and a re-signed build used to fail that check quietly and open to a blank screen. This patch answers Messenger's lookup of its own certificate with Meta's original one. Lookups for every other app still get the real answer. On the S25, a fully patched build opens straight to the signed-in chat list.
+Always on. Messenger compares its own signing certificate with Meta's, and a re-signed build used to fail that check quietly and open to a blank screen. This patch answers Messenger's lookup of its own certificate with Meta's original one. On the S25, a fully patched build opens straight to the signed-in chat list.
+
+It makes one more exception. When a Facebook signed with your same key calls into Messenger, for example to read Messenger's shared message keys, Messenger checks it as if it were Meta's own Facebook. That only happens while Facebook is the app on the other end of the call, its uid holds nothing but Facebook, and its current signing key matches Messenger's exactly. Meta's own rules still decide what it may read. Every other app, and a Facebook signed with a different key, gets the real answer. The App tab's **Copy setup** counts each outcome.
 
 ### Open settings from menu
 

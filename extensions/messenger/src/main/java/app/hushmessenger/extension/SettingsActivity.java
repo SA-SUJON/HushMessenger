@@ -553,6 +553,7 @@ public final class SettingsActivity extends Activity {
                     .append(", last_active=").append(lastActive == 0 ? "none" : ((System.currentTimeMillis() - lastActive) / 1000) + "s ago")
                     .append('\n');
             }
+            summary.append("Facebook caller checks: ").append(MessengerSignature.callerSummary()).append('\n');
             ClipData clip = ClipData.newPlainText(text.get("clipboard"), summary.toString());
             PersistableBundle extras = new PersistableBundle();
             extras.putBoolean(Build.VERSION.SDK_INT >= 33 ? ClipDescription.EXTRA_IS_SENSITIVE : "android.content.extra.IS_SENSITIVE", true);

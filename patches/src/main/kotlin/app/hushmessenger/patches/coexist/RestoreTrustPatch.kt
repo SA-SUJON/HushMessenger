@@ -49,7 +49,8 @@ internal object PackageSignersFingerprint : Fingerprint(
 @Suppress("unused")
 val restoreTrustPatch = bytecodePatch(
     name = "Restore screens on re-signed builds",
-    description = "Answers Messenger's own signer lookup with the original Meta certificate. Always on.",
+    description = "Answers Messenger's own signer lookup, and a Facebook signed with your key calling Messenger, " +
+        "with the original Meta certificate. Always on.",
     default = true,
 ) {
     category("Fixes")
@@ -78,8 +79,9 @@ val restoreTrustPatch = bytecodePatch(
 }
 
 /**
- * For Messenger itself, answer with the original certificate and skip the body. For any other
- * package, the extension answers null and the body runs as before. The two flags are false, as the
+ * For Messenger itself, or a Facebook carrying this build's key while it calls Messenger, answer
+ * with the original certificate and skip the body. For any other package or read, the extension
+ * answers null and the body runs as before. The two flags are false, as the
  * body sets them for a single signer.
  *
  * The injection is at index 0, where no local is live yet, so v0 to v2 are free once the method is

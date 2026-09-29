@@ -1403,7 +1403,7 @@
         },
         {
             "name": "Restore screens on re-signed builds",
-            "description": "Answers Messenger's own signer lookup with the original Meta certificate. Always on.",
+            "description": "Answers Messenger's own signer lookup, and a Facebook signed with your key calling Messenger, with the original Meta certificate. Always on.",
             "default": true,
             "category": "Fixes",
             "dependencies": [
