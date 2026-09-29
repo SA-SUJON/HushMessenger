@@ -423,13 +423,18 @@ public final class SettingsActivity extends Activity {
         }
         ui.add(labels, titleLine, 0);
         if (!description.isEmpty()) ui.add(labels, ui.text(text.display(description), 14, ui.muted, false), 6);
+        // A switch records a use only when Messenger reaches its screen or event, so an off switch shows nothing.
+        TextView activeLabel = null;
         if (divided) {
             long lastActive = Settings.lastActive(key);
             String status = lastActive == 0 ? text.get("not_active") : formatActive(lastActive);
-            TextView activeLabel = ui.text(status, 12, lastActive > 0 ? ui.accent : ui.muted, false);
+            activeLabel = ui.text(status, 12, lastActive > 0 ? ui.accent : ui.muted, false);
             activeLabel.setAlpha(0.7f);
+            activeLabel.setTag("active_" + key);
+            activeLabel.setVisibility(Settings.preferences.getBoolean(key, false) ? View.VISIBLE : View.GONE);
             ui.add(labels, activeLabel, 4);
         }
+        TextView usage = activeLabel;
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         Switch control = ui.toggle(key, text.display(title), text.display(("ads".equals(key) ? text.base("experimental") + ". " : "") + description), Settings.preferences.getBoolean(key, false));
         LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ui.dp(48), -2);
@@ -440,6 +445,7 @@ public final class SettingsActivity extends Activity {
         // The custom track has no disabled state, so dim it; the description says why.
         if (!available) control.setAlpha(0.4f);
         control.setOnCheckedChangeListener((button, checked) -> {
+            if (usage != null) usage.setVisibility(checked ? View.VISIBLE : View.GONE);
             if (binding) return;
             Settings.preferences.edit().putBoolean(key, checked).apply();
             if ("paused".equals(key) && !checked && CrashGuard.isSafeMode()) CrashGuard.clearSafeMode();

@@ -134,9 +134,9 @@ final class SettingsText {
             case "update_action": return "View release";
             case "up_to_date": return "You have the latest version.";
             case "update_error": return "Couldn't check for updates.";
-            case "active_now": return "Active just now";
-            case "active_ago": return "Active %s ago";
-            case "not_active": return "Not active since restart";
+            case "active_now": return "Used just now";
+            case "active_ago": return "Used %s ago";
+            case "not_active": return "Nothing to change yet since restart";
             case "changes_paused": return "Changes paused";
             case "changes_resumed": return "Changes resumed";
             case "safe_mode": return "Safe mode";

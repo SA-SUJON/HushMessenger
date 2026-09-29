@@ -19,7 +19,7 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It offers 27 patc
 
 ## Get the preview
 
-1. **Check the APK.** This patch targets three arm64 Messenger builds, with version codes `346013387`, `346013440` and `346013442`. The version name alone isn't enough. APKMirror lists six arm64 "nodpi" builds of 580.0.0.49.91 with the same label, and only two of them work. Download [build 346013440](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-5-android-apk-download/) or [build 346013387](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-11-android-apk-download/) directly and check the version code on the page before you patch. Build 346013442 comes from APKPure. The [supported builds](#supported-messenger-builds) have the full details.
+1. **Check the APK.** This patch targets four arm64 Messenger builds, with version codes `346013387`, `346013440`, `346013442` and `346013354`. The version name alone isn't enough. APKMirror lists several arm64 "nodpi" builds of 580.0.0.49.91 with the same label, and only some of them work. Download [build 346013440](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-5-android-apk-download/) or [build 346013387](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-11-android-apk-download/) directly and check the version code on the page before you patch. Build 346013354 is APKMirror's arm64 nodpi bundle of the same release, and build 346013442 comes from APKPure. The [supported builds](#supported-messenger-builds) have the full details.
 2. **Add the source.** Open the link above on Android with Morphe Manager installed. You can also open **Sources**, tap **+**, choose **Remote**, and enter `github.com/SysAdminDoc/HushMessenger`.
 3. **Check the source.** The HushMessenger card should show **27 patches**. Open **Patches** to browse the catalog. Every patch is selected by default, so use **Choose patches** when preparing Messenger if you want to leave some out. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend. Mixing independent patches can cause conflicts.
@@ -31,7 +31,7 @@ For a local source, download [`patches-0.5.0.mpp`](https://github.com/SysAdminDo
 - **Can't find the settings:** Long-press the Messenger icon and tap **Patch controls**, or open **HushMessenger settings** from the app drawer. If neither appears, refresh the source and patch Messenger again.
 - **Switches have no effect:** The settings must be embedded in the patched Messenger APK. A separate settings preview cannot change stock Messenger. S25 has the embedded controls, while S22 still runs stock Messenger. Refreshing a Morphe source only downloads patches. Use **Restart Messenger** after changing inbox options.
 - **Patch missing:** Refresh the HushMessenger source, check that it shows v0.5.0 and open its **Patches** list. This public release doesn't require the pre-release switch.
-- **APK rejected:** Use an unmodified arm64 Messenger 580.0.0.49.91 APK with version code `346013387`, `346013440` or `346013442`. If a permission or instruction check fails, the error names the tested builds.
+- **APK rejected:** Use an unmodified arm64 Messenger 580.0.0.49.91 APK with version code `346013387`, `346013440`, `346013442` or `346013354`. If a permission or instruction check fails, the error names the tested builds.
 - **Android rejects installation over stock Messenger:** A re-signed APK can't replace Meta's signed copy. Keep your local data intact while you plan a backup. Future updates of your patched copy must reuse your key. See [Morphe's keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
 - **Local source still old:** Download the latest `.mpp` and replace the local source yourself.
 
@@ -129,7 +129,7 @@ The full set checks 79 hook methods in each supported APK. Plugin gates must ret
 
 The patch renames Messenger's two shared Meta signature permissions in declarations, requests, guarded components and six DEX string loads. It requires the original signature protection level and checks DEX sites before changing the manifest. It stops if those sites differ from the tested APK. Messenger's other cross-app signer checks, Facebook login and account switching still need separate verification.
 
-Morphe groups these builds under one version name, so it may list the patch for another 580 APK. The patch checks the version code before changing anything and rejects builds other than `346013387`, `346013440` and `346013442`.
+Morphe groups these builds under one version name, so it may list the patch for another 580 APK. The patch checks the version code before changing anything and rejects builds other than `346013387`, `346013440`, `346013442` and `346013354`.
 
 If you patch both Messenger and [Hushfacebook](https://github.com/SysAdminDoc/Hushfacebook), sign them with the **same key**. Android grants shared signature permissions only when the apps are signed alike.
 
@@ -149,12 +149,12 @@ Always on. It adds a **HushMessenger** row right under Settings in Messenger's *
 | --- | --- |
 | Package | `com.facebook.orca` |
 | Version | `580.0.0.49.91` |
-| Version codes | `346013387`, `346013440`, `346013442` |
+| Version codes | `346013387`, `346013440`, `346013442`, `346013354` |
 | Architecture | `arm64-v8a` |
 | Minimum Android version | Android 9 (API 28) |
 | APKMirror downloads | [346013440](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-5-android-apk-download/), [346013387](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-11-android-apk-download/) |
 
-APKMirror's 580.0.0.49.91 release has 24 variants. Six are arm64 "nodpi" builds that look alike: `346013354`, `346013370`, `346013387`, `346013394`, `346013423` and `346013440`. Build `346013442` is an arm64 213-240dpi variant from APKPure. Picking one through Morphe's download link can land on an unsupported build, which the patch rejects before changing anything. Builds `346013354` and `346013370` came up in [issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3) and [issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1).
+APKMirror's 580.0.0.49.91 release has 25 variants. Several are arm64 "nodpi" builds that look alike: `346013354` (a bundle), `346013370`, `346013387`, `346013394`, `346013423` and `346013440`. Build `346013442` is an arm64 213-240dpi variant from APKPure. Picking one through Morphe's download link can land on an unsupported build, which the patch rejects before changing anything. Build `346013354` came up in [issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3) and is supported now. Build `346013370`, from [issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1) and [issue 8](https://github.com/SysAdminDoc/HushMessenger/issues/8), has the same features under different internal names and isn't supported yet.
 
 SHA-256 of the stock base APKs used for the off-device checks:
 
@@ -162,6 +162,7 @@ SHA-256 of the stock base APKs used for the off-device checks:
 346013387  128ec75e836f24328d2b28777091c03b20abba0adc536e7ee911ee5fe52e70bc
 346013440  e7d3c64227a7d9a26adda4e89321a87a49c85ee9e9f28f2fa7ed7fa79ae15cf6
 346013442  55636f34a49173f5607011a6dfdf635597f435047a8c105cb7fe420665a38c24
+346013354  4f061acd57cbeb640fb547cb7191b18f0fea36df77a0f9ee01e8267ab6264c9d
 ```
 
 On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.apk`. Meta can publish different APKs under one version name. If the hash differs, don't assume the off-device result applies to your file. The patch also checks its permission layout and instruction sites.
@@ -221,7 +222,7 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 
 - Fresh-install startup and encrypted-history recovery still need dedicated checks. The existing signed-in S25 installation passes updates and restarts.
 - Signing in to Messenger with **Continue as** through a patched Facebook app fails on the Facebook side. The fix belongs in [Hushfacebook](https://github.com/SysAdminDoc/Hushfacebook).
-- [Issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1) and [issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3) report Messenger 580 builds `346013370` and `346013354`. Neither is one of the validated APKs. Each build's exact original APK is needed before adding support.
+- Build `346013370` ([issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1), [issue 8](https://github.com/SysAdminDoc/HushMessenger/issues/8)) has the same features under different internal names, so it needs its own checked list before it can be supported. Until then, use one of the supported builds above.
 - Live ad removal, inbox tabs, bubbles on a low-memory phone, group chat notifications, typing in encrypted group chats and screenshots in vanish mode haven't been checked on a phone yet. Structural APK checks don't establish those behaviors.
 - Keep unsent messages can't cover end-to-end encrypted chats. Messenger removes those messages below the part of the app HushMessenger can change.
 - S22 still runs stock Messenger. A source refresh alone cannot activate its patches.

@@ -46,7 +46,7 @@ public class CompatReport {
 
     static final String PACKAGE = "com.facebook.orca";
     static final String VERSION = "580.0.0.49.91";
-    static final Set<Integer> VERSION_CODES = Set.of(346013387, 346013440, 346013442);
+    static final Set<Integer> VERSION_CODES = Set.of(346013387, 346013440, 346013442, 346013354);
 
     static final String FACEBOOK_SIGNER =
         "e3f9e1e0cf99d0e56a055ba65e241b3399f7cea524326b0cdd6ec1327ed0fdc1";
