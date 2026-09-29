@@ -30,6 +30,7 @@ None of this is in a release yet. It'll ship together in the next one.
 - The title stays on one line at large text sizes on older Android versions, and very long pasted searches are trimmed.
 - In the right-to-left test language, headings and descriptions now line up on the right instead of running into their counts.
 - The README links the two APKMirror builds that work, since six look alike on that page. The Install beside Meta apps description no longer says signed builds don't open chats.
+- Checked Messenger at Android's largest font size (2x) on the S25. The chat list, chats, composer and HushMessenger settings all scale and stay usable, so there's no font patch. Long labels shorten with an ellipsis the way they do in stock Messenger.
 - Checked the README's "Add HushMessenger to Morphe Manager" link on a phone. It opens the morphe.software page, and its Open in Morphe button brings up Morphe Manager's Add source dialog with this repository filled in.
 - Building the same source now gives the same bundle from any checkout. The license files used to carry whichever line endings Git wrote, so a fresh clone couldn't reproduce the published checksum.
 - Release checks compare every README link to this project's own releases, and the permission failure check says when Morphe Desktop never started.
