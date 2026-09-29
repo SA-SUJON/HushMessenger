@@ -55,6 +55,7 @@ public class CompatReport {
 
     static final String AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/InboxAdsItem;";
     static final String IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;";
+    static final String MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;";
     static final String PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z";
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
 
@@ -123,6 +124,7 @@ public class CompatReport {
         hooks.put("ai_search_chip", Set.of("LX/D8E;->render(LX/2MZ;)LX/1GG;"));
         hooks.put("typing_mailbox", Set.of("LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"));
         hooks.put("read_mailbox", Set.of("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"));
+        hooks.put("anonymous_stories", Set.of("LX/HNV;->C1V(" + MONTAGE_CARD + "Z)V"));
         hooks.put("avatar_tabs", Set.of("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()" + IMMUTABLE_LIST));
         hooks.put("menu_settings", Set.of("LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;", "LX/TxV;->CAo(LX/4jw;I)V",
             "LX/Txc;->A0I(Ljava/util/List;)V", "LX/Jwp;->onClick(Landroid/view/View;)V"));
@@ -176,6 +178,7 @@ public class CompatReport {
         hooks370.put("people_jewel", Set.of("LX/NRn;->A01(LX/NRn;)Z"));
         hooks370.put("people_list_end", Set.of("LX/1pl;->A0B()Z", "LX/2Wk;->A03()Z"));
         hooks370.put("read_mailbox", Set.of("LX/9rH;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"));
+        hooks370.put("anonymous_stories", Set.of("LX/Ncx;->C1W(" + MONTAGE_CARD + "Z)V"));
         hooks370.put("reels_badge", Set.of("LX/7vk;->A09(LX/7vk;)Z"));
         hooks370.put("stories", Set.of("LX/1mh;->A00()Z"));
         hooks370.put("subtabs", Set.of("LX/2UK;->run()V"));
@@ -247,6 +250,7 @@ public class CompatReport {
         PATCHES.put("Allow screenshots", List.of("allow_screenshot"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
+        PATCHES.put("View stories anonymously", List.of("anonymous_stories"));
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
 
@@ -628,6 +632,12 @@ public class CompatReport {
                 // read_mailbox: the msys call that marks a thread read (and sends the receipt) in encrypted chats
                 if ("V".equals(method.getReturnType()) && strings.contains("markAsReadThreadWithThreadIdentifier")) {
                     found.get("read_mailbox").add(method);
+                }
+
+                // anonymous_stories: the story mark-read handler that reports a viewed card
+                if ("V".equals(method.getReturnType()) && paramTypes.equals(List.of(MONTAGE_CARD, "Z")) &&
+                    !isStatic && strings.contains("MontageMsysMarkReadHandler")) {
+                    found.get("anonymous_stories").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder

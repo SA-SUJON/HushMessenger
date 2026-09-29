@@ -43,6 +43,9 @@ internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
 internal const val SCREEN_CAPTURE_CALLBACK = "Landroid/app/Activity\$ScreenCaptureCallback;"
+internal const val MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;"
+internal const val STORY_MARK_READ_TAG = "MontageMsysMarkReadHandler"
+private const val IMMUTABLE_LIST_OF = "$IMMUTABLE_LIST->of(Ljava/lang/Object;)$IMMUTABLE_LIST"
 private const val FLAG_SECURE = 0x2000
 
 private val facebookPlugins = setOf(
@@ -85,6 +88,7 @@ internal val expectedHooks = mapOf(
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
+    "anonymous_stories" to setOf("LX/HNV;->C1V(${MONTAGE_CARD}Z)V"),
     "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
     "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
@@ -262,6 +266,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.parameterTypes == listOf("Ljava/lang/String;", "Z") && TYPING_MAILBOX_CALL in strings) add("typing_mailbox")
             // Encrypted chats mark a thread read, which also sends the receipt, through this msys call.
             if (method.returnType == "V" && READ_MAILBOX_CALL in strings) add("read_mailbox")
+            // Opening a story card sends its seen state through the handler Messenger tags with this name.
+            if (method.returnType == "V" && method.parameterTypes == listOf(MONTAGE_CARD, "Z") &&
+                !AccessFlags.STATIC.isSet(method.accessFlags) && STORY_MARK_READ_TAG in strings) add("anonymous_stories")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -770,4 +777,48 @@ internal fun MutableMethod.injectDeltaUnsent() {
         invoke-static {v0, p1}, $SETTINGS->suppressUnsent(ZLjava/lang/String;)Z
         move-result v0
     """.trimIndent())
+}
+
+/**
+ * The story mark-read handler zeroes v0, hands the card to msys (StoryOptimisticMarkRead, which reports the
+ * view), then marks it seen in the local story cache starting at ImmutableList.of(card). Returns that start.
+ */
+internal fun MutableMethod.validateStorySeen(): Int {
+    if (AccessFlags.STATIC.isSet(accessFlags) || returnType != "V" || parameterTypes != listOf(MONTAGE_CARD, "Z")) {
+        throw PatchException("Messenger controls: the story mark-read handler is ${hookId()}, expected (MontageCard, boolean) void")
+    }
+    val code = implementation!!.instructions.toList()
+    val zero = code.firstOrNull()
+    if (zero?.opcode != Opcode.CONST_4 || (zero as OneRegisterInstruction).registerA != 0 ||
+        (zero as NarrowLiteralInstruction).narrowLiteral != 0) {
+        throw PatchException("Messenger controls: the story mark-read handler no longer starts by zeroing v0")
+    }
+    val card = implementation!!.registerCount - 2
+    val cache = code.indexOfFirst { insn ->
+        insn.opcode == Opcode.INVOKE_STATIC && (insn as ReferenceInstruction).reference.toString() == IMMUTABLE_LIST_OF &&
+            (insn as FiveRegisterInstruction).registerCount == 1 && insn.registerC == card
+    }
+    if (cache <= 1 || cache !in jumpTargets()) {
+        throw PatchException("Messenger controls: the story mark-read handler's local seen update isn't where the send ends")
+    }
+    val send = code.subList(1, cache)
+    // Opcode.name is the smali mnemonic ("return-void"), so exits are listed rather than matched by name.
+    val exits = setOf(Opcode.RETURN_VOID, Opcode.RETURN, Opcode.RETURN_WIDE, Opcode.RETURN_OBJECT, Opcode.THROW)
+    if (send.any { it.opcode in exits } ||
+        send.none { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == STORY_MARK_READ_TAG }) {
+        throw PatchException("Messenger controls: the story mark-read handler's send no longer matches the tested build")
+    }
+    return cache
+}
+
+/** While View stories anonymously is on, jump past the msys send and keep only the local seen update. */
+internal fun MutableMethod.injectStorySeen() {
+    val cache = validateStorySeen()
+    addInstructionsWithLabels(1, """
+        invoke-static {}, $SETTINGS->viewStoriesAnonymously()Z
+        move-result v0
+        if-eqz v0, :stock_behavior
+        const/4 v0, 0x0
+        goto/16 :local_seen
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(1)), ExternalLabel("local_seen", getInstruction(cache)))
 }

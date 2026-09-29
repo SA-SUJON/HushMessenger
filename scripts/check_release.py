@@ -10,7 +10,7 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-PATCH_COUNT = 27
+PATCH_COUNT = 28
 
 
 def require(condition, message):

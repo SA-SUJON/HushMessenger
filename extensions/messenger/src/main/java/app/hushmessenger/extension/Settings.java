@@ -66,6 +66,7 @@ public final class Settings {
     public static boolean allowScreenshot() { return enabled("allow_screenshot"); }
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
+    public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }
     /** The icon stays hidden only while the Menu row that replaces it exists. */
     static boolean drawerIconHidden() {
         SharedPreferences prefs = preferences;

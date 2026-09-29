@@ -28,8 +28,8 @@ class ExpandedControlsTest {
         val patches = Class.forName("app.hushmessenger.patches.controls.MessengerControlsPatchKt").methods
             .filter { it.name.startsWith("get") && it.returnType == BytecodePatch::class.java }
             .map { it.invoke(null) as BytecodePatch }.filter { it.name != null }
-        assertEquals(25, patches.size)
-        assertEquals(25, patches.map { it.name }.toSet().size)
+        assertEquals(26, patches.size)
+        assertEquals(26, patches.map { it.name }.toSet().size)
         val shared = patches.map { it.dependencies.filterIsInstance<BytecodePatch>().single() }.toSet()
         assertEquals(1, shared.size)
         assertNull(shared.single().name)
@@ -247,5 +247,49 @@ class ExpandedControlsTest {
         assertEquals(1, document.getElementsByTagName("provider").length)
         assertEquals(2, document.getElementsByTagName("activity").length)
         assertFailsWith<PatchException> { document.addFeature("people") }
+    }
+
+    private fun storyMethod(body: String = STORY_MARK_READ_BODY, flags: Int = AccessFlags.PUBLIC.value) =
+        fixtureMethod(STORY_MARK_READ_HOOK, body, flags = flags)
+
+    @Test fun anonymousStoriesSkipOnlyTheSendAndKeepTheLocalSeenUpdate() {
+        val method = storyMethod()
+        val original = method.implementation!!.instructions.toList()
+        val cache = original.indexOfFirst { (it as? ReferenceInstruction)?.reference.toString().contains("ImmutableList;->of(") }
+        method.injectStorySeen()
+        val code = method.implementation!!.instructions.toList()
+        val addresses = code.runningFold(0) { address, instruction -> address + instruction.codeUnits }
+        fun target(index: Int) = addresses[index] + (code[index] as OffsetInstruction).codeOffset
+        assertEquals(original[0], code[0])
+        assertEquals("$SETTINGS->viewStoriesAnonymously()Z", (code[1] as ReferenceInstruction).reference.toString())
+        assertEquals(Opcode.MOVE_RESULT, code[2].opcode)
+        assertEquals(0, (code[2] as OneRegisterInstruction).registerA)
+        // Switch off: straight into the untouched send. Switch on: v0 is zeroed again and the send is skipped.
+        assertEquals(Opcode.IF_EQZ, code[3].opcode)
+        assertEquals(addresses[6], target(3))
+        assertEquals(Opcode.CONST_4, code[4].opcode)
+        assertEquals(0, (code[4] as OneRegisterInstruction).registerA)
+        assertEquals(Opcode.GOTO_16, code[5].opcode)
+        assertEquals(addresses[cache + 5], target(5))
+        assertEquals(original.drop(1), code.drop(6))
+    }
+
+    @Test fun anonymousStoriesRejectAChangedMarkReadHandler() {
+        listOf(
+            STORY_MARK_READ_BODY.replace("const/4 v0, 0x0", "const/4 v0, 0x1"),
+            STORY_MARK_READ_BODY.replace("MontageMsysMarkReadHandler", "MontageSomethingElse"),
+            STORY_MARK_READ_BODY.replace("\n:send\n", "\n:send\nreturn-void\n"),
+            STORY_MARK_READ_BODY.replace("\n:send\n", "\n:send\nthrow v1\n"),
+            STORY_MARK_READ_BODY.replace("if-eqz v1, :local_seen", "nop\nnop"),
+            STORY_MARK_READ_BODY.replace("invoke-static {p1}, Lcom/google", "invoke-static {v1}, Lcom/google"),
+        ).forEachIndexed { case, body ->
+            assertFailsWith<PatchException>("case $case") { storyMethod(body).injectStorySeen() }
+        }
+        assertFailsWith<PatchException> {
+            storyMethod(flags = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value).injectStorySeen()
+        }
+        assertFailsWith<PatchException> {
+            fixtureMethod("LX/HNV;->C1V(${MONTAGE_CARD})V", STORY_MARK_READ_BODY.replace("p2", "v7")).injectStorySeen()
+        }
     }
 }

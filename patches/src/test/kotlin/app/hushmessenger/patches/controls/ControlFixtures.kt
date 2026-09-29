@@ -167,3 +167,23 @@ internal fun pluginBody(anchor: String, branch: String = "if-eq") = """
     :disabled
     return v5
 """.trimIndent()
+
+internal const val STORY_MARK_READ_HOOK = "LX/HNV;->C1V(${MONTAGE_CARD}Z)V"
+
+/** The mark-read handler's shape: zero v0, send the view to msys, then mark the card seen locally. */
+internal const val STORY_MARK_READ_BODY = """const/4 v0, 0x0
+iget-object v1, p0, LX/HNV;->A00:Ljava/lang/Object;
+if-eqz v1, :local_seen
+const-string v2, "MontageMsysMarkReadHandler"
+if-eqz p2, :first_view
+const-string v3, "StoryOptimisticMarkReadRewatch"
+goto :send
+:first_view
+const-string v3, "StoryOptimisticMarkRead"
+:send
+invoke-static {v1, v2, v3}, LX/Erv;->A00(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V
+:local_seen
+invoke-static {p1}, Lcom/google/common/collect/ImmutableList;->of(Ljava/lang/Object;)Lcom/google/common/collect/ImmutableList;
+move-result-object v1
+invoke-static {v1}, LX/5Jf;->A0C(Lcom/google/common/collect/ImmutableList;)V
+return-void"""
