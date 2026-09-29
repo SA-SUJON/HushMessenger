@@ -35,6 +35,7 @@ internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPrefe
 private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
+internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -75,6 +76,7 @@ internal val expectedHooks = mapOf(
     "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
     "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
+    "ai_search_chip" to setOf("LX/D8E;->render(LX/2MZ;)LX/1GG;"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
@@ -155,6 +157,7 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             break
         }
     }
+    var searchFieldRender: Method? = null
     for (cls in classes) {
         val original = cls.fields.firstOrNull { it.name == "__redex_internal_original_name" }
             ?.initialValue.let { (it as? StringEncodedValue)?.value }
@@ -230,6 +233,7 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             // The Litho sticker keyboard's tab list builder reads the avatar tab's activate event.
             if (method.returnType == IMMUTABLE_LIST && method.parameterTypes.isEmpty() &&
                 refs.any { it.toString().startsWith("$AVATAR_TAB_EVENT->") }) add("avatar_tabs")
+            if (method.name == "render" && SEARCH_CLEAR_TAG in strings) searchFieldRender = method
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -250,6 +254,16 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             }?.let { found.getValue("menu_settings").add(it) }
             break
         }
+    }
+    // The search field creates the Ask Meta AI chip before any other component, and only for a typed query.
+    searchFieldRender?.let { field ->
+        val chip = field.implementation!!.instructions.asSequence()
+            .filter { it.opcode == Opcode.NEW_INSTANCE }
+            .map { ((it as ReferenceInstruction).reference as TypeReference).type }
+            .mapNotNull { type -> classes.firstOrNull { it.type == type } }
+            .firstOrNull { cls -> cls.methods.any { it.name == "render" } }
+        chip?.methods?.singleOrNull { it.name == "render" && it.returnType == field.returnType }
+            ?.let { found.getValue("ai_search_chip").add(it) }
     }
     return found
 }

@@ -118,6 +118,7 @@ public class CompatReport {
         hooks.put("delta_unsent", Set.of("LX/K1Y;->Btd(I)Z"));
         hooks.put("ai_search", Set.of("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"));
         hooks.put("emoji_typeface", Set.of("LX/1KV;->A00()Landroid/graphics/Typeface;"));
+        hooks.put("ai_search_chip", Set.of("LX/D8E;->render(LX/2MZ;)LX/1GG;"));
         hooks.put("avatar_tabs", Set.of("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()" + IMMUTABLE_LIST));
         hooks.put("menu_settings", Set.of("LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;", "LX/TxV;->CAo(LX/4jw;I)V",
             "LX/Txc;->A0I(Ljava/util/List;)V", "LX/Jwp;->onClick(Landroid/view/View;)V"));
@@ -167,7 +168,7 @@ public class CompatReport {
         PATCHES.put("Hide stories and notes", List.of("stories"));
         PATCHES.put("Hide inbox tabs", List.of("subtabs"));
         PATCHES.put("Hide Facebook shortcuts", List.of("facebook"));
-        PATCHES.put("Hide Meta AI", List.of("ai_menu", "ai_fab", "ai_toolbar", "ai_search"));
+        PATCHES.put("Hide Meta AI", List.of("ai_menu", "ai_fab", "ai_toolbar", "ai_search", "ai_search_chip"));
         PATCHES.put("Hide Chat Moments", List.of("moments"));
         PATCHES.put("Hide Reels badge", List.of("reels_badge"));
         PATCHES.put("Hide AI sticker tools", List.of("ai_stickers"));
@@ -559,6 +560,37 @@ public class CompatReport {
                     strings.contains("HomeDrawerFragmentBase.handleOnFolderSelected")) {
                     found.get("menu_settings").add(method);
                 }
+            }
+        }
+        // ai_search_chip: the first component with a render method that the search field creates.
+        Method searchField = null;
+        for (var cls : classes) {
+            for (var m : cls.getMethods()) {
+                if (!"render".equals(m.getName()) || m.getImplementation() == null) continue;
+                for (var i : m.getImplementation().getInstructions()) {
+                    if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                        "messenger_search_clear_button_tag".equals(sr.getString())) searchField = m;
+                }
+            }
+        }
+        if (searchField != null) {
+            var byType = new HashMap<String, ClassDef>();
+            for (var cls : classes) byType.put(cls.getType(), cls);
+            chip:
+            for (var i : searchField.getImplementation().getInstructions()) {
+                if (i.getOpcode() != Opcode.NEW_INSTANCE || !(i instanceof ReferenceInstruction ri) ||
+                    !(ri.getReference() instanceof TypeReference tr)) continue;
+                var cls = byType.get(tr.getType());
+                if (cls == null) continue;
+                boolean renders = false;
+                for (var m : cls.getMethods()) if ("render".equals(m.getName())) renders = true;
+                if (!renders) continue;
+                for (var m : cls.getMethods()) {
+                    if ("render".equals(m.getName()) && m.getReturnType().equals(searchField.getReturnType())) {
+                        found.get("ai_search_chip").add(m);
+                    }
+                }
+                break chip;
             }
         }
         // menu_settings: the plain-list drawer items setter lives in the class that creates the grid binder.
