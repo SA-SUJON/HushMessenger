@@ -1030,7 +1030,7 @@
         },
         {
             "name": "Hide read receipts",
-            "description": "Suppresses your outgoing read receipt so senders can't see when you viewed their message. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Suppresses your outgoing read receipt. Not yet in end-to-end encrypted chats. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -1144,7 +1144,7 @@
         },
         {
             "name": "Hide typing indicator",
-            "description": "Suppresses your outgoing active-typing signal. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Suppresses your outgoing active-typing signal. Not yet in end-to-end encrypted chats. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -1245,7 +1245,7 @@
         },
         {
             "name": "Keep unsent messages",
-            "description": "Preserves messages other people remove for everyone. Your own unsend ability may be limited while active. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Preserves messages other people remove for everyone. Not yet in end-to-end encrypted chats. Your own unsend ability may be limited while active. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [

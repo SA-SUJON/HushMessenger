@@ -75,13 +75,13 @@ public final class SettingsActivity extends Activity {
         {"suggested_replies", "Hide business reply suggestions", "Hides suggested replies in business conversations.", "conversations"},
         {"business_suggestions", "Hide business typing suggestions", "Hides business suggestions as you type.", "conversations"},
         {"event_prompts", "Hide event prompts", "Hides event quick-promotion prompts inside chats.", "conversations"},
-        {"typing", "Hide typing indicator", "Stops your outgoing active-typing signal. Messages and read receipts are separate.", "conversations"},
+        {"typing", "Hide typing indicator", "Stops your outgoing active-typing signal. Not yet working in end-to-end encrypted chats.", "conversations"},
         {"use_system_emoji", "Use system emoji", "Renders emoji with your phone's own font instead of Messenger's built-in set.", "conversations"},
         {"external_browser", "Open web links externally", "Uses your default browser for HTTP and HTTPS links. Other link types keep their original behavior.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
         {"allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "privacy"},
-        {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. Senders won't see when you viewed their message.", "privacy"},
-        {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone. Your own unsend ability may be limited.", "privacy"},
+        {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. Not yet working in end-to-end encrypted chats.", "privacy"},
+        {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone. Not yet working in end-to-end encrypted chats.", "privacy"},
     };
 
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {
