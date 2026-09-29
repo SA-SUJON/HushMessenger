@@ -215,6 +215,23 @@ class ExpandedControlsTest {
         assertFailsWith<PatchException> { method("LX/Fixture;", "A0P", 1, IMMUTABLE_LIST, "return-object p0").injectKeyboardTabs() }
     }
 
+    @Test fun encryptedTypingFlagIsFilteredBeforeTheMailboxCallReadsIt() {
+        val id = "LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"
+        val method = fixtureMethod(id, "const-string v0, \"$TYPING_MAILBOX_CALL\"\nconst/4 v0, 0x0\nreturn-object v0", registers = 13)
+        val original = method.implementation!!.instructions.toList()
+        method.injectOutgoingTyping()
+        val code = method.implementation!!.instructions.toList()
+        assertEquals("$SETTINGS->outgoingTyping(Z)Z", (code[0] as ReferenceInstruction).reference.toString())
+        assertEquals(12, (code[0] as com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction).registerC)
+        assertEquals(Opcode.MOVE_RESULT, code[1].opcode)
+        assertEquals(12, (code[1] as OneRegisterInstruction).registerA)
+        assertEquals(original, code.drop(2))
+        assertFailsWith<PatchException> { fixtureMethod(id, "const/4 v0, 0x0\nreturn-object v0", registers = 20).injectOutgoingTyping() }
+        assertFailsWith<PatchException> {
+            fixtureMethod("LX/8eb;->A0I(Ljava/lang/String;)LX/325;", "const/4 v0, 0x0\nreturn-object v0").injectOutgoingTyping()
+        }
+    }
+
     @Test fun featureMetadataIsSpecificAndDuplicateSelectionIsRejected() {
         val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(ByteArrayInputStream(
             """<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application /></manifest>""".toByteArray(),

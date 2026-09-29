@@ -20,7 +20,7 @@ None of this is in a release yet. It'll ship together in the next one.
 ### Changed and fixed
 
 - Hide avatar stickers now also removes the Avatar stickers tab from Messenger's newer sticker keyboard. Pausing brings it back.
-- Hide typing indicator doesn't work in end-to-end encrypted chats yet. In a two-phone check the other phone still saw "is typing", so its description now says so.
+- Hide typing indicator now also works in end-to-end encrypted chats, which Messenger uses for most one-to-one chats. Before, the other person still saw "is typing" there. In a two-phone check the indicator stayed hidden with the switch on and came back while paused, and messages still went through.
 - Hide Meta AI also removes the "Ask Meta AI" button that appears in the search bar once you type, and turns off the AI agent behind search. People, messages and group results still show, and pausing brings the button back. The search field's "Ask Meta AI or search" hint doesn't change.
 - Other apps can no longer restart Messenger. Restart Messenger used to accept a request from any app on the phone, which could close Messenger at any moment, even during a call. The long-press shortcut and the App tab button still work.
 - The long-press shortcuts are found wherever a build keeps them, so build 346013442 gets them too.

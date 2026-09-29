@@ -36,6 +36,7 @@ private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
 internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
+internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -63,6 +64,7 @@ internal val expectedHooks = mapOf(
     "ai_fab" to setOf("LX/6k8;->render(LX/2MZ;)LX/1GG;"),
     "subtabs" to setOf("LX/2UL;->run()V"),
     "typing" to setOf("LX/Ahp;->run()V"),
+    "typing_mailbox" to setOf("LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"),
     "bubbles" to setOf("LX/2ZW;->A00()Z"),
     "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
     "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
@@ -234,6 +236,8 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == IMMUTABLE_LIST && method.parameterTypes.isEmpty() &&
                 refs.any { it.toString().startsWith("$AVATAR_TAB_EVENT->") }) add("avatar_tabs")
             if (method.name == "render" && SEARCH_CLEAR_TAG in strings) searchFieldRender = method
+            // Encrypted chats send typing through this msys mailbox call (thread id, typing).
+            if (method.parameterTypes == listOf("Ljava/lang/String;", "Z") && TYPING_MAILBOX_CALL in strings) add("typing_mailbox")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -574,6 +578,25 @@ internal fun MutableMethod.injectKeyboardTabs() {
         move-result-object v$result
         :original_tabs
         return-object v$result
+    """.trimIndent())
+}
+
+internal fun MutableMethod.validateOutgoingTyping(): Int {
+    if (parameterTypes != listOf("Ljava/lang/String;", "Z") || AccessFlags.STATIC.isSet(accessFlags)) {
+        throw PatchException("Messenger controls: the encrypted typing call takes ${parameterTypes.joinToString()}, expected String and boolean")
+    }
+    // The boolean is the last parameter register; invoke-static {vN} needs it below v16.
+    val typing = implementation!!.registerCount - 1
+    if (typing > 15) throw PatchException("Messenger controls: the encrypted typing flag sits in v$typing, out of invoke range")
+    return typing
+}
+
+/** Clears the typing flag while Hide typing indicator is on, so Messenger sends "not typing". */
+internal fun MutableMethod.injectOutgoingTyping() {
+    val typing = validateOutgoingTyping()
+    addInstructions(0, """
+        invoke-static {v$typing}, $SETTINGS->outgoingTyping(Z)Z
+        move-result v$typing
     """.trimIndent())
 }
 

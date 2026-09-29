@@ -119,6 +119,7 @@ public class CompatReport {
         hooks.put("ai_search", Set.of("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"));
         hooks.put("emoji_typeface", Set.of("LX/1KV;->A00()Landroid/graphics/Typeface;"));
         hooks.put("ai_search_chip", Set.of("LX/D8E;->render(LX/2MZ;)LX/1GG;"));
+        hooks.put("typing_mailbox", Set.of("LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"));
         hooks.put("avatar_tabs", Set.of("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()" + IMMUTABLE_LIST));
         hooks.put("menu_settings", Set.of("LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;", "LX/TxV;->CAo(LX/4jw;I)V",
             "LX/Txc;->A0I(Ljava/util/List;)V", "LX/Jwp;->onClick(Landroid/view/View;)V"));
@@ -177,7 +178,7 @@ public class CompatReport {
         PATCHES.put("Hide business reply suggestions", List.of("suggested_replies"));
         PATCHES.put("Hide business typing suggestions", List.of("business_suggestions"));
         PATCHES.put("Hide event prompts", List.of("event_prompts"));
-        PATCHES.put("Hide typing indicator", List.of("typing"));
+        PATCHES.put("Hide typing indicator", List.of("typing", "typing_mailbox"));
         PATCHES.put("Open web links externally", List.of("browser"));
         PATCHES.put("Allow chat bubbles", List.of("bubbles"));
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
@@ -537,6 +538,12 @@ public class CompatReport {
                     paramTypes.isEmpty() && !isStatic &&
                     strings.contains("FacebookEmojiTypefaceProviderImpl")) {
                     found.get("emoji_typeface").add(method);
+                }
+
+                // typing_mailbox: the msys call that sends typing in encrypted chats
+                if (paramTypes.equals(List.of("Ljava/lang/String;", "Z")) &&
+                    strings.contains("setTypingIndicatorForThreadWithThreadIdentifier")) {
+                    found.get("typing_mailbox").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder

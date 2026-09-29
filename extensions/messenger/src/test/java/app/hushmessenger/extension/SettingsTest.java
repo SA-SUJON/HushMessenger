@@ -50,6 +50,16 @@ public class SettingsTest {
         assertTrue(Settings.hideStories());
     }
 
+    @Test public void encryptedTypingFlagDropsOnlyWhileTheSwitchIsOn() {
+        assertTrue(Settings.outgoingTyping(true));
+        assertFalse(Settings.outgoingTyping(false));
+        Settings.preferences.edit().putBoolean("typing", true).apply();
+        assertFalse(Settings.outgoingTyping(true));
+        assertFalse(Settings.outgoingTyping(false));
+        Settings.preferences.edit().putBoolean("paused", true).apply();
+        assertTrue(Settings.outgoingTyping(true));
+    }
+
     @Test public void browserOverrideOnlyUsesStockPreferenceForWebSchemes() {
         Settings.preferences.edit().putBoolean("external_browser", true).apply();
         assertTrue(Settings.preferExternalBrowser(false, Uri.parse("HTTPS://example.com/a?signature=kept")));

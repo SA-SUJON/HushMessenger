@@ -80,7 +80,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Hide business reply suggestions | Hides suggested replies in business chats. |
 | Hide business typing suggestions | Hides business suggestions as you type. |
 | Hide event prompts | Hides event quick-promotion prompts inside chats. |
-| Hide typing indicator | Suppresses your outgoing active-typing signal. It doesn't work in end-to-end encrypted chats yet, which Messenger now uses for most one-to-one chats. |
+| Hide typing indicator | Suppresses your outgoing active-typing signal. In v0.4.2 it doesn't cover end-to-end encrypted chats, which Messenger now uses for most one-to-one chats; the next release does. |
 | Open web links externally | Uses the stock external-browser branch for HTTP and HTTPS. |
 | Allow chat bubbles | Removes the low-memory gate on Android 11 or newer. Android permissions still apply. |
 

@@ -57,6 +57,8 @@ public final class Settings {
     public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean keepPeopleSection(boolean original) { return original && !enabled("people"); }
     public static boolean suppressTyping() { return enabled("typing"); }
+    /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
+    public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) { return !"bubbles".equals(key) || Build.VERSION.SDK_INT >= 30; }
     public static boolean enableBubbles() { return available("bubbles") && enabled("bubbles"); }
     public static boolean allowScreenshot() { return enabled("allow_screenshot"); }

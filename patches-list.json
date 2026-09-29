@@ -1144,7 +1144,7 @@
         },
         {
             "name": "Hide typing indicator",
-            "description": "Suppresses your outgoing active-typing signal. Not yet in end-to-end encrypted chats. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Suppresses your outgoing active-typing signal, including in end-to-end encrypted chats. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [

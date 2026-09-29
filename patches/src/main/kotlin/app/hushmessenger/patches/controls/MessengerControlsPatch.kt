@@ -104,6 +104,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateScratch()
             "avatar_tabs" -> method.validateKeyboardTabs()
+            "typing_mailbox" -> method.validateOutgoingTyping()
             else -> method.validateSwitch()
         }
     }
@@ -125,6 +126,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
             "avatar_tabs" -> method.injectKeyboardTabs()
+            "typing_mailbox" -> method.injectOutgoingTyping()
             else -> method.injectFeatureSwitch(key)
         }
     }
@@ -199,7 +201,7 @@ val hideBusinessSuggestionsPatch = controlPatch("business_suggestions", "Hide bu
 @Suppress("unused")
 val hideEventPromptsPatch = controlPatch("event_prompts", "Hide event prompts", "Hides event quick-promotion prompts inside chats.", "Conversations")
 @Suppress("unused")
-val suppressTypingPatch = controlPatch("typing", "Hide typing indicator", "Suppresses your outgoing active-typing signal. Not yet in end-to-end encrypted chats.", "Conversations")
+val suppressTypingPatch = controlPatch("typing", "Hide typing indicator", "Suppresses your outgoing active-typing signal, including in end-to-end encrypted chats.", "Conversations", "typing", "typing_mailbox")
 @Suppress("unused")
 val externalBrowserPatch = controlPatch("external_browser", "Open web links externally", "Uses Messenger's external-browser branch for HTTP and HTTPS links.", "Links and bubbles", "browser")
 @Suppress("unused")
