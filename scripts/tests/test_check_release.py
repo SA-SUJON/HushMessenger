@@ -36,7 +36,7 @@ class ReleaseChecks(unittest.TestCase):
             "version": "1.2.3",
             "patches": [
                 {"name": f"Control {n}", "default": True, "dependencies": []}
-                for n in range(21)
+                for n in range(release.PATCH_COUNT)
             ],
         }
         self.index = {

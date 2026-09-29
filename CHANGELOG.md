@@ -1,12 +1,10 @@
 # Changelog
 
-## Unreleased
-
-None of this is in a release yet. It'll ship together in the next one.
+## 0.5.0 (2026-09-28)
 
 ### New
 
-- Restore screens on re-signed builds, always on. Messenger checks its own signing certificate against Meta's, and a re-signed build used to fail that check quietly and open to a blank screen. The patch answers that one check with Meta's original certificate for Messenger itself; every other app still gets the real answer. On the S25 a fully patched build now opens straight to the signed-in chat list.
+- Restore screens on re-signed builds, always on. Messenger checks its own signing certificate against Meta's, and a re-signed build used to fail that check quietly and open to a blank screen. The patch answers that one check with Meta's original certificate for Messenger itself. Every other app still gets the real answer. On the S25 a fully patched build now opens straight to the signed-in chat list.
 - A HushMessenger row in the Menu tab, always on. It sits right under Messenger's own Settings row and opens the HushMessenger settings screen, while Settings still opens Messenger's settings. Accounts that get Messenger's folder grid instead of the list use a separate path that no test account has shown yet.
 - Three privacy switches, all off by default: Allow screenshots, Hide read receipts and Keep unsent messages. A kept message shows "[unsent]" before its text and stays after a restart. Hide read receipts also works in end-to-end encrypted chats, which Messenger uses for most one-to-one chats. There, Messenger marks a chat read and sends the receipt in one step, so chats you open stay unread until you reply or turn the switch off. Keep unsent messages doesn't work in end-to-end encrypted chats: Messenger removes those messages below the part of the app HushMessenger can change.
 - Use system emoji, off by default. Emoji are drawn with your phone's own font instead of Messenger's. If the phone has no emoji font, Messenger's set stays.
@@ -34,6 +32,8 @@ None of this is in a release yet. It'll ship together in the next one.
 - Checked the README's "Add HushMessenger to Morphe Manager" link on a phone. It opens the morphe.software page, and its Open in Morphe button brings up Morphe Manager's Add source dialog with this repository filled in.
 - Building the same source now gives the same bundle from any checkout. The license files used to carry whichever line endings Git wrote, so a fresh clone couldn't reproduce the published checksum.
 - Release checks compare every README link to this project's own releases, and the permission failure check says when Morphe Desktop never started.
+- The README screenshots show this release's settings, with all 24 controls.
+- Pass 204 local tests. All three supported APKs apply all 27 patches, and clean builds from two separate checkouts produce the same bundle.
 
 ## 0.4.2 (2026-09-28)
 

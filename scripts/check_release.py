@@ -10,6 +10,8 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
+PATCH_COUNT = 27
+
 
 def require(condition, message):
     if not condition:
@@ -105,7 +107,8 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
     require(public.get("version") == version, "Catalog version differs from source")
     entries = public.get("patches")
     require(
-        isinstance(entries, list) and len(entries) == 21, "Expected 21 catalog patches"
+        isinstance(entries, list) and len(entries) == PATCH_COUNT,
+        f"Expected {PATCH_COUNT} catalog patches",
     )
     require(
         all(
@@ -115,7 +118,8 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
         "Invalid catalog patch entry",
     )
     require(
-        len({entry["name"] for entry in entries}) == 21, "Duplicate catalog patch names"
+        len({entry["name"] for entry in entries}) == PATCH_COUNT,
+        "Duplicate catalog patch names",
     )
 
     readme = (root / "README.md").read_text(encoding="utf-8")
@@ -158,7 +162,7 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
             checksums.read_text(encoding="utf-8").strip() == f"{digest}  {filename}",
             "Release checksum file differs from built bundle",
         )
-    return f"Release metadata passed: v{version}, 21 patches, SHA-256 {digest}"
+    return f"Release metadata passed: v{version}, {PATCH_COUNT} patches, SHA-256 {digest}"
 
 
 def main(argv=None):
