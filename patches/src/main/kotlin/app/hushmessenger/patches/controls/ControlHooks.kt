@@ -17,6 +17,7 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
@@ -38,6 +39,8 @@ internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/ava
 internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
+internal const val SCREEN_CAPTURE_CALLBACK = "Landroid/app/Activity\$ScreenCaptureCallback;"
+private const val FLAG_SECURE = 0x2000
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -73,6 +76,8 @@ internal val expectedHooks = mapOf(
     "allow_screenshot" to setOf(
         "LX/N2h;->run()V",
         "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
+        "LX/8xp;->onScreenCaptured()V",
+        "LX/4nW;->A00(Landroid/view/Window;)V",
     ),
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
@@ -200,6 +205,14 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 refs.any { it.toString() in peopleJewelKeys } && refs.any { it.toString() == PREFERENCE_GETTER }) add("people_jewel")
             if (cls.type == "Lcom/facebook/screenshot/ScreenshotContentObserver;" && method.name == "onChange" &&
                 method.returnType == "V") add("allow_screenshot")
+            // Android 14 and newer report a screenshot here, and Messenger turns it into the in-chat notice.
+            if (method.name == "onScreenCaptured" && method.returnType == "V" && method.parameterTypes.isEmpty() &&
+                SCREEN_CAPTURE_CALLBACK in cls.interfaces) add("allow_screenshot")
+            // Photo and media viewers in protected chats lock their window through this one helper.
+            if (method.returnType == "V" && method.parameterTypes == listOf("Landroid/view/Window;") &&
+                !AccessFlags.STATIC.isSet(method.accessFlags) &&
+                instructions.any { (it as? NarrowLiteralInstruction)?.narrowLiteral == FLAG_SECURE } &&
+                refs.any { it.toString() == "Landroid/view/Window;->addFlags(I)V" }) add("allow_screenshot")
             if (method.returnType == "V" && method.parameterTypes.size == 3 &&
                 method.parameterTypes[0] == "Landroid/content/Intent;" &&
                 strings.any { "ACTION_REVOKE_MESSAGE" in it }) add("keep_unsent")

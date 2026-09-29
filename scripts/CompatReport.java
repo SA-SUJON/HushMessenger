@@ -21,6 +21,7 @@ import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
@@ -111,7 +112,8 @@ public class CompatReport {
         hooks.put("browser", Set.of("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"));
         hooks.put("ads", Set.of("LX/2Wl;->D2i(LX/1fx;" + IMMUTABLE_LIST + "Ljava/lang/String;)" + IMMUTABLE_LIST));
         hooks.put("people_jewel", Set.of("LX/HAR;->A01(LX/HAR;)Z"));
-        hooks.put("allow_screenshot", Set.of("LX/N2h;->run()V", "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V"));
+        hooks.put("allow_screenshot", Set.of("LX/N2h;->run()V", "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
+            "LX/8xp;->onScreenCaptured()V", "LX/4nW;->A00(Landroid/view/Window;)V"));
         hooks.put("hide_read_receipts", Set.of("LX/AX0;->run()V"));
         hooks.put("keep_unsent", Set.of("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"));
         hooks.put("unsent_indicator", Set.of("LX/K1Y;->BWo(I)Ljava/lang/String;"));
@@ -468,6 +470,23 @@ public class CompatReport {
                 if ("Lcom/facebook/screenshot/ScreenshotContentObserver;".equals(cls.getType()) &&
                     "onChange".equals(method.getName()) && "V".equals(method.getReturnType())) {
                     found.get("allow_screenshot").add(method);
+                }
+
+                // Android 14+ screenshot callback (in-chat notice)
+                if ("onScreenCaptured".equals(method.getName()) && "V".equals(method.getReturnType()) &&
+                    paramTypes.isEmpty() && cls.getInterfaces().contains("Landroid/app/Activity$ScreenCaptureCallback;")) {
+                    found.get("allow_screenshot").add(method);
+                }
+
+                // Media viewers' window lock: FLAG_SECURE through Window.addFlags
+                if ("V".equals(method.getReturnType()) && !isStatic &&
+                    paramTypes.equals(List.of("Landroid/view/Window;"))) {
+                    boolean secureFlag = false, addFlags = false;
+                    for (var i : instructions) {
+                        if (i instanceof NarrowLiteralInstruction lit && lit.getNarrowLiteral() == 0x2000) secureFlag = true;
+                    }
+                    for (var r : refs) if ("Landroid/view/Window;->addFlags(I)V".equals(r.toString())) addFlags = true;
+                    if (secureFlag && addFlags) found.get("allow_screenshot").add(method);
                 }
 
                 // keep_unsent

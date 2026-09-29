@@ -61,7 +61,7 @@
         },
         {
             "name": "Allow screenshots",
-            "description": "Removes screenshot restrictions in vanish mode and E2EE chats. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
