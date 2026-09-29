@@ -46,6 +46,7 @@ class ControlDiscoveryTest {
                     "avatar_tabs" -> "sget-object v0, $AVATAR_TAB_EVENT->A03:$AVATAR_TAB_EVENT\nreturn-object v0"
                     "ai_search_chip" -> "const/4 v0, 0x0\nreturn-object v0"
                     "typing_mailbox" -> "const-string v0, \"$TYPING_MAILBOX_CALL\"\nconst/4 v0, 0x0\nreturn-object v0"
+                    "read_mailbox" -> "const-string v0, \"$READ_MAILBOX_CALL\"\nreturn-void"
                     "menu_settings" -> when {
                         id.contains("ArrayList") ->
                             "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
@@ -111,7 +112,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(76, found.values.sumOf { it.size })
+        assertEquals(77, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

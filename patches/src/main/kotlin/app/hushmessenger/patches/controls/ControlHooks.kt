@@ -37,6 +37,7 @@ internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFold
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
 internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
+internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -74,6 +75,7 @@ internal val expectedHooks = mapOf(
         "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
     ),
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
+    "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
     "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
@@ -238,6 +240,8 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.name == "render" && SEARCH_CLEAR_TAG in strings) searchFieldRender = method
             // Encrypted chats send typing through this msys mailbox call (thread id, typing).
             if (method.parameterTypes == listOf("Ljava/lang/String;", "Z") && TYPING_MAILBOX_CALL in strings) add("typing_mailbox")
+            // Encrypted chats mark a thread read, which also sends the receipt, through this msys call.
+            if (method.returnType == "V" && READ_MAILBOX_CALL in strings) add("read_mailbox")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()

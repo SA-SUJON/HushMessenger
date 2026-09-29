@@ -120,7 +120,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "typing" -> method.injectSwitch("suppressTyping", "0x0")
             "bubbles" -> method.injectSwitch("enableBubbles", "0x1")
             "allow_screenshot" -> method.injectSwitch("allowScreenshot", "0x0")
-            "hide_read_receipts" -> method.injectSwitch("hideReadReceipts", "0x0")
+            "hide_read_receipts", "read_mailbox" -> method.injectSwitch("hideReadReceipts", "0x0")
             "keep_unsent" -> method.injectKeepUnsent()
             "unsent_indicator" -> method.injectUnsentIndicator()
             "delta_unsent" -> method.injectDeltaUnsent()
@@ -211,9 +211,9 @@ val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "Privacy")
 @Suppress("unused")
-val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt. Not yet in end-to-end encrypted chats.", "Privacy")
+val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt. In end-to-end encrypted chats, chats you open stay unread until you reply.", "Privacy", "hide_read_receipts", "read_mailbox")
 @Suppress("unused")
-val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone. Not yet in end-to-end encrypted chats. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
+val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 
 @Suppress("unused")
 val menuSettingsPatch = bytecodePatch(

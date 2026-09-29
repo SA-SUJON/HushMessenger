@@ -120,6 +120,7 @@ public class CompatReport {
         hooks.put("emoji_typeface", Set.of("LX/1KV;->A00()Landroid/graphics/Typeface;"));
         hooks.put("ai_search_chip", Set.of("LX/D8E;->render(LX/2MZ;)LX/1GG;"));
         hooks.put("typing_mailbox", Set.of("LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"));
+        hooks.put("read_mailbox", Set.of("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"));
         hooks.put("avatar_tabs", Set.of("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()" + IMMUTABLE_LIST));
         hooks.put("menu_settings", Set.of("LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;", "LX/TxV;->CAo(LX/4jw;I)V",
             "LX/Txc;->A0I(Ljava/util/List;)V", "LX/Jwp;->onClick(Landroid/view/View;)V"));
@@ -183,7 +184,7 @@ public class CompatReport {
         PATCHES.put("Allow chat bubbles", List.of("bubbles"));
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot"));
-        PATCHES.put("Hide read receipts", List.of("hide_read_receipts"));
+        PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
@@ -544,6 +545,11 @@ public class CompatReport {
                 if (paramTypes.equals(List.of("Ljava/lang/String;", "Z")) &&
                     strings.contains("setTypingIndicatorForThreadWithThreadIdentifier")) {
                     found.get("typing_mailbox").add(method);
+                }
+
+                // read_mailbox: the msys call that marks a thread read (and sends the receipt) in encrypted chats
+                if ("V".equals(method.getReturnType()) && strings.contains("markAsReadThreadWithThreadIdentifier")) {
+                    found.get("read_mailbox").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder
