@@ -113,7 +113,7 @@ Messenger and Android already handle this, so there's no HushMessenger switch fo
 1. Open Messenger's app info, go to **Notifications**, and set **Chats** to **Silent**.
 2. In each chat you still want alerts from, tap the chat's name, then **Notifications & sounds > Customize notifications**, and pick **Alert** (or **Priority**). The page will show **Silent** at this point, which is expected.
 
-A chat only keeps its own setting once you change it, so doing step 1 first matters. Chats you haven't changed follow **Chats** and arrive quietly. On the S25, a chat set to **Alert** still alerted after **Chats** was silenced. Each chat's **Notifications & sounds** page also has separate switches for messages, reactions, chat heads and calls. Each chat's **Notifications & sounds** page also has separate switches for messages, reactions, chat heads and calls. On Samsung phones, Do not disturb's contact exceptions don't reliably match Messenger senders, so use the chat settings instead.
+A chat only keeps its own setting once you change it, so doing step 1 first matters. Chats you haven't changed follow **Chats** and arrive quietly. On the S25, a chat set to **Alert** still alerted after **Chats** was silenced. Each chat's **Notifications & sounds** page also has separate switches for messages, reactions, chat heads and calls. On Samsung phones, Do not disturb's contact exceptions don't reliably match Messenger senders, so use the chat settings instead.
 
 ## What the patches change
 
