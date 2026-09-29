@@ -1,7 +1,7 @@
 /*
  * Dry-run compatibility report for Messenger APKs.
  *
- * Checks whether a given APK is compatible with all 26 HushMessenger patches
+ * Checks whether a given APK is compatible with all 27 HushMessenger patches
  * without modifying the file. Prints package, version code, ABI, signer and
  * PASS/FAIL per patch, then exits non-zero on any failure.
  *
@@ -273,6 +273,7 @@ public class CompatReport {
         }
 
         String msgTextGetterName = "", msgIdGetterName = "", msgIsUnsentGetterName = "";
+        String rawText = "", rawId = "", rawUnsent = "";
         outer:
         for (var cls : classes) {
             for (var m : cls.getMethods()) {
@@ -289,26 +290,47 @@ public class CompatReport {
                     }
                 }
                 if (!hasText || !hasMsgId || !hasUnsent) continue;
-                String lastMarker = null;
+                MethodReference lastRef = null;
                 for (var i : mCode) {
                     if (!(i instanceof ReferenceInstruction ri)) continue;
                     var ref = ri.getReference();
-                    if (ref instanceof StringReference sr) {
-                        if ("text=".equals(sr.getString())) lastMarker = "text";
-                        else if ("message_id=".equals(sr.getString())) lastMarker = "id";
-                        else if ("is_unsent=".equals(sr.getString())) lastMarker = "unsent";
-                    } else if (i.getOpcode() == Opcode.INVOKE_INTERFACE && ref instanceof MethodReference mr &&
-                            lastMarker != null && mr.getParameterTypes().size() == 1) {
-                        if ("Ljava/lang/String;".equals(mr.getReturnType())) {
-                            if ("text".equals(lastMarker)) msgTextGetterName = mr.getName();
-                            else if ("id".equals(lastMarker)) msgIdGetterName = mr.getName();
-                        } else if ("Z".equals(mr.getReturnType()) && "unsent".equals(lastMarker)) {
-                            msgIsUnsentGetterName = mr.getName();
+                    if (i.getOpcode() == Opcode.INVOKE_INTERFACE && ref instanceof MethodReference mr) {
+                        lastRef = mr;
+                    } else if (ref instanceof StringReference sr && lastRef != null) {
+                        switch (sr.getString()) {
+                            case "text=" -> { if ("Ljava/lang/String;".equals(lastRef.getReturnType())) { rawText = lastRef.getName(); lastRef = null; } }
+                            case "message_id=" -> { if ("Ljava/lang/String;".equals(lastRef.getReturnType())) { rawId = lastRef.getName(); lastRef = null; } }
+                            case "is_unsent=" -> { if ("Z".equals(lastRef.getReturnType())) { rawUnsent = lastRef.getName(); lastRef = null; } }
                         }
-                        lastMarker = null;
                     }
                 }
                 break outer;
+            }
+        }
+
+        if (!rawText.isEmpty()) {
+            msgTextGetterName = rawText;
+            msgIdGetterName = rawId;
+            msgIsUnsentGetterName = rawUnsent;
+            for (var wCls : classes) {
+                if (!AccessFlags.ABSTRACT.isSet(wCls.getAccessFlags())) continue;
+                if (wCls.getInterfaces().size() != 1) continue;
+                long instFields = 0; String fieldType = null;
+                for (var f : wCls.getFields()) {
+                    if (!AccessFlags.STATIC.isSet(f.getAccessFlags())) { instFields++; fieldType = f.getType(); }
+                }
+                if (instFields != 1 || !"Ljava/util/List;".equals(fieldType)) continue;
+                boolean hasGetCount = false;
+                for (var wm : wCls.getMethods()) {
+                    if ("getCount".equals(wm.getName()) && "I".equals(wm.getReturnType()) && wm.getParameterTypes().isEmpty()) {
+                        hasGetCount = true; break;
+                    }
+                }
+                if (!hasGetCount) continue;
+                msgTextGetterName = resolveWrapper(wCls, rawText, "Ljava/lang/String;");
+                msgIdGetterName = resolveWrapper(wCls, rawId, "Ljava/lang/String;");
+                msgIsUnsentGetterName = resolveWrapper(wCls, rawUnsent, "Z");
+                break;
             }
         }
 
@@ -562,6 +584,26 @@ public class CompatReport {
             }
         }
         return abis;
+    }
+
+    static String resolveWrapper(ClassDef wCls, String rawName, String returnType) {
+        for (var wm : wCls.getMethods()) {
+            if (wm.getName().equals(rawName) && wm.getReturnType().equals(returnType)
+                    && wm.getParameterTypes().size() == 1 && "I".equals(wm.getParameterTypes().get(0).toString()))
+                return rawName;
+        }
+        for (var wm : wCls.getMethods()) {
+            if (!wm.getReturnType().equals(returnType)) continue;
+            if (wm.getParameterTypes().size() != 1 || !"I".equals(wm.getParameterTypes().get(0).toString())) continue;
+            var impl = wm.getImplementation();
+            if (impl == null) continue;
+            for (var insn : impl.getInstructions()) {
+                if (insn.getOpcode() == Opcode.INVOKE_INTERFACE && insn instanceof ReferenceInstruction ri
+                        && ri.getReference() instanceof MethodReference mr && rawName.equals(mr.getName()))
+                    return wm.getName();
+            }
+        }
+        return rawName;
     }
 
     static String findTool(String name) {

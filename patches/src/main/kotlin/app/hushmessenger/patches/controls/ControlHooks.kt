@@ -101,27 +101,53 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
     messageTextGetterName = ""
     messageIdGetterName = ""
     messageIsUnsentGetterName = ""
+    var rawText = ""
+    var rawId = ""
+    var rawUnsent = ""
     for (cls in classes) {
-        if (messageTextGetterName.isNotEmpty()) break
+        if (rawText.isNotEmpty()) break
         for (m in cls.methods) {
             val debugCode = m.implementation?.instructions?.toList() ?: continue
             val debugStrs = debugCode.mapNotNull { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string }
             if ("text=" !in debugStrs || "message_id=" !in debugStrs || "is_unsent=" !in debugStrs) continue
-            var lastMarker: String? = null
+            var lastRef: DexMethodReference? = null
             for (insn in debugCode) {
                 val ref = (insn as? ReferenceInstruction)?.reference ?: continue
-                if (ref is StringReference) {
-                    when (ref.string) { "text=" -> lastMarker = "text"; "message_id=" -> lastMarker = "id"; "is_unsent=" -> lastMarker = "unsent" }
-                } else if (insn.opcode == Opcode.INVOKE_INTERFACE && ref is DexMethodReference &&
-                    lastMarker != null && ref.parameterTypes.size == 1) {
-                    if (ref.returnType == "Ljava/lang/String;") {
-                        when (lastMarker) { "text" -> messageTextGetterName = ref.name; "id" -> messageIdGetterName = ref.name }
-                    } else if (ref.returnType == "Z" && lastMarker == "unsent") {
-                        messageIsUnsentGetterName = ref.name
+                if (insn.opcode == Opcode.INVOKE_INTERFACE && ref is DexMethodReference) {
+                    lastRef = ref
+                } else if (ref is StringReference && lastRef != null) {
+                    when (ref.string) {
+                        "text=" -> if (lastRef.returnType == "Ljava/lang/String;") { rawText = lastRef.name; lastRef = null }
+                        "message_id=" -> if (lastRef.returnType == "Ljava/lang/String;") { rawId = lastRef.name; lastRef = null }
+                        "is_unsent=" -> if (lastRef.returnType == "Z") { rawUnsent = lastRef.name; lastRef = null }
                     }
-                    lastMarker = null
                 }
             }
+            break
+        }
+    }
+    if (rawText.isNotEmpty()) {
+        messageTextGetterName = rawText
+        messageIdGetterName = rawId
+        messageIsUnsentGetterName = rawUnsent
+        for (wrapperCls in classes) {
+            if (!AccessFlags.ABSTRACT.isSet(wrapperCls.accessFlags) || wrapperCls.interfaces.size != 1) continue
+            val wf = wrapperCls.fields.filter { !AccessFlags.STATIC.isSet(it.accessFlags) }
+            if (wf.size != 1 || wf[0].type != "Ljava/util/List;") continue
+            if (wrapperCls.methods.none { it.name == "getCount" && it.returnType == "I" && it.parameterTypes.isEmpty() }) continue
+            fun resolve(raw: String, ret: String): String {
+                if (wrapperCls.methods.any { it.name == raw && it.returnType == ret && it.parameterTypes == listOf("I") }) return raw
+                return wrapperCls.methods.firstOrNull { wm ->
+                    wm.returnType == ret && wm.parameterTypes == listOf("I") &&
+                        wm.implementation?.instructions?.any { insn ->
+                            insn.opcode == Opcode.INVOKE_INTERFACE &&
+                                ((insn as? ReferenceInstruction)?.reference as? DexMethodReference)?.name == raw
+                        } == true
+                }?.name ?: raw
+            }
+            messageTextGetterName = resolve(rawText, "Ljava/lang/String;")
+            messageIdGetterName = resolve(rawId, "Ljava/lang/String;")
+            messageIsUnsentGetterName = resolve(rawUnsent, "Z")
             break
         }
     }

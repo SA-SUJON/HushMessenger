@@ -82,21 +82,28 @@ internal fun peopleJewelKeyHolder() = fixtureClass("LX/JTx;", listOf(fixtureMeth
 """.trimIndent(), flags = AccessFlags.STATIC.value or AccessFlags.CONSTRUCTOR.value)))
 
 internal fun debugDumperFixture(
-    textGetter: String = "BWo",
-    idGetter: String = "B9d",
-    unsentGetter: String = "Btd",
-    interfaceType: String = "Lfixture/MessageRow;",
+    textGetter: String = "BWn",
+    idGetter: String = "B9c",
+    unsentGetter: String = "Btc",
+    itemType: String = "Lfixture/KKn;",
 ): MutableClass {
-    val method = fixtureMethod("Lfixture/Dumper;->A02(${interfaceType})Ljava/lang/String;", """
-        const-string v0, "message_id="
-        invoke-interface {p1, v1}, $interfaceType->$idGetter(I)Ljava/lang/String;
-        move-result-object v0
-        const-string v0, "text="
-        invoke-interface {p1, v1}, $interfaceType->$textGetter(I)Ljava/lang/String;
-        move-result-object v0
-        const-string v0, "is_unsent="
-        invoke-interface {p1, v1}, $interfaceType->$unsentGetter(I)Z
+    val method = fixtureMethod("Lfixture/Dumper;->A02(Lfixture/MessageRow;)Ljava/lang/String;", """
+        invoke-interface {p1}, $itemType->$unsentGetter()Z
         move-result v0
+        const-string v0, "is_unsent="
+        invoke-static {v0, v1, v2}, Lfixture/Helper;->A09(Ljava/lang/String;Ljava/util/AbstractCollection;Z)V
+        invoke-interface {p1}, $itemType->$idGetter()Ljava/lang/String;
+        move-result-object v0
+        if-eqz v0, :skip_id
+        const-string v0, "message_id="
+        invoke-static {v0, v1, v2}, Lfixture/Helper;->A1V(Ljava/lang/String;Ljava/lang/String;Ljava/util/AbstractCollection;)V
+        :skip_id
+        invoke-interface {p1}, $itemType->$textGetter()Ljava/lang/String;
+        move-result-object v0
+        if-eqz v0, :skip_text
+        const-string v0, "text="
+        invoke-static {v0, v1, v2}, Lfixture/Helper;->A1V(Ljava/lang/String;Ljava/lang/String;Ljava/util/AbstractCollection;)V
+        :skip_text
         return-object v1
     """.trimIndent(), registers = 4)
     return fixtureClass("Lfixture/Dumper;", listOf(method))
@@ -106,12 +113,20 @@ internal fun messageWrapperFixture(
     type: String = "Lfixture/MessageWrapper;",
     interfaceType: String = "Lfixture/MessageRow;",
     textGetter: String = "BWo",
+    idGetter: String = "B9d",
     unsentGetter: String = "Btd",
 ): MutableClass {
     val bwoMethod = fixtureMethod("$type->$textGetter(I)Ljava/lang/String;", """
         invoke-static {p0, p1}, $type->A00(${type}I)Lfixture/KKn;
         move-result-object v0
         invoke-interface {v0}, Lfixture/KKn;->BWn()Ljava/lang/String;
+        move-result-object v0
+        return-object v0
+    """.trimIndent(), registers = 3)
+    val b9dMethod = fixtureMethod("$type->$idGetter(I)Ljava/lang/String;", """
+        invoke-static {p0, p1}, $type->A00(${type}I)Lfixture/KKn;
+        move-result-object v0
+        invoke-interface {v0}, Lfixture/KKn;->B9c()Ljava/lang/String;
         move-result-object v0
         return-object v0
     """.trimIndent(), registers = 3)
@@ -132,7 +147,7 @@ internal fun messageWrapperFixture(
     return MutableClass(ImmutableClassDef(type,
         AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value,
         "Ljava/lang/Object;", listOf(interfaceType), null, emptySet(), fields,
-        listOf(bwoMethod, btdMethod, getCountMethod)))
+        listOf(bwoMethod, b9dMethod, btdMethod, getCountMethod)))
 }
 
 internal fun pluginBody(anchor: String, branch: String = "if-eq") = """
