@@ -106,6 +106,10 @@ The **App** tab starts with quick access and a restart button. Appearance and se
 
 The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. An affected-account before/after check is still needed. It doesn't claim to remove story ads. Media-transcoding changes remain unavailable until the upload path is verified.
 
+### Alerts from only some chats
+
+Messenger and Android already handle this, so there's no HushMessenger switch for it. In each chat you want alerts from, tap the chat's name, then **Notifications & sounds > Customize notifications**, and pick **Alert** or **Priority**. That gives the chat its own Android notification channel. Then open Messenger's app info, go to **Notifications**, and set **Chats** to silent. Chats you customized keep their own setting, and the rest arrive quietly. Each chat's **Notifications & sounds** page also has separate switches for messages, reactions, chat heads and calls. On Samsung phones, Do not disturb's contact exceptions don't reliably match Messenger senders, so use the chat settings instead.
+
 ## What the patches change
 
 The [patch catalog](patches-list.json) lists all 27 patches with their categories, default selections, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
