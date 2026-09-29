@@ -17,6 +17,13 @@ class DexSiteContractTest {
     }
 
     @Test
+    fun eachBuildAcceptsOnlyItsOwnInstructionSites() {
+        validateDexSites(expectedDexSites346013370.toList(), expectedDexSitesFor("346013370"))
+        assertFailsWith<PatchException> { validateDexSites(expectedDexSites346013370.toList(), expectedDexSitesFor("346013440")) }
+        assertFailsWith<PatchException> { validateDexSites(expectedDexSites.toList(), expectedDexSitesFor("346013370")) }
+    }
+
+    @Test
     fun rejectsAMissingInstructionSite() {
         val failure = assertFailsWith<PatchException> {
             validateDexSites(expectedDexSites.toList().dropLast(1))

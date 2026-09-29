@@ -69,11 +69,15 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
     dependsOn(settingsResources)
     extendWith("extensions/messenger.mpe")
     execute {
+        activeProfile = controlProfileFor(packageMetadata.versionCode)
         val classes = mutableListOf<com.android.tools.smali.dexlib2.iface.ClassDef>()
         classDefForEach { classes.add(it) }
         discoveredControls = findControls(classes)
     }
-    finalize { discoveredControls = emptyMap() }
+    finalize {
+        discoveredControls = emptyMap()
+        activeProfile = BASE_PROFILE
+    }
 }
 
 private fun Document.requireFeatureAbsent(key: String): Element {
@@ -107,7 +111,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "unsent_indicator" -> method.validateUnsentIndicator()
             "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateScratch()
-            "avatar_tabs" -> method.validateKeyboardTabs()
+            "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
             else -> method.validateSwitch()
         }
@@ -129,7 +133,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "unsent_indicator" -> method.injectUnsentIndicator()
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
-            "avatar_tabs" -> method.injectKeyboardTabs()
+            "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
             else -> method.injectFeatureSwitch(key)
         }

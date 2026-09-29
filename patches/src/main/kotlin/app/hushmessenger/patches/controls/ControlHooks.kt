@@ -37,6 +37,7 @@ internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPrefe
 private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
+internal const val COMPOSER_FACTORY = "Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;"
 internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
@@ -203,7 +204,7 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 refs.any { it.toString() == "Landroid/app/ActivityManager;->isLowRamDevice()Z" }) add("bubbles")
             if (method.returnType == "Z" && strings.containsAll(setOf("iab_skipped_reason", "user_prefers_external"))) add("browser")
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type) &&
-                refs.any { it.toString() in peopleJewelKeys } && refs.any { it.toString() == PREFERENCE_GETTER }) add("people_jewel")
+                refs.any { it.toString() in peopleJewelKeys } && refs.any { it.toString() == activeProfile.preferenceGetter }) add("people_jewel")
             if (cls.type == "Lcom/facebook/screenshot/ScreenshotContentObserver;" && method.name == "onChange" &&
                 method.returnType == "V") add("allow_screenshot")
             // Android 14 and newer report a screenshot here, and Messenger turns it into the in-chat notice.
@@ -251,6 +252,10 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             // The Litho sticker keyboard's tab list builder reads the avatar tab's activate event.
             if (method.returnType == IMMUTABLE_LIST && method.parameterTypes.isEmpty() &&
                 refs.any { it.toString().startsWith("$AVATAR_TAB_EVENT->") }) add("avatar_tabs")
+            // Some builds fill that list inline in a void method of the composer factory instead.
+            if (method.returnType == "V" && cls.type == COMPOSER_FACTORY &&
+                refs.any { it.toString().startsWith("$AVATAR_TAB_EVENT->") } &&
+                refs.any { it.toString().startsWith("$IMMUTABLE_LIST->builder()") }) add("avatar_tabs")
             if (method.name == "render" && SEARCH_CLEAR_TAG in strings) searchFieldRender = method
             // Encrypted chats send typing through this msys mailbox call (thread id, typing).
             if (method.parameterTypes == listOf("Ljava/lang/String;", "Z") && TYPING_MAILBOX_CALL in strings) add("typing_mailbox")
@@ -290,9 +295,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
     return found
 }
 
-internal fun validateControls(found: Map<String, List<Method>>, selected: Set<String> = expectedHooks.keys) {
+internal fun validateControls(found: Map<String, List<Method>>, selected: Set<String> = activeProfile.hooks.keys) {
     for (feature in selected) {
-        val expected = expectedHooks.getValue(feature)
+        val expected = activeProfile.hooks.getValue(feature)
         val actual = found[feature].orEmpty().map { it.hookId() }
         if (actual.size != expected.size || actual.toSet() != expected) {
             throw PatchException("Messenger controls: $feature hooks differ from the tested build. " +
@@ -343,7 +348,7 @@ internal fun MutableMethod.validatePluginGate() {
         tail.map { it.opcode } != listOf(Opcode.IGET_OBJECT, Opcode.SGET_OBJECT, Opcode.IF_EQ, Opcode.RETURN, Opcode.RETURN) ||
         cache?.registerA != 1 || cache.registerB != first.registerB ||
         (tail[0] as? ReferenceInstruction)?.reference != (code[0] as? ReferenceInstruction)?.reference ||
-        (tail[1] as? ReferenceInstruction)?.reference.toString() != "LX/1dj;->A03:Ljava/lang/Object;" ||
+        (tail[1] as? ReferenceInstruction)?.reference.toString() != activeProfile.pluginSentinel ||
         (tail[1] as? OneRegisterInstruction)?.registerA != 0 || compare?.registerA != 1 || compare.registerB != 0 ||
         (tail[2] as? OffsetInstruction)?.codeOffset != 3 ||
         (tail[3] as? OneRegisterInstruction)?.registerA != (enabled as? OneRegisterInstruction)?.registerA ||
@@ -356,7 +361,7 @@ internal fun MutableMethod.validatePluginGate() {
 internal fun MutableMethod.validateAdFilter(): List<Int> {
     val code = implementation!!.instructions
     val exits = code.indices.filter { code[it].opcode == Opcode.RETURN_OBJECT }
-    if (implementation!!.registerCount != 24 || code.size != 935 || exits != listOf(916, 931) ||
+    if (implementation!!.registerCount != 24 || code.size != activeProfile.adFilterSize || exits != activeProfile.adFilterExits ||
         exits.any { (code[it] as? OneRegisterInstruction)?.registerA != 5 }) {
         throw PatchException("Messenger controls: the inbox ad filter exits differ from the tested build")
     }
@@ -436,8 +441,7 @@ internal fun MutableMethod.validateSubtabs() {
         setter?.registerCount != 2 || setter.registerC != 1 || setter.registerD != 0 ||
         (literal as? OneRegisterInstruction)?.registerA != 0 ||
         (literal as? WideLiteralInstruction)?.wideLiteral != 1L ||
-        (instructions[0] as? ReferenceInstruction)?.reference.toString() !=
-            "LX/2UL;->A00:Lcom/facebook/messaging/inboxsubtabs/plugins/subtabs/itemsupplier/InboxSubtabsItemSupplierImplementation;" ||
+        (instructions[0] as? ReferenceInstruction)?.reference.toString() != activeProfile.subtabsSupplier ||
         (instructions[1] as? ReferenceInstruction)?.reference.toString() !=
             "Lcom/facebook/messaging/inboxsubtabs/plugins/subtabs/itemsupplier/InboxSubtabsItemSupplierImplementation;->A05:Ljava/util/concurrent/atomic/AtomicBoolean;" ||
         (instructions[3] as? ReferenceInstruction)?.reference.toString() != "Ljava/util/concurrent/atomic/AtomicBoolean;->set(Z)V") {
@@ -450,30 +454,31 @@ internal fun MutableMethod.injectSubtabs() {
     addInstructions(3, "invoke-static {v0}, $SETTINGS->showSubtabs(Z)Z\nmove-result v0")
 }
 
-internal fun MutableMethod.validateBrowserPreference() {
+internal fun MutableMethod.validateBrowserPreference(): Int {
     val instructions = implementation!!.instructions
-    val getter = instructions.getOrNull(61) as? FiveRegisterInstruction
+    val key = activeProfile.browserPreferenceIndex
+    val getter = instructions.getOrNull(key + 1) as? FiveRegisterInstruction
     if (AccessFlags.STATIC.isSet(accessFlags) ||
         parameterTypes != listOf("Landroid/net/Uri;", "Lcom/facebook/auth/usersession/FbUserSession;") ||
-        returnType != "Z" || instructions.getOrNull(60)?.opcode != Opcode.SGET_OBJECT ||
-        (instructions[60] as? OneRegisterInstruction)?.registerA != 0 ||
-        instructions.getOrNull(61)?.opcode != Opcode.INVOKE_INTERFACE ||
+        returnType != "Z" || instructions.getOrNull(key)?.opcode != Opcode.SGET_OBJECT ||
+        (instructions[key] as? OneRegisterInstruction)?.registerA != 0 ||
+        instructions.getOrNull(key + 1)?.opcode != Opcode.INVOKE_INTERFACE ||
         getter?.registerCount != 3 || getter.registerC != 1 || getter.registerD != 0 || getter.registerE != 3 ||
-        (instructions.getOrNull(60) as? ReferenceInstruction)?.reference.toString() != "LX/1D1;->A1U:LX/1BK;" ||
-        (instructions.getOrNull(61) as? ReferenceInstruction)?.reference.toString() !=
-            "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z" ||
-        instructions.getOrNull(62)?.opcode != Opcode.MOVE_RESULT ||
-        (instructions[62] as? OneRegisterInstruction)?.registerA != 0 ||
-        instructions.getOrNull(63)?.opcode != Opcode.IF_EQZ ||
-        (instructions[63] as? OneRegisterInstruction)?.registerA != 0 || implementation!!.registerCount != 9) {
+        (instructions.getOrNull(key) as? ReferenceInstruction)?.reference.toString() != activeProfile.browserPreferenceKey ||
+        (instructions.getOrNull(key + 1) as? ReferenceInstruction)?.reference.toString() != activeProfile.preferenceGetter ||
+        instructions.getOrNull(key + 2)?.opcode != Opcode.MOVE_RESULT ||
+        (instructions[key + 2] as? OneRegisterInstruction)?.registerA != 0 ||
+        instructions.getOrNull(key + 3)?.opcode != Opcode.IF_EQZ ||
+        (instructions[key + 3] as? OneRegisterInstruction)?.registerA != 0 || implementation!!.registerCount != 9) {
         throw PatchException("Messenger controls: external-browser preference no longer matches the tested build")
     }
+    return key + 3
 }
 
 internal fun MutableMethod.injectBrowserPreference() {
-    validateBrowserPreference()
+    val branch = validateBrowserPreference()
     // p1 is Uri (v7). Use the same stock preference branch, preserving surrounding handling.
-    addInstructions(63, "invoke-static {v0, p1}, $SETTINGS->preferExternalBrowser(ZLandroid/net/Uri;)Z\nmove-result v0")
+    addInstructions(branch, "invoke-static {v0, p1}, $SETTINGS->preferExternalBrowser(ZLandroid/net/Uri;)Z\nmove-result v0")
 }
 
 /** Instruction index a branch lands on, or -1 when it doesn't start an instruction. */
@@ -501,7 +506,7 @@ internal fun MutableMethod.validatePeopleSection() {
         flag?.opcode != Opcode.CONST_WIDE || (flag as? OneRegisterInstruction)?.registerA != 0 ||
         (flag as? WideLiteralInstruction)?.wideLiteral != 72344235860374863L ||
         code.getOrNull(18)?.opcode != Opcode.INVOKE_STATIC ||
-        (code[18] as? ReferenceInstruction)?.reference.toString() != "LX/16z;->A1Z(Ljava/lang/Object;J)Z" ||
+        (code[18] as? ReferenceInstruction)?.reference.toString() != activeProfile.peopleFlagCheck ||
         code.getOrNull(19)?.opcode != Opcode.MOVE_RESULT || (code[19] as? OneRegisterInstruction)?.registerA != 0 ||
         code.getOrNull(20)?.opcode != Opcode.IF_NEZ || (code[20] as? OneRegisterInstruction)?.registerA != 0 ||
         code.branchTarget(12) != last || code.branchTarget(20) != last ||
@@ -509,11 +514,11 @@ internal fun MutableMethod.validatePeopleSection() {
         code[last - 1].opcode != Opcode.RETURN || (code[last - 1] as? OneRegisterInstruction)?.registerA != 0 ||
         code[last - 2].opcode != Opcode.CONST_4 || (code[last - 2] as? WideLiteralInstruction)?.wideLiteral != 1L ||
         key?.opcode != Opcode.SGET_OBJECT || (key as? OneRegisterInstruction)?.registerA != 0 ||
-        (key as? ReferenceInstruction)?.reference.toString() != "LX/JTx;->A01:LX/1BL;" ||
+        (key as? ReferenceInstruction)?.reference.toString() != activeProfile.peopleKey ||
         default?.opcode != Opcode.CONST_4 || (default as? OneRegisterInstruction)?.registerA != 4 ||
         (default as? WideLiteralInstruction)?.wideLiteral != 0L ||
         code.getOrNull(10)?.opcode != Opcode.INVOKE_INTERFACE ||
-        (code[10] as? ReferenceInstruction)?.reference.toString() != PREFERENCE_GETTER ||
+        (code[10] as? ReferenceInstruction)?.reference.toString() != activeProfile.preferenceGetter ||
         getter?.registerCount != 3 || getter.registerC != 1 || getter.registerD != 0 || getter.registerE != 4 ||
         code.getOrNull(11)?.opcode != Opcode.MOVE_RESULT || (code[11] as? OneRegisterInstruction)?.registerA != 0 ||
         code.getOrNull(12)?.opcode != Opcode.IF_EQZ || (code[12] as? OneRegisterInstruction)?.registerA != 0) {
@@ -597,6 +602,30 @@ internal fun MutableMethod.injectKeyboardTabs() {
         :original_tabs
         return-object v$result
     """.trimIndent())
+}
+
+/**
+ * Builds that fill the keyboard's tab list inline hand a local ArrayList of tab items to one static
+ * (ImmutableList.Builder, Iterable) -> ImmutableList copy. Returns that call's index and list register.
+ */
+internal fun MutableMethod.validateKeyboardTabsInline(): Pair<Int, Int> {
+    val code = implementation!!.instructions.toList()
+    val copies = code.indices.filter { index ->
+        val ref = (code[index] as? ReferenceInstruction)?.reference as? DexMethodReference
+        code[index].opcode == Opcode.INVOKE_STATIC && ref != null && ref.returnType == IMMUTABLE_LIST &&
+            ref.parameterTypes.map { it.toString() } == listOf("Lcom/google/common/collect/ImmutableList\$Builder;", "Ljava/lang/Iterable;")
+    }
+    // Code inserted before a branch target would be skipped by that branch.
+    if (returnType != "V" || copies.size != 1 || code.indices.any { code.branchTarget(it) == copies.single() }) {
+        throw PatchException("Messenger controls: the sticker keyboard tab list differs from the tested build")
+    }
+    return copies.single() to (code[copies.single()] as FiveRegisterInstruction).registerD
+}
+
+/** Drops the avatar tab from the list just before Messenger copies it; the list is a local. */
+internal fun MutableMethod.injectKeyboardTabsInline() {
+    val (copy, tabs) = validateKeyboardTabsInline()
+    addInstructions(copy, "invoke-static/range {v$tabs .. v$tabs}, $SETTINGS->removeAvatarTabs(Ljava/lang/Iterable;)V")
 }
 
 internal fun MutableMethod.validateOutgoingTyping(): Int {
