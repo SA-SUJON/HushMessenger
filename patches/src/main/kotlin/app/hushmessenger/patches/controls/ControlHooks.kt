@@ -34,6 +34,7 @@ internal const val IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;"
 internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z"
 private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
+internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
 
 private val facebookPlugins = setOf(
     "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
@@ -75,6 +76,7 @@ internal val expectedHooks = mapOf(
     "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
+    "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
         "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
         "LX/TxV;->CAo(LX/4jw;I)V",
@@ -225,6 +227,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.name == "onClick" && method.returnType == "V" &&
                 method.parameterTypes == listOf("Landroid/view/View;") &&
                 DRAWER_FOLDER_SELECTED in strings) add("menu_settings")
+            // The Litho sticker keyboard's tab list builder reads the avatar tab's activate event.
+            if (method.returnType == IMMUTABLE_LIST && method.parameterTypes.isEmpty() &&
+                refs.any { it.toString().startsWith("$AVATAR_TAB_EVENT->") }) add("avatar_tabs")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -528,6 +533,33 @@ internal fun MutableMethod.injectMenuDrawerAdd() {
     addInstructions(0, """
         invoke-static {p1}, $SETTINGS->addMenuDrawerEntry(Ljava/util/List;)Ljava/util/List;
         move-result-object p1
+    """.trimIndent())
+}
+
+internal fun MutableMethod.validateKeyboardTabs(): Int {
+    val code = implementation!!.instructions.toList()
+    val exits = code.indices.filter { code[it].opcode == Opcode.RETURN_OBJECT }
+    val parameterWords = parameterTypes.sumOf { if (it == "J" || it == "D") 2 else 1 } +
+        if (AccessFlags.STATIC.isSet(accessFlags)) 0 else 1
+    if (returnType != IMMUTABLE_LIST || exits.size != 1 || implementation!!.registerCount - parameterWords < 2) {
+        throw PatchException("Messenger controls: the sticker keyboard tab builder differs from the tested build")
+    }
+    return exits.single()
+}
+
+/** Replacing the return keeps every branch to it; any register but the result is free there. */
+internal fun MutableMethod.injectKeyboardTabs() {
+    val exit = validateKeyboardTabs()
+    val result = (getInstruction(exit) as OneRegisterInstruction).registerA
+    val scratch = if (result == 0) 1 else 0
+    replaceInstruction(exit, "invoke-static {v$result}, $SETTINGS->filterKeyboardTabs(Ljava/util/List;)Ljava/util/List;")
+    addInstructionsWithLabels(exit + 1, """
+        move-result-object v$scratch
+        if-eqz v$scratch, :original_tabs
+        invoke-static {v$scratch}, $IMMUTABLE_LIST->copyOf(Ljava/util/Collection;)$IMMUTABLE_LIST
+        move-result-object v$result
+        :original_tabs
+        return-object v$result
     """.trimIndent())
 }
 

@@ -183,6 +183,27 @@ public class SettingsTest {
         assertTrue((launched.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
     }
 
+    /** Shaped like Messenger 580's keyboard tab: an activate event plus int icon and label fields. */
+    static final class KeyboardTab {
+        final Object event;
+        final int icon = 7;
+        KeyboardTab(Object event) { this.event = event; }
+    }
+
+    @Test public void avatarTabLeavesTheStickerKeyboardOnlyWhileTheSwitchIsOn() {
+        KeyboardTab emoji = new KeyboardTab(new Object());
+        KeyboardTab avatar = new KeyboardTab(new com.facebook.xapp.messaging.composer.avatar.composertab.event.ActivateAvatarSticker());
+        KeyboardTab gifs = new KeyboardTab("gifs");
+        java.util.List<Object> tabs = java.util.List.of(emoji, avatar, gifs);
+        assertNull(Settings.filterKeyboardTabs(tabs));
+        Settings.preferences.edit().putBoolean("avatar_stickers", true).apply();
+        assertEquals(java.util.List.of(emoji, gifs), Settings.filterKeyboardTabs(tabs));
+        assertNull(Settings.filterKeyboardTabs(java.util.List.of(emoji, gifs)));
+        assertNull(Settings.filterKeyboardTabs(null));
+        Settings.preferences.edit().putBoolean("paused", true).apply();
+        assertNull(Settings.filterKeyboardTabs(tabs));
+    }
+
     @Test public void messengerButtonOpensItsLauncherTaskInsteadOfTheSettingsTask() {
         var application = RuntimeEnvironment.getApplication();
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)

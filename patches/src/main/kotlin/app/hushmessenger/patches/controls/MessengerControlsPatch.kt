@@ -103,6 +103,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "unsent_indicator" -> method.validateUnsentIndicator()
             "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateScratch()
+            "avatar_tabs" -> method.validateKeyboardTabs()
             else -> method.validateSwitch()
         }
     }
@@ -123,6 +124,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "unsent_indicator" -> method.injectUnsentIndicator()
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
+            "avatar_tabs" -> method.injectKeyboardTabs()
             else -> method.injectFeatureSwitch(key)
         }
     }
@@ -187,7 +189,7 @@ val hideReelsBadgePatch = controlPatch("reels_badge", "Hide Reels badge", "Hides
 @Suppress("unused")
 val hideAiStickersPatch = controlPatch("ai_stickers", "Hide AI sticker tools", "Hides the generated-sticker tab and AI sticker suggestions.", "Stickers")
 @Suppress("unused")
-val hideAvatarStickersPatch = controlPatch("avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "Stickers")
+val hideAvatarStickersPatch = controlPatch("avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "Stickers", "avatar_stickers", "avatar_tabs")
 @Suppress("unused")
 val hideChatPromotionsPatch = controlPatch("chat_promotions", "Hide chat promotions", "Hides Messenger quick-promotion banners inside conversations.", "Conversations")
 @Suppress("unused")

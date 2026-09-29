@@ -118,6 +118,29 @@ public final class Settings {
         return filtered;
     }
 
+    private static final String AVATAR_TAB_EVENT = "com.facebook.xapp.messaging.composer.avatar.composertab.event.ActivateAvatarSticker";
+
+    /** Null means keep Messenger's sticker keyboard tabs; otherwise the tabs without the avatar tab. */
+    public static List<?> filterKeyboardTabs(List<?> tabs) {
+        if (tabs == null || tabs.isEmpty() || !enabled("avatar_stickers")) return null;
+        List<Object> kept = new ArrayList<>(tabs.size());
+        for (Object tab : tabs) if (!opensAvatarTab(tab)) kept.add(tab);
+        return kept.size() == tabs.size() ? null : kept;
+    }
+
+    private static boolean opensAvatarTab(Object tab) {
+        if (tab == null) return false;
+        for (java.lang.reflect.Field f : tab.getClass().getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
+            try {
+                f.setAccessible(true);
+                Object value = f.get(tab);
+                if (value != null && AVATAR_TAB_EVENT.equals(value.getClass().getName())) return true;
+            } catch (ReflectiveOperationException | RuntimeException ignored) { }
+        }
+        return false;
+    }
+
     /** Keep non-web routes and Messenger's surrounding link handling intact. */
     public static boolean preferExternalBrowser(boolean original, Uri uri) {
         if (uri == null || !enabled("external_browser")) return original;

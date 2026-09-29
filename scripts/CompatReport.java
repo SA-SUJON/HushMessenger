@@ -118,6 +118,7 @@ public class CompatReport {
         hooks.put("delta_unsent", Set.of("LX/K1Y;->Btd(I)Z"));
         hooks.put("ai_search", Set.of("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"));
         hooks.put("emoji_typeface", Set.of("LX/1KV;->A00()Landroid/graphics/Typeface;"));
+        hooks.put("avatar_tabs", Set.of("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()" + IMMUTABLE_LIST));
         hooks.put("menu_settings", Set.of("LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;", "LX/TxV;->CAo(LX/4jw;I)V",
             "LX/Txc;->A0I(Ljava/util/List;)V", "LX/Jwp;->onClick(Landroid/view/View;)V"));
         hooks.put("people", Set.of("LX/1pm;->A0C()Z", "LX/2Wl;->A04()Z"));
@@ -170,7 +171,7 @@ public class CompatReport {
         PATCHES.put("Hide Chat Moments", List.of("moments"));
         PATCHES.put("Hide Reels badge", List.of("reels_badge"));
         PATCHES.put("Hide AI sticker tools", List.of("ai_stickers"));
-        PATCHES.put("Hide avatar stickers", List.of("avatar_stickers"));
+        PATCHES.put("Hide avatar stickers", List.of("avatar_stickers", "avatar_tabs"));
         PATCHES.put("Hide chat promotions", List.of("chat_promotions"));
         PATCHES.put("Hide business reply suggestions", List.of("suggested_replies"));
         PATCHES.put("Hide business typing suggestions", List.of("business_suggestions"));
@@ -535,6 +536,13 @@ public class CompatReport {
                     paramTypes.isEmpty() && !isStatic &&
                     strings.contains("FacebookEmojiTypefaceProviderImpl")) {
                     found.get("emoji_typeface").add(method);
+                }
+
+                // avatar_tabs: the Litho sticker keyboard's tab list builder
+                if (IMMUTABLE_LIST.equals(method.getReturnType()) && paramTypes.isEmpty() &&
+                    refs.stream().anyMatch(r -> r.toString().startsWith(
+                        "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;->"))) {
+                    found.get("avatar_tabs").add(method);
                 }
 
                 // menu_settings: Settings folder builder, grid binder and the drawer's folder click
