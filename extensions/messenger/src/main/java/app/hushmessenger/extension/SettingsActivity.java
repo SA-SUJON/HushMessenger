@@ -81,7 +81,7 @@ public final class SettingsActivity extends Activity {
         {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
         {"allow_screenshot", "Allow screenshots", "Removes screenshot restrictions in vanish mode and E2EE chats.", "privacy"},
         {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. Not yet working in end-to-end encrypted chats.", "privacy"},
-        {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone. Not yet working in end-to-end encrypted chats.", "privacy"},
+        {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone. Not yet working in end-to-end encrypted chats. Your own unsend ability may be limited.", "privacy"},
     };
 
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {

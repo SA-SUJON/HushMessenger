@@ -165,6 +165,18 @@ public final class Settings {
                     title = f;
                 } else if (f.getType() == Integer.class) {
                     f.set(clone, null);
+                } else if (f.getType().getName().endsWith("HeterogeneousMap")) {
+                    // Folder metadata, such as Settings' unseen badge count, belongs to the Settings row.
+                    Object metadata = f.get(original);
+                    if (metadata == null) continue;
+                    Object copy = shallowClone(metadata);
+                    if (copy == null) return;
+                    for (java.lang.reflect.Field m : copy.getClass().getDeclaredFields()) {
+                        if (java.lang.reflect.Modifier.isStatic(m.getModifiers()) || m.getType() != Map.class) continue;
+                        m.setAccessible(true);
+                        m.set(copy, new java.util.HashMap<>());
+                    }
+                    f.set(clone, copy);
                 } else if (f.getType().getName().endsWith("DrawerFolderKey")) {
                     // Folder keys compare by identity, so a copy keeps this row from acting as Settings.
                     Object key = f.get(original);
@@ -186,15 +198,17 @@ public final class Settings {
         if (item == null) return null;
         try {
             Context context = null;
-            boolean ours = false;
+            boolean titled = false, settingsKey = false;
             for (java.lang.reflect.Field f : item.getClass().getDeclaredFields()) {
                 if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
                 f.setAccessible(true);
                 Object value = f.get(item);
                 if (value instanceof Context) context = (Context) value;
-                else if ("HushMessenger".equals(value)) ours = true;
+                else if ("HushMessenger".equals(value)) titled = true;
+                // Only the copy of the Settings row carries a Settings folder key with this title.
+                else if (value != null && value.getClass().getName().endsWith("SettingsFolderKey")) settingsKey = true;
             }
-            if (!ours || context == null) return item;
+            if (!titled || !settingsKey || context == null) return item;
             android.content.Intent intent = new android.content.Intent();
             intent.setClassName(context.getPackageName(), "app.hushmessenger.extension.SettingsActivity");
             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);

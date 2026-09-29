@@ -178,6 +178,7 @@ class ExpandedControlsTest {
             folderClick.replace("check-cast v16, LX/HRf;", "check-cast v16, LX/HRg;"),
             folderClick.replace("check-cast v1, LX/HRn;", "check-cast v1, LX/HRf;"),
             folderClick.replace("const/4 v7, 0x1", "const/4 v7, 0x1\n" + "nop\n".repeat(12)),
+            folderClick.replace("return-void", "const-string v1, \"$DRAWER_FOLDER_SELECTED\"\nreturn-void"),
         )) {
             assertFailsWith<PatchException> { folderClickMethod(body).injectMenuFolderClick("LX/HRf;") }
         }

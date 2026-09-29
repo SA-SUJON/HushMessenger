@@ -575,7 +575,11 @@ internal fun MutableMethod.menuFolderItemType(): String {
 internal fun MutableMethod.menuFolderCastIndex(folderItemType: String): Int {
     if (returnType != "V") throw PatchException("Messenger controls: drawer folder click returns $returnType")
     val code = implementation!!.instructions.toList()
-    val marker = code.indexOfFirst { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == DRAWER_FOLDER_SELECTED }
+    val markers = code.indices.filter {
+        ((code[it] as? ReferenceInstruction)?.reference as? StringReference)?.string == DRAWER_FOLDER_SELECTED
+    }
+    val marker = markers.singleOrNull()
+        ?: throw PatchException("Messenger controls: drawer folder click has ${markers.size} folder-selected markers, expected 1")
     val casts = code.indices.filter { index ->
         index < marker && marker - index <= 12 && code[index].opcode == Opcode.CHECK_CAST &&
             ((code[index] as ReferenceInstruction).reference as TypeReference).type == folderItemType

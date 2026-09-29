@@ -118,20 +118,32 @@ public class SettingsTest {
         }
     }
 
-    /** Shaped like Messenger 580's Menu tab folder row: context, identity key, badge and one title. */
-    static final class FakeDrawerFolderKey {
+    /** Shaped like Messenger 580's Menu tab folder row (HRf): context, key, metadata, badge and one title. */
+    static class FakeDrawerFolderKey {
         final String name;
         FakeDrawerFolderKey(String name) { this.name = name; }
+    }
+
+    static final class FakeSettingsFolderKey extends FakeDrawerFolderKey {
+        FakeSettingsFolderKey() { super("settings"); }
+    }
+
+    /** Messenger keeps folder metadata such as the unseen badge count in one Map. */
+    static final class FakeHeterogeneousMap {
+        final java.util.Map<Object, Object> entries;
+        FakeHeterogeneousMap(java.util.Map<Object, Object> entries) { this.entries = entries; }
     }
 
     static final class FolderRow {
         final Context context;
         final FakeDrawerFolderKey key;
+        final FakeHeterogeneousMap metadata;
         final Integer badge;
         final String title;
-        FolderRow(Context context, FakeDrawerFolderKey key, Integer badge, String title) {
+        FolderRow(Context context, FakeDrawerFolderKey key, FakeHeterogeneousMap metadata, Integer badge, String title) {
             this.context = context;
             this.key = key;
+            this.metadata = metadata;
             this.badge = badge;
             this.title = title;
         }
@@ -142,22 +154,26 @@ public class SettingsTest {
         final String second = "Subtitle";
     }
 
-    @Test public void menuSettingsRowCopiesTheFolderRowWithItsOwnKeyAndNoBadge() {
+    @Test public void menuSettingsRowCopiesTheFolderRowWithoutItsKeyOrBadge() {
         var application = RuntimeEnvironment.getApplication();
-        FakeDrawerFolderKey key = new FakeDrawerFolderKey("settings");
-        FolderRow settings = new FolderRow(application, key, 3, "Settings");
+        FakeDrawerFolderKey key = new FakeSettingsFolderKey();
+        FakeHeterogeneousMap metadata = new FakeHeterogeneousMap(new java.util.HashMap<>(java.util.Map.of("badge", 3)));
+        FolderRow settings = new FolderRow(application, key, metadata, 3, "Settings");
         java.util.ArrayList<Object> rows = new java.util.ArrayList<>(java.util.List.of(settings));
         Settings.addMenuSettingsEntry(rows);
         assertEquals(2, rows.size());
         assertSame(settings, rows.get(0));
         assertEquals("Settings", settings.title);
-        assertEquals(Integer.valueOf(3), settings.badge);
+        assertSame(metadata, settings.metadata);
+        assertEquals(java.util.Map.of("badge", 3), metadata.entries);
         FolderRow hush = (FolderRow) rows.get(1);
         assertEquals("HushMessenger", hush.title);
         assertNull(hush.badge);
         assertSame(application, hush.context);
         assertNotSame(key, hush.key);
-        assertEquals("settings", hush.key.name);
+        assertEquals(FakeSettingsFolderKey.class, hush.key.getClass());
+        assertNotSame(metadata, hush.metadata);
+        assertTrue(hush.metadata.entries.isEmpty());
     }
 
     @Test public void menuSettingsRowLeavesListsItCannotLabelAlone() {
@@ -170,12 +186,15 @@ public class SettingsTest {
         Settings.addMenuSettingsEntry(null);
     }
 
-    @Test public void onlyTheHushFolderRowOpensSettings() {
+    @Test public void onlyTheHushCopyOfTheSettingsRowOpensSettings() {
         var application = RuntimeEnvironment.getApplication();
-        FolderRow settings = new FolderRow(application, new FakeDrawerFolderKey("settings"), null, "Settings");
+        FolderRow settings = new FolderRow(application, new FakeSettingsFolderKey(), null, null, "Settings");
         assertSame(settings, Settings.drawerFolderClicked(settings));
+        // A community or folder that happens to use the same name keeps Messenger's handling.
+        FolderRow namesake = new FolderRow(application, new FakeDrawerFolderKey("community"), null, null, "HushMessenger");
+        assertSame(namesake, Settings.drawerFolderClicked(namesake));
         assertNull(Shadows.shadowOf(application).getNextStartedActivity());
-        FolderRow hush = new FolderRow(application, new FakeDrawerFolderKey("settings"), null, "HushMessenger");
+        FolderRow hush = new FolderRow(application, new FakeSettingsFolderKey(), null, null, "HushMessenger");
         assertNull(Settings.drawerFolderClicked(hush));
         Intent launched = Shadows.shadowOf(application).getNextStartedActivity();
         assertEquals(SettingsActivity.class.getName(), launched.getComponent().getClassName());

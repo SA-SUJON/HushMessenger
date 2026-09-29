@@ -564,7 +564,11 @@ public class CompatReport {
         // menu_settings: the plain-list drawer items setter lives in the class that creates the grid binder.
         String gridBinderType = null;
         for (var m : found.get("menu_settings")) {
-            if ("V".equals(m.getReturnType()) && m.getParameterTypes().size() == 2) gridBinderType = m.getDefiningClass();
+            if ("V".equals(m.getReturnType()) && m.getParameterTypes().size() == 2 &&
+                "I".equals(m.getParameterTypes().get(1).toString())) {
+                gridBinderType = m.getDefiningClass();
+                break;
+            }
         }
         if (gridBinderType != null) {
             outer:
