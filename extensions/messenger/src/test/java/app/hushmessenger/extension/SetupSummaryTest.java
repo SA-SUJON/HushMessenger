@@ -131,7 +131,7 @@ public class SetupSummaryTest {
     }
 
     @Test public void hidingTheDrawerIconDisablesOnlyTheLauncherAlias() throws Exception {
-        installedFeatures("people");
+        installedFeatures("people", "menu_row");
         var app = RuntimeEnvironment.getApplication();
         PackageManager packages = app.getPackageManager();
         var alias = new android.content.ComponentName(app.getPackageName(), SettingsActivity.DRAWER_ALIAS);
@@ -150,12 +150,36 @@ public class SetupSummaryTest {
             hide.setChecked(false);
             assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
         }
-        // A saved choice is applied again when settings open, for example after Import.
+        // A saved choice is applied again when settings open or Messenger starts.
         Settings.preferences.edit().putBoolean("hide_drawer_icon", true).commit();
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
             assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
         }
         Settings.preferences.edit().putBoolean("hide_drawer_icon", false).commit();
+        SettingsActivity.syncDrawerIcon(app);
+        assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
+    }
+
+    @Test public void withoutTheMenuRowTheDrawerIconCantBeHiddenAndComesBack() throws Exception {
+        installedFeatures("people");
+        var app = RuntimeEnvironment.getApplication();
+        PackageManager packages = app.getPackageManager();
+        var alias = new android.content.ComponentName(app.getPackageName(), SettingsActivity.DRAWER_ALIAS);
+        Shadows.shadowOf(packages).addActivityIfNotPresent(alias);
+        packages.setComponentEnabledSetting(alias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+        Settings.initialize(app);
+        Settings.preferences.edit().putBoolean("hide_drawer_icon", true).commit();
+        try {
+            SettingsActivity.syncDrawerIcon(app);
+            assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                View root = screen.get().getWindow().getDecorView();
+                root.findViewWithTag("tab_app").performClick();
+                assertNull(root.findViewWithTag("hide_drawer_icon"));
+            }
+        } finally {
+            Settings.preferences.edit().putBoolean("hide_drawer_icon", false).commit();
+        }
     }
 
     @Test public void pauseAndAndroidEligibilityAreSeparateFromSavedChoices() throws Exception {

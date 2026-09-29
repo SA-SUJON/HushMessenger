@@ -82,8 +82,7 @@ final class SettingsText {
             case "quick_access": return "QUICK ACCESS";
             case "access_help": return "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from your app drawer.";
             case "hide_drawer_icon": return "Hide app drawer icon";
-            case "hide_drawer_icon_help": return "Removes HushMessenger settings from your app list. Long-press Messenger's icon and tap Patch controls to open it.";
-            case "hide_drawer_icon_help_menu": return "Removes HushMessenger settings from your app list. Open it from Messenger's Menu tab, or long-press Messenger's icon and tap Patch controls.";
+            case "hide_drawer_icon_help": return "Removes HushMessenger settings from your app list. Open it from Messenger's Menu tab, or long-press Messenger's icon and tap Patch controls.";
             case "access_help_menu": return "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from its row in Messenger's Menu tab or from your app drawer.";
             case "restart": return "Restart Messenger";
             case "restarting": return "Restarting Messenger...";

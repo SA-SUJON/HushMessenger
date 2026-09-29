@@ -46,19 +46,32 @@ class ControlProfileTest {
     private val builder = "Lcom/google/common/collect/ImmutableList${'$'}Builder;"
     private val copy = "LX/CS3;->A0j($builder Ljava/lang/Iterable;)Lcom/google/common/collect/ImmutableList;".replace(" ", "")
 
-    private fun inlineTabs(extraCopy: Boolean = false, branchIntoCopy: Boolean = false) =
-        fixtureMethod("$COMPOSER_FACTORY->A6U(LX/5n3;)V", """
+    private fun inlineTabs(
+        extraCopy: Boolean = false,
+        branchIntoCopy: Boolean = false,
+        switchIntoCopy: Boolean = false,
+        catchIntoCopy: Boolean = false,
+    ) = fixtureMethod("$COMPOSER_FACTORY->A6U(LX/5n3;)V", """
             new-instance v12, Ljava/util/ArrayList;
             invoke-direct {v12}, Ljava/util/ArrayList;-><init>()V
             invoke-static {}, Lcom/google/common/collect/ImmutableList;->builder()$builder
             move-result-object v2
             ${if (branchIntoCopy) "if-eqz v2, :copy" else "nop"}
-            ${if (branchIntoCopy) ":copy" else ""}
+            const/4 v4, 0x0
+            ${if (switchIntoCopy) "packed-switch v4, :cases" else "nop"}
+            :copy
             invoke-static {v2, v12}, $copy
             move-result-object v3
             ${if (extraCopy) "invoke-static {v2, v12}, $copy" else "nop"}
             return-void
-        """.trimIndent(), registers = 16)
+            ${if (switchIntoCopy) ":cases\n.packed-switch 0x1\n:copy\n.end packed-switch" else ""}
+        """.trimIndent(), registers = 16).apply {
+            // Instruction snippets carry no try blocks, so the handler is added directly.
+            if (catchIntoCopy) implementation!!.run {
+                val copyIndex = instructions.indexOfFirst { (it as? ReferenceInstruction)?.reference.toString() == copy }
+                addCatch(newLabelForIndex(2), newLabelForIndex(4), newLabelForIndex(copyIndex))
+            }
+        }
 
     @Test fun anInlineTabListIsFilteredJustBeforeItIsCopied() {
         val method = inlineTabs()
@@ -69,11 +82,17 @@ class ControlProfileTest {
         val call = method.getInstruction(copyIndex)
         assertEquals(Opcode.INVOKE_STATIC_RANGE, call.opcode)
         assertEquals("$SETTINGS->removeAvatarTabs(Ljava/lang/Iterable;)V", (call as ReferenceInstruction).reference.toString())
+        // The hook gets the Iterable (v12), not the Builder (v2).
+        val range = call as com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+        assertEquals(12, range.startRegister)
+        assertEquals(1, range.registerCount)
         assertEquals(copy, (method.getInstruction(copyIndex + 1) as ReferenceInstruction).reference.toString())
     }
 
     @Test fun anInlineTabListWithTwoCopiesOrABranchIntoTheCopyIsRefused() {
         assertFailsWith<PatchException> { inlineTabs(extraCopy = true).injectKeyboardTabsInline() }
         assertFailsWith<PatchException> { inlineTabs(branchIntoCopy = true).injectKeyboardTabsInline() }
+        assertFailsWith<PatchException> { inlineTabs(switchIntoCopy = true).injectKeyboardTabsInline() }
+        assertFailsWith<PatchException> { inlineTabs(catchIntoCopy = true).injectKeyboardTabsInline() }
     }
 }

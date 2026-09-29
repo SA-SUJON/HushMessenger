@@ -25,6 +25,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference as DexMethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
@@ -490,6 +491,28 @@ internal fun List<Instruction>.branchTarget(index: Int): Int {
     return -1
 }
 
+/** Instruction indexes a branch, a switch case or a catch handler can land on. */
+internal fun MutableMethod.jumpTargets(): Set<Int> {
+    val code = implementation!!.instructions.toList()
+    val addresses = IntArray(code.size + 1)
+    for (i in code.indices) addresses[i + 1] = addresses[i] + code[i].codeUnits
+    val indexAt = code.indices.associateBy { addresses[it] }
+    val targets = mutableSetOf<Int>()
+    code.forEachIndexed { i, instruction ->
+        if (instruction !is OffsetInstruction) return@forEachIndexed
+        val landing = addresses[i] + instruction.codeOffset
+        if (instruction.opcode == Opcode.PACKED_SWITCH || instruction.opcode == Opcode.SPARSE_SWITCH) {
+            // Case offsets count from the switch instruction, not from its payload.
+            (indexAt[landing]?.let(code::get) as? SwitchPayload)?.switchElements
+                ?.forEach { case -> indexAt[addresses[i] + case.offset]?.let(targets::add) }
+        } else indexAt[landing]?.let(targets::add)
+    }
+    implementation!!.tryBlocks.forEach { block ->
+        block.exceptionHandlers.forEach { handler -> indexAt[handler.handlerCodeAddress]?.let(targets::add) }
+    }
+    return targets
+}
+
 /**
  * The Notifications tab reads its stock "section hidden" preference into v0 and branches on it. A hidden
  * section is still shown when a server flag (v0 at index 19) is on; both branches land on the final false return.
@@ -615,8 +638,8 @@ internal fun MutableMethod.validateKeyboardTabsInline(): Pair<Int, Int> {
         code[index].opcode == Opcode.INVOKE_STATIC && ref != null && ref.returnType == IMMUTABLE_LIST &&
             ref.parameterTypes.map { it.toString() } == listOf("Lcom/google/common/collect/ImmutableList\$Builder;", "Ljava/lang/Iterable;")
     }
-    // Code inserted before a branch target would be skipped by that branch.
-    if (returnType != "V" || copies.size != 1 || code.indices.any { code.branchTarget(it) == copies.single() }) {
+    // Code inserted before a jump target would be skipped by whatever jumps there.
+    if (returnType != "V" || copies.size != 1 || copies.single() in jumpTargets()) {
         throw PatchException("Messenger controls: the sticker keyboard tab list differs from the tested build")
     }
     return copies.single() to (code[copies.single()] as FiveRegisterInstruction).registerD

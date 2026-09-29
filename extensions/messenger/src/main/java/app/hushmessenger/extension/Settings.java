@@ -66,6 +66,11 @@ public final class Settings {
     public static boolean allowScreenshot() { return enabled("allow_screenshot"); }
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
+    /** The icon stays hidden only while the Menu row that replaces it exists. */
+    static boolean drawerIconHidden() {
+        SharedPreferences prefs = preferences;
+        return installed.contains("menu_row") && prefs != null && prefs.getBoolean("hide_drawer_icon", false);
+    }
 
     private static final String KEPT_UNSENT_KEY = "kept_unsent_ids";
 

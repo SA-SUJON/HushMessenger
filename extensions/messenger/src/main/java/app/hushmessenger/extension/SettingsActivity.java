@@ -91,6 +91,10 @@ public final class SettingsActivity extends Activity {
      * Shows or hides the app drawer entry, an alias of this screen that only a patched Messenger has.
      * The screen itself stays enabled for the long-press shortcut and the Menu tab row.
      */
+    static void syncDrawerIcon(Context context) {
+        applyDrawerIcon(context, Settings.drawerIconHidden());
+    }
+
     static void applyDrawerIcon(Context context, boolean hidden) {
         PackageManager packages = context.getPackageManager();
         ComponentName alias = new ComponentName(context.getPackageName(), DRAWER_ALIAS);
@@ -107,8 +111,7 @@ public final class SettingsActivity extends Activity {
 
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {
         Settings.initialize(this);
-        // Keep the drawer icon in step with the saved choice, for example after Import.
-        applyDrawerIcon(this, Settings.preferences.getBoolean("hide_drawer_icon", false));
+        syncDrawerIcon(this);
         boolean light = Settings.preferences.getBoolean("light", false);
         lightTheme = light;
         setTheme(light ? android.R.style.Theme_Material_Light_NoActionBar : android.R.style.Theme_Material_NoActionBar);
@@ -503,9 +506,11 @@ public final class SettingsActivity extends Activity {
         restart.setTag("restart_messenger");
         restart.setOnClickListener(view -> startActivity(new Intent(this, RestartActivity.class)));
         ui.add(access, restart, 14);
-        ui.rule(access, 14);
-        ui.add(access, controlRow("hide_drawer_icon", text.base("hide_drawer_icon"),
-            text.base(Settings.installed.contains("menu_row") ? "hide_drawer_icon_help_menu" : "hide_drawer_icon_help"), false), 14);
+        // Without the Menu row, a launcher that has no app shortcuts would leave no way back in.
+        if (Settings.installed.contains("menu_row")) {
+            ui.rule(access, 14);
+            ui.add(access, controlRow("hide_drawer_icon", text.base("hide_drawer_icon"), text.base("hide_drawer_icon_help"), false), 14);
+        }
         ui.add(content, access, 12);
         ui.add(content, ui.heading(text.get("appearance")), 22);
         LinearLayout appearance = ui.panel();
