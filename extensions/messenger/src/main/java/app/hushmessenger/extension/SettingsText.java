@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Build;
 import android.os.LocaleList;
 import android.text.TextUtils;
+import java.util.IllegalFormatException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -38,8 +39,16 @@ final class SettingsText {
 
     int layoutDirection() { return TextUtils.getLayoutDirectionFromLocale(locale); }
 
-    String get(String id, Object... arguments) {
-        return display(String.format(locale, base(id), arguments));
+    String get(String id, Object... arguments) { return display(format(id, arguments)); }
+
+    /** The id's text with its arguments, without the pseudo-locale markers, for text placed inside other text. */
+    String format(String id, Object... arguments) {
+        try {
+            return String.format(locale, base(id), arguments);
+        } catch (IllegalFormatException brokenTranslation) {
+            // A translated placeholder that doesn't format mustn't take the screen down; the English one does.
+            return String.format(locale, english(id), arguments);
+        }
     }
 
     String count(String id, int count) { return get(id + (count == 1 ? "_one" : "_many"), count); }
@@ -143,6 +152,9 @@ final class SettingsText {
         ENGLISH.put("update_error", "Couldn't check for updates.");
         ENGLISH.put("active_now", "Used just now");
         ENGLISH.put("active_ago", "Used %s ago");
+        ENGLISH.put("seconds_short", "%ds");
+        ENGLISH.put("minutes_short", "%dm");
+        ENGLISH.put("hours_short", "%dh");
         ENGLISH.put("not_active", "Nothing to change yet since restart");
         ENGLISH.put("error_now", "Stopped with an error just now");
         ENGLISH.put("error_ago", "Stopped with an error %s ago");

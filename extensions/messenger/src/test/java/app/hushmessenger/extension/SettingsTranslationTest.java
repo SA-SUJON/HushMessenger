@@ -7,8 +7,10 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IllegalFormatException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,8 +34,14 @@ public class SettingsTranslationTest {
         Settings.preferences.edit().clear().commit();
     }
 
-    @After public void removeTestLocales() {
-        SettingsTranslations.LOCALES.remove("es");
+    private Map<String, String> shippedSpanish;
+
+    @Before public void keepShippedSpanish() { shippedSpanish = SettingsTranslations.LOCALES.get("es"); }
+
+    /** The display test swaps in its own Spanish table; put back the real one so the shipped check still sees it. */
+    @After public void restoreShippedSpanish() {
+        if (shippedSpanish == null) SettingsTranslations.LOCALES.remove("es");
+        else SettingsTranslations.LOCALES.put("es", shippedSpanish);
     }
 
     /** Every id a locale table has to cover, with its English. */
@@ -60,7 +68,20 @@ public class SettingsTranslationTest {
         return found;
     }
 
-    /** What's wrong with a locale table: ids it lacks or doesn't know, empty text, and changed placeholders. */
+    /** Arguments shaped like the English text's placeholders, so a translation can be formatted the way get() does. */
+    static Object[] sampleArguments(String english) {
+        List<String> found = placeholders(english);
+        int count = 0;
+        for (String p : found) count = Math.max(count, Integer.parseInt(p.substring(0, p.length() - 1)));
+        Object[] arguments = new Object[count];
+        for (String p : found) {
+            char conversion = p.charAt(p.length() - 1);
+            arguments[Integer.parseInt(p.substring(0, p.length() - 1)) - 1] = "doxX".indexOf(conversion) >= 0 ? (Object) 7 : "x";
+        }
+        return arguments;
+    }
+
+    /** What's wrong with a locale table: ids it lacks or doesn't know, empty text, changed placeholders, and text that won't format. */
     static List<String> problems(Map<String, String> table) {
         Map<String, String> english = englishIds();
         List<String> problems = new ArrayList<>();
@@ -69,7 +90,17 @@ public class SettingsTranslationTest {
             String source = english.get(entry.getKey());
             if (source == null) problems.add("unknown " + entry.getKey());
             else if (entry.getValue().trim().isEmpty()) problems.add("empty " + entry.getKey());
+            // Control rows are shown as is; only text ids go through get(), which runs String.format on them.
+            else if (!SettingsText.ENGLISH.containsKey(entry.getKey())) continue;
             else if (!placeholders(source).equals(placeholders(entry.getValue()))) problems.add("placeholders differ in " + entry.getKey());
+            else {
+                // A stray % that isn't %% passes the placeholder list but crashes the screen.
+                try {
+                    String.format(Locale.ROOT, entry.getValue(), sampleArguments(source));
+                } catch (IllegalFormatException e) {
+                    problems.add("won't format " + entry.getKey());
+                }
+            }
         }
         Collections.sort(problems);
         return problems;
@@ -107,8 +138,35 @@ public class SettingsTranslationTest {
         table.put("update_available", "Version %d is available");
         table.put("people.title", " ");
         table.put("no_such_text", "x");
+        table.put("saved", "PX 100%.");
+        // A control row is shown as is, never formatted, so a percent sign is fine there.
+        table.put("people.description", "Hides 100% of suggestions.");
+        table.put("saved_one", "%d saved choice, 100%% kept.");
         assertEquals(List.of("empty people.title", "missing controls", "placeholders differ in results_one",
-            "placeholders differ in update_available", "unknown no_such_text"), problems(table));
+            "placeholders differ in update_available", "unknown no_such_text", "won't format saved"), problems(table));
+    }
+
+    @Test public void aShippedSpanishTableIsCheckedEvenAfterTheDisplayTestSwapsItsOwnIn() {
+        Map<String, String> reallyShipped = shippedSpanish;
+        String[][] missingOne = marked(englishIds());
+        SettingsTranslations.add("es", java.util.Arrays.stream(missingOne).filter(p -> !p[0].equals("controls")).toArray(String[][]::new));
+        // Run the display test with its own before and after around it, as JUnit would.
+        keepShippedSpanish();
+        aLocaleTableTranslatesTheScreenAndKeepsPreferenceKeysAndEnglishSearch();
+        restoreShippedSpanish();
+        assertEquals(List.of("missing controls"), problems(SettingsTranslations.LOCALES.get("es")));
+        shippedSpanish = reallyShipped;
+    }
+
+    @Test public void aTranslationThatWontFormatFallsBackToEnglishInsteadOfCrashing() {
+        Map<String, String> english = englishIds();
+        english.put("results_many", "%d of %d installed controls, 100%");
+        SettingsTranslations.add("es", marked(english));
+        SettingsText text = new SettingsText(Locale.forLanguageTag("es"));
+        assertEquals("3 of 20 installed controls", text.get("results_many", 3, 20));
+        assertEquals("ES 5m", text.format("minutes_short", 5L));
+        assertEquals("ES Used ES 5m ago", text.get("active_ago", text.format("minutes_short", 5L)));
+        assertEquals("Used 5m ago", new SettingsText(Locale.US).get("active_ago", new SettingsText(Locale.US).format("minutes_short", 5L)));
     }
 
     @Test public void aLocaleTableTranslatesTheScreenAndKeepsPreferenceKeysAndEnglishSearch() {
@@ -131,7 +189,8 @@ public class SettingsTranslationTest {
                 assertFalse(query, root.findViewWithTag("stories").isShown());
             }
         }
-        assertEquals("ES 3 of 20 installed controls", new SettingsText(java.util.Locale.forLanguageTag("es-MX")).get("results_many", 3, 20));
-        assertEquals("3 of 20 installed controls", new SettingsText(java.util.Locale.forLanguageTag("fr-FR")).get("results_many", 3, 20));
+        assertEquals("ES 3 of 20 installed controls", new SettingsText(Locale.forLanguageTag("es-MX")).get("results_many", 3, 20));
+        // "zxx" is the tag for no linguistic content, so no table will ever be added for it.
+        assertEquals("3 of 20 installed controls", new SettingsText(Locale.forLanguageTag("zxx")).get("results_many", 3, 20));
     }
 }

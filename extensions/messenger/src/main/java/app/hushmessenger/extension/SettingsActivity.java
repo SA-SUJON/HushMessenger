@@ -731,11 +731,11 @@ public final class SettingsActivity extends Activity {
     private String formatSince(long timestamp, String now, String ago) {
         long seconds = (System.currentTimeMillis() - timestamp) / 1000;
         if (seconds < 10) return text.get(now);
-        if (seconds < 60) return text.get(ago, seconds + "s");
+        if (seconds < 60) return text.get(ago, text.format("seconds_short", seconds));
         long minutes = seconds / 60;
-        if (minutes < 60) return text.get(ago, minutes + "m");
+        if (minutes < 60) return text.get(ago, text.format("minutes_short", minutes));
         long hours = minutes / 60;
-        return text.get(ago, hours + "h");
+        return text.get(ago, text.format("hours_short", hours));
     }
 
     private static final String EXPORT_HEADER = "hushmessenger:choices";
