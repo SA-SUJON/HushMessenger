@@ -1207,10 +1207,13 @@ public class CompatReport {
         System.out.println();
 
         boolean anyFail = false;
+        // Failed checks that aren't about the recorded profile; a new build with any of these isn't recorded
+        var blockers = new ArrayList<String>();
 
         // Pre-checks
         if (info != null && !PACKAGE.equals(info.packageName)) {
             System.out.println("[FAIL] Package name: expected " + PACKAGE + ", got " + info.packageName);
+            blockers.add("Package name");
             anyFail = true;
         }
         String code = info != null ? info.versionCode : null;
@@ -1269,6 +1272,7 @@ public class CompatReport {
             } else {
                 System.out.println("[FAIL] Install beside Meta apps");
                 for (var f : failures) System.out.println("       " + f);
+                blockers.add("Install beside Meta apps");
                 anyFail = true;
             }
         }
@@ -1281,6 +1285,7 @@ public class CompatReport {
             } else {
                 System.out.println("[FAIL] Restore screens on re-signed builds");
                 System.out.println("       No method found matching the signer lookup pattern");
+                blockers.add("Restore screens on re-signed builds");
                 anyFail = true;
             }
         }
@@ -1318,6 +1323,8 @@ public class CompatReport {
         } else if (expected != null) {
             System.out.println("PROFILE: differs from scripts/profiles/" + found.code + ".txt; see the failures above.");
             anyFail = true;
+        } else if (!blockers.isEmpty()) {
+            System.out.println("PROFILE: not written. Every control resolved, but these checks failed: " + String.join(", ", blockers) + ".");
         } else if (!save) {
             System.out.println("PROFILE: every control resolved. Run again with --save to record this build.");
         } else if (found.code.isEmpty()) {
