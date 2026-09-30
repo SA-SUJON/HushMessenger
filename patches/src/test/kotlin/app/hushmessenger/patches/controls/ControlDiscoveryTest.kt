@@ -56,6 +56,7 @@ class ControlDiscoveryTest {
                     "ai_search_chip" -> "const/4 v0, 0x0\nreturn-object v0"
                     "typing_mailbox" -> "const-string v0, \"$TYPING_MAILBOX_CALL\"\nconst/4 v0, 0x0\nreturn-object v0"
                     "read_mailbox" -> "const-string v0, \"$READ_MAILBOX_CALL\"\nreturn-void"
+                    "anonymous_stories" -> STORY_MARK_READ_BODY
                     "menu_settings" -> when {
                         id.contains("ArrayList") ->
                             "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
@@ -122,7 +123,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(82, found.values.sumOf { it.size })
+        assertEquals(83, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

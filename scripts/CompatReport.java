@@ -71,6 +71,7 @@ public class CompatReport {
     static final String AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/InboxAdsItem;";
     static final String IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;";
     static final String PREFERENCES = "Lcom/facebook/prefs/shared/FbSharedPreferences;";
+    static final String MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;";
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
     static final long PEOPLE_SERVER_FLAG = 72344235860374863L;
 
@@ -153,6 +154,7 @@ public class CompatReport {
         PATCHES.put("Allow screenshots", List.of("allow_screenshot"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
+        PATCHES.put("View stories anonymously", List.of("anonymous_stories"));
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
 
@@ -910,6 +912,12 @@ public class CompatReport {
                 // read_mailbox: the msys call that marks a thread read (and sends the receipt) in encrypted chats
                 if ("V".equals(method.getReturnType()) && strings.contains("markAsReadThreadWithThreadIdentifier")) {
                     found.get("read_mailbox").add(method);
+                }
+
+                // anonymous_stories: the story mark-read handler that reports a viewed card
+                if ("V".equals(method.getReturnType()) && paramTypes.equals(List.of(MONTAGE_CARD, "Z")) &&
+                    !isStatic && strings.contains("MontageMsysMarkReadHandler")) {
+                    found.get("anonymous_stories").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder
