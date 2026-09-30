@@ -25,12 +25,14 @@ class ControlProfileTest {
             }
         }
         assertEquals(79, PROFILE_346013370.hooks.values.sumOf { it.size })
+        assertEquals(79, PROFILE_346013423.hooks.values.sumOf { it.size })
     }
 
     @Test fun theVersionCodePicksTheProfile() {
         assertEquals(MessengerTarget.VERSION_CODES.toSet(), controlProfiles.keys)
         assertSame(PROFILE_346013370, controlProfileFor("346013370"))
-        for (code in listOf("346013387", "346013440", "346013442", "346013354", null)) {
+        assertSame(PROFILE_346013423, controlProfileFor("346013423"))
+        for (code in listOf("346013387", "346013440", "346013442", "346013354", "346013394", null)) {
             assertSame(BASE_PROFILE, controlProfileFor(code))
         }
     }
@@ -48,7 +50,7 @@ class ControlProfileTest {
         activeProfile = controlProfileFor("346013387", profiles)
         val failure = assertFailsWith<PatchException> { validateControls(found, setOf("people"), versions) }
         assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK (version code " +
-            "346013387 or 346013440 or 346013442 or 346013354 or 346013370) or 581.0.0.1.91 APK (version code 347000001).")
+            "346013387 or 346013440 or 346013442 or 346013354 or 346013370 or 346013394 or 346013423) or 581.0.0.1.91 APK (version code 347000001).")
     }
 
     @Test fun validationFollowsTheActiveBuild() {

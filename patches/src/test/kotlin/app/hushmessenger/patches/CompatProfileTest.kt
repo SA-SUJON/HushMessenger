@@ -96,9 +96,9 @@ class CompatProfileTest {
         val (exit, output) = compatReport("--kotlin", "../scripts/profiles/346013387.txt")
         assertEquals(0, exit, output)
         assertFalse("internal val" in output, output)
-        assertContains(output, "the controls match build 346013354, 346013440, 346013442.")
-        assertContains(output, "the permission loads match build 346013354, 346013440, 346013442.")
-        for (code in listOf(346013387, 346013354, 346013440, 346013442)) assertSame(BASE_PROFILE, controlProfileFor("$code"))
+        assertContains(output, "the controls match build 346013354, 346013394, 346013440, 346013442.")
+        assertContains(output, "the permission loads match build 346013354, 346013394, 346013440, 346013442.")
+        for (code in listOf(346013387, 346013354, 346013394, 346013440, 346013442)) assertSame(BASE_PROFILE, controlProfileFor("$code"))
     }
 
     @Test fun aRecordWithUnresolvedControlsListsThemAndGeneratesNothing(@TempDir dir: Path) {

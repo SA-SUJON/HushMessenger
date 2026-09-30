@@ -375,11 +375,18 @@ public class CompatReport {
     static List<String> peopleSection(List<Method> jewel, String getter) {
         if (jewel.size() != 1) return null;
         var code = instructions(jewel.get(0));
-        if (code.size() < 21 || code.get(8).getOpcode() != Opcode.SGET_OBJECT || register(code.get(8)) != 0 ||
+        // The server flag loads at 17, or at 16 where Redex inlined the list reset into one call (346013423).
+        var flags = new ArrayList<Integer>();
+        for (int i = 0; i < code.size(); i++) {
+            if (code.get(i).getOpcode() == Opcode.CONST_WIDE && code.get(i) instanceof WideLiteralInstruction flag &&
+                flag.getWideLiteral() == PEOPLE_SERVER_FLAG) flags.add(i);
+        }
+        if (flags.size() != 1 || flags.get(0) < 16 || flags.get(0) > 17) return null;
+        int at = flags.get(0);
+        if (code.size() < at + 4 || code.get(8).getOpcode() != Opcode.SGET_OBJECT || register(code.get(8)) != 0 ||
             code.get(10).getOpcode() != Opcode.INVOKE_INTERFACE || !getter.equals(ref(code.get(10))) ||
-            code.get(17).getOpcode() != Opcode.CONST_WIDE || !(code.get(17) instanceof WideLiteralInstruction flag) ||
-            flag.getWideLiteral() != PEOPLE_SERVER_FLAG || code.get(18).getOpcode() != Opcode.INVOKE_STATIC) return null;
-        return List.of(ref(code.get(8)), ref(code.get(18)));
+            code.get(at + 1).getOpcode() != Opcode.INVOKE_STATIC) return null;
+        return List.of(ref(code.get(8)), ref(code.get(at + 1)));
     }
 
     static String subtabsSupplier(List<Method> subtabs) {

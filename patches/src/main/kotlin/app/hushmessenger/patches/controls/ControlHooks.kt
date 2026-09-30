@@ -517,26 +517,37 @@ internal fun MutableMethod.jumpTargets(): Set<Int> {
     return targets
 }
 
+private const val PEOPLE_SERVER_FLAG = 72344235860374863L
+
+/**
+ * Where the Notifications tab loads its server flag: the method's only constant with that value, after the
+ * preference branch at 12. It's at 17 in most builds and at 16 where Redex inlined the list reset into one call.
+ */
+private fun List<Instruction>.peopleFlagIndex(): Int =
+    indices.filter { i -> this[i].opcode == Opcode.CONST_WIDE && (this[i] as? WideLiteralInstruction)?.wideLiteral == PEOPLE_SERVER_FLAG }
+        .singleOrNull()?.takeIf { it in 16..17 } ?: -1
+
 /**
  * The Notifications tab reads its stock "section hidden" preference into v0 and branches on it. A hidden
- * section is still shown when a server flag (v0 at index 19) is on; both branches land on the final false return.
+ * section is still shown when a server flag (v0, three instructions after its constant) is on; both branches
+ * land on the final false return.
  */
 internal fun MutableMethod.validatePeopleSection() {
     val code = implementation!!.instructions.toList()
     val key = code.getOrNull(8)
     val default = code.getOrNull(9)
     val getter = code.getOrNull(10) as? FiveRegisterInstruction
-    val flag = code.getOrNull(17)
+    val at = code.peopleFlagIndex()
+    val flag = code.getOrNull(at)
     val last = code.lastIndex
     if (!AccessFlags.STATIC.isSet(accessFlags) || returnType != "Z" || parameterTypes != listOf(definingClass) ||
         implementation!!.registerCount != 6 ||
         flag?.opcode != Opcode.CONST_WIDE || (flag as? OneRegisterInstruction)?.registerA != 0 ||
-        (flag as? WideLiteralInstruction)?.wideLiteral != 72344235860374863L ||
-        code.getOrNull(18)?.opcode != Opcode.INVOKE_STATIC ||
-        (code[18] as? ReferenceInstruction)?.reference.toString() != activeProfile.peopleFlagCheck ||
-        code.getOrNull(19)?.opcode != Opcode.MOVE_RESULT || (code[19] as? OneRegisterInstruction)?.registerA != 0 ||
-        code.getOrNull(20)?.opcode != Opcode.IF_NEZ || (code[20] as? OneRegisterInstruction)?.registerA != 0 ||
-        code.branchTarget(12) != last || code.branchTarget(20) != last ||
+        code.getOrNull(at + 1)?.opcode != Opcode.INVOKE_STATIC ||
+        (code[at + 1] as? ReferenceInstruction)?.reference.toString() != activeProfile.peopleFlagCheck ||
+        code.getOrNull(at + 2)?.opcode != Opcode.MOVE_RESULT || (code[at + 2] as? OneRegisterInstruction)?.registerA != 0 ||
+        code.getOrNull(at + 3)?.opcode != Opcode.IF_NEZ || (code[at + 3] as? OneRegisterInstruction)?.registerA != 0 ||
+        code.branchTarget(12) != last || code.branchTarget(at + 3) != last ||
         code[last].opcode != Opcode.RETURN || (code[last] as? OneRegisterInstruction)?.registerA != 4 ||
         code[last - 1].opcode != Opcode.RETURN || (code[last - 1] as? OneRegisterInstruction)?.registerA != 0 ||
         code[last - 2].opcode != Opcode.CONST_4 || (code[last - 2] as? WideLiteralInstruction)?.wideLiteral != 1L ||
@@ -557,7 +568,8 @@ internal fun MutableMethod.injectPeopleSection() {
     validatePeopleSection()
     // An enabled control ignores the server override, then counts as Messenger's own hide choice.
     // The later site goes first so index 12 still names the preference branch.
-    addInstructions(20, "invoke-static {v0}, $SETTINGS->keepPeopleSection(Z)Z\nmove-result v0")
+    val serverBranch = implementation!!.instructions.toList().peopleFlagIndex() + 3
+    addInstructions(serverBranch, "invoke-static {v0}, $SETTINGS->keepPeopleSection(Z)Z\nmove-result v0")
     addInstructions(12, "invoke-static {v0}, $SETTINGS->hidePeopleSection(Z)Z\nmove-result v0")
 }
 

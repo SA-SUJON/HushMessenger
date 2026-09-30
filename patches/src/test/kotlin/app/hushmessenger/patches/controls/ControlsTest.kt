@@ -95,24 +95,28 @@ class ControlsTest {
     }
 
     @Test fun notificationsSuggestionsJoinTheStockPreferenceAndSkipTheServerOverride() {
-        val reader = peopleJewelMethod()
-        val original = reader.implementation!!.instructions.toList()
-        reader.injectPeopleSection()
-        val code = reader.implementation!!.instructions.toList()
-        fun assertSwitch(index: Int, method: String) {
-            assertEquals("$SETTINGS->$method(Z)Z", (code[index] as ReferenceInstruction).reference.toString())
-            assertEquals(listOf(1, 0), (code[index] as FiveRegisterInstruction).let { listOf(it.registerCount, it.registerC) })
-            assertEquals(Opcode.MOVE_RESULT, code[index + 1].opcode)
-            assertEquals(0, (code[index + 1] as OneRegisterInstruction).registerA)
+        // The server branch sits at 20, or at 19 in 346013423 where the list reset is one call.
+        for ((inlined, serverBranch) in listOf(false to 20, true to 19)) {
+            val reader = peopleJewelMethod(inlinedReset = inlined)
+            val original = reader.implementation!!.instructions.toList()
+            assertEquals(Opcode.IF_NEZ, original[serverBranch].opcode)
+            reader.injectPeopleSection()
+            val code = reader.implementation!!.instructions.toList()
+            fun assertSwitch(index: Int, method: String) {
+                assertEquals("$SETTINGS->$method(Z)Z", (code[index] as ReferenceInstruction).reference.toString())
+                assertEquals(listOf(1, 0), (code[index] as FiveRegisterInstruction).let { listOf(it.registerCount, it.registerC) })
+                assertEquals(Opcode.MOVE_RESULT, code[index + 1].opcode)
+                assertEquals(0, (code[index + 1] as OneRegisterInstruction).registerA)
+            }
+            assertEquals(original.take(12), code.take(12))
+            assertSwitch(12, "hidePeopleSection")
+            assertEquals(original.subList(12, serverBranch), code.subList(14, serverBranch + 2))
+            assertSwitch(serverBranch + 2, "keepPeopleSection")
+            assertEquals(original.drop(serverBranch), code.drop(serverBranch + 4))
+            // Both stock branches still skip to the original "not hidden" return.
+            assertEquals(code.lastIndex, code.branchTarget(14))
+            assertEquals(code.lastIndex, code.branchTarget(serverBranch + 4))
         }
-        assertEquals(original.take(12), code.take(12))
-        assertSwitch(12, "hidePeopleSection")
-        assertEquals(original.subList(12, 20), code.subList(14, 22))
-        assertSwitch(22, "keepPeopleSection")
-        assertEquals(original.drop(20), code.drop(24))
-        // Both stock branches still skip to the original "not hidden" return.
-        assertEquals(code.lastIndex, code.branchTarget(14))
-        assertEquals(code.lastIndex, code.branchTarget(24))
     }
 
     @Test fun changedNotificationsSuggestionsReaderFailsBeforeEditing() {
@@ -122,6 +126,10 @@ class ControlsTest {
             peopleJewelMethod(flags = AccessFlags.PUBLIC.value),
             peopleJewelMethod(serverFlag = "0x1L"),
             peopleJewelMethod(serverTarget = ":hidden"),
+            peopleJewelMethod(inlinedReset = true, serverTarget = ":hidden"),
+            // A second load of the flag makes the server branch ambiguous.
+            peopleJewelMethod(extraFlag = true),
+            peopleJewelMethod(inlinedReset = true, extraFlag = true),
         )) {
             val before = changed.implementation!!.instructions.toList()
             assertFailsWith<PatchException> { changed.injectPeopleSection() }

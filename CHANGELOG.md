@@ -4,6 +4,11 @@
 
 None of this is in a release yet. It'll ship together in the next one.
 
+### New
+
+- Messenger 580 builds `346013394` and `346013423` are supported now. They were the last two arm64 "nodpi" builds on APKMirror that the patch turned away, so all six of those work. All 27 patches apply to both in Morphe Desktop 1.17.0. Build `346013423` checks the Notifications tab's suggestions setting one step earlier than the others, so that check now finds its spot instead of counting on a fixed position.
+- Adding a Messenger build now starts with running `scripts/CompatReport.java <apk> --save` (dexlib2 and Guava on the classpath). It records the build under `scripts/profiles/` and prints the Kotlin to paste, or lists the controls that don't resolve and writes nothing. The install checker and the changed-APK check read those records, so each build is listed in one place, and a Gradle test fails if a record and the Kotlin tables disagree.
+
 ### Changed and fixed
 
 - The build now uses the Kotlin Gradle plugin 2.4.20 instead of 2.4.10, which had an unsafe deserialization flaw in its build cache (CVE-2026-53914). Bouncy Castle, which the build uses for signing, is now 1.86 everywhere. The 1.77 and 1.79 copies it replaces predate fixes for several published advisories. This only changes how the bundle is built. All 27 patches still apply in Morphe Desktop.
