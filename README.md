@@ -40,7 +40,7 @@ The S22's stock Messenger 580 has a **Hide suggestions** action in the `People y
 
 ### Check a signed APK before installation
 
-The repository includes a read-only installation check. It uses Android's `apksigner` to verify the candidate and installed APKs, compares the complete signer sets for the phone's Android version, and checks who owns the candidate's declared permissions. It checks every Android user for an existing installation. Source-stamp certificates aren't treated as app signers. It also catches version downgrades and checks the APK's arm64 libraries against the phone's memory page size.
+The repository includes a read-only installation check. It uses Android's `apksigner` to verify the candidate and installed APKs, compares the complete signer sets for the phone's Android version, and checks who owns the candidate's declared permissions. It checks every Android user for an existing installation. Source-stamp certificates aren't treated as app signers. It also catches version downgrades and checks the APK's arm64 libraries against the phone's memory page size. If Messenger was uninstalled with its data kept, the check reads the version code Android kept for it. When that's 2147483647, it tells you it's likely a leftover from another patch set's "Spoof package version" and points to the fix under Troubleshooting.
 
 Use Python 3.11 or newer, JDK 21, Android SDK Build Tools (tested with 36.1.0), and an authorized ADB connection. Run this from the repository with the phone's exact serial from `adb devices`:
 

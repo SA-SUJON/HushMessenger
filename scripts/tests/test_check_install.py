@@ -115,6 +115,48 @@ class CertificateChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             checker.conflicts(apk(), {}, {PERMISSION: "com.facebook.katana"})
 
+    def test_normal_downgrade_keeps_the_plain_message(self):
+        self.assertEqual(
+            checker.conflicts(apk(), {"com.facebook.orca": apk(code=346013441)}, {}),
+            ["Version downgrade: installed 346013441, candidate 346013440."],
+        )
+
+    def test_spoofed_version_code_is_named_with_the_readme_fix(self):
+        installed = {"com.facebook.orca": apk(code=2147483647)}
+        leftover_only = checker.conflicts(apk(), {}, {}, leftover=2147483647)
+        for problems in (checker.conflicts(apk(), installed, {}), leftover_only):
+            with self.subTest(problems=problems):
+                self.assertEqual(len(problems), 1)
+                self.assertIn("2147483647", problems[0])
+                self.assertIn('"Spoof package version"', problems[0])
+                self.assertIn("INSTALL_FAILED_VERSION_DOWNGRADE", problems[0])
+        self.assertIn("uninstalled with its data kept", leftover_only[0])
+
+    def test_leftover_data_only_conflicts_when_newer(self):
+        self.assertIn(
+            "Android refuses anything lower",
+            checker.conflicts(apk(), {}, {}, leftover=346013441)[0],
+        )
+        self.assertEqual(checker.conflicts(apk(), {}, {}, leftover=346013387), [])
+        self.assertEqual(checker.conflicts(apk(), {}, {}, leftover=None), [])
+
+    def test_leftover_version_inventory_is_read_exactly(self):
+        output = (
+            "package:com.facebook.orca.extra versionCode:1\n"
+            "package:com.facebook.orca versionCode:2147483647\n"
+        )
+        self.assertEqual(
+            checker.leftover_version(output, "com.facebook.orca"), 2147483647
+        )
+        self.assertIsNone(checker.leftover_version("", "com.facebook.orca"))
+        for output in (
+            "package:com.facebook.orca\n",
+            "Error: unknown option --show-versioncode\n",
+            "package:com.facebook.orca versionCode:1\npackage:com.facebook.orca versionCode:2\n",
+        ):
+            with self.subTest(output=output), self.assertRaises(ValueError):
+                checker.leftover_version(output, "com.facebook.orca")
+
     def test_permission_inventory_must_be_complete_and_unambiguous(self):
         self.assertEqual(
             checker.permission_owners(OWNERS)[PERMISSION], "com.facebook.katana"
@@ -257,6 +299,77 @@ class CertificateChecks(unittest.TestCase):
             )
             self.assertNotIn("Secret owner", output.getvalue())
             self.assertNotIn("Private work profile", output.getvalue())
+
+    def test_spoofed_leftover_data_is_found_when_messenger_is_not_installed(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as root:
+            candidate = Path(root) / "candidate.apk"
+            candidate.write_bytes(b"fixture")
+            args = argparse.Namespace(apk=candidate, serial="phone", adb=Path("adb"))
+            versions = [
+                "shell",
+                "pm",
+                "list",
+                "packages",
+                "-u",
+                "--show-versioncode",
+                "--user",
+            ]
+
+            def device(command):
+                operation = command[3:]
+                calls.append(operation)
+                results = {
+                    ("get-state",): "device",
+                    ("shell", "getprop", "ro.build.version.sdk"): "36",
+                    ("shell", "pm", "list", "permissions", "-f"): OWNERS,
+                    (
+                        "shell",
+                        "pm",
+                        "list",
+                        "users",
+                    ): "Users:\n UserInfo{0:Owner:c13} running\n UserInfo{10:Work:30}\n",
+                    ("shell", "pm", "list", "packages", "--user", "0"): (
+                        "package:android\npackage:com.facebook.katana\n"
+                    ),
+                    ("shell", "pm", "list", "packages", "--user", "10"): (
+                        "package:android\n"
+                    ),
+                    tuple(versions + ["0", "com.facebook.orca"]): (
+                        "package:com.facebook.orca versionCode:2147483647\n"
+                    ),
+                    tuple(versions + ["10", "com.facebook.orca"]): "",
+                }
+                if tuple(operation) in results:
+                    return results[tuple(operation)]
+                if operation[:3] == ["shell", "pm", "path"]:
+                    return f"package:/data/app/{operation[-1]}/base.apk\n"
+                if operation[0] == "pull":
+                    Path(operation[2]).write_bytes(b"pulled")
+                    return ""
+                self.fail(operation)
+
+            output = io.StringIO()
+            with (
+                patch.object(checker, "run", side_effect=device),
+                patch.object(checker, "check_native"),
+                patch.object(
+                    checker,
+                    "read_apk",
+                    side_effect=[apk(), apk("com.facebook.katana")],
+                ),
+                redirect_stdout(output),
+            ):
+                self.assertEqual(checker.check(args), 1)
+            text = output.getvalue()
+            self.assertIn(
+                "NOTE: com.facebook.orca was uninstalled with its data kept", text
+            )
+            self.assertIn("CONFLICT: Version downgrade", text)
+            self.assertIn('"Spoof package version"', text)
+            self.assertNotIn(
+                ["shell", "pm", "path", "--user", "0", "com.facebook.orca"], calls
+            )
 
 
 class ParserAndCliChecks(unittest.TestCase):
