@@ -358,7 +358,7 @@ public final class SettingsActivity extends Activity {
         setupNote = ui.text("", 13, ui.muted, false);
         ui.add(setup, setupNote, 6);
         ui.rule(setup, 12);
-        ui.add(setup, controlRow("paused", text.base("paused"), "", false), 0);
+        ui.add(setup, controlRow("paused", text.format("paused"), "", false), 0);
         ui.add(content, setup, 0);
         search = new EditText(this);
         search.setTag("find_control");
@@ -444,7 +444,7 @@ public final class SettingsActivity extends Activity {
     @SuppressWarnings("deprecation")
     private LinearLayout controlRow(String key, String title, String description, boolean divided) {
         boolean available = Settings.available(key);
-        if (!available) description += " " + text.base("unavailable");
+        if (!available) description += " " + text.format("unavailable");
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -478,7 +478,7 @@ public final class SettingsActivity extends Activity {
         }
         TextView usage = activeLabel;
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
-        Switch control = ui.toggle(key, text.display(title), text.display(("ads".equals(key) ? text.base("experimental") + ". " : "") + description), Settings.preferences.getBoolean(key, false));
+        Switch control = ui.toggle(key, text.display(title), text.display(("ads".equals(key) ? text.format("experimental") + ". " : "") + description), Settings.preferences.getBoolean(key, false));
         LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ui.dp(48), -2);
         switchParams.setMarginStart(ui.dp(12));
         row.addView(control, switchParams);
@@ -525,12 +525,12 @@ public final class SettingsActivity extends Activity {
         // Without the Menu row, a launcher that has no app shortcuts would leave no way back in.
         if (Settings.installed.contains("menu_row")) {
             ui.rule(access, 14);
-            ui.add(access, controlRow("hide_drawer_icon", text.base("hide_drawer_icon"), text.base("hide_drawer_icon_help"), false), 14);
+            ui.add(access, controlRow("hide_drawer_icon", text.format("hide_drawer_icon"), text.format("hide_drawer_icon_help"), false), 14);
         }
         ui.add(content, access, 12);
         ui.add(content, ui.heading(text.get("appearance")), 22);
         LinearLayout appearance = ui.panel();
-        ui.add(appearance, controlRow("light", text.base("light"), text.base("light_help"), false), 0);
+        ui.add(appearance, controlRow("light", text.format("light"), text.format("light_help"), false), 0);
         ui.rule(appearance, 14);
         ui.add(appearance, ui.text(text.get("theme_help"), 13, ui.muted, false), 14);
         ui.add(content, appearance, 12);
@@ -559,7 +559,7 @@ public final class SettingsActivity extends Activity {
         ui.add(about, ui.text(text.get("import_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
         LinearLayout updates = ui.panel();
-        ui.add(updates, controlRow("check_updates", text.base("check_updates"), text.base("check_updates_help"), false), 0);
+        ui.add(updates, controlRow("check_updates", text.format("check_updates"), text.format("check_updates_help"), false), 0);
         TextView updateStatus = ui.text("", 13, ui.muted, false);
         updateStatus.setTag("update_status");
         updateStatus.setVisibility(View.GONE);

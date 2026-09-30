@@ -169,6 +169,23 @@ public class SettingsTranslationTest {
         assertEquals("Used 5m ago", new SettingsText(Locale.US).get("active_ago", new SettingsText(Locale.US).format("minutes_short", 5L)));
     }
 
+    @Test public void everyTextIdIsFormattedSoADoubledPercentShowsOnce() {
+        Map<String, String> english = englishIds();
+        english.put("light_help", "Use a light background in settings, 100%% of the time.");
+        english.put("check_updates_help", "Checks GitHub 100% of the time.");
+        String[][] table = marked(english);
+        SettingsTranslations.add("es", table);
+        assertEquals(List.of("placeholders differ in check_updates_help"), problems(SettingsTranslations.LOCALES.get("es")));
+        RuntimeEnvironment.setQualifiers("es-rES-w400dp-h800dp-mdpi");
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            View root = screen.get().getWindow().getDecorView();
+            root.findViewWithTag("tab_app").performClick();
+            assertTrue(showsText(root, "ES Use a light background in settings, 100% of the time."));
+            // A line that won't format shows in English instead.
+            assertTrue(showsText(root, new SettingsText(Locale.US).get("check_updates_help")));
+        }
+    }
+
     @Test public void aLocaleTableTranslatesTheScreenAndKeepsPreferenceKeysAndEnglishSearch() {
         SettingsTranslations.add("es", marked(englishIds()));
         assertEquals(List.of(), problems(SettingsTranslations.LOCALES.get("es")));
