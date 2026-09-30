@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.5.0"><img src="https://img.shields.io/badge/version-0.5.0-0084FF" alt="Version 0.5.0"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.6.0"><img src="https://img.shields.io/badge/version-0.6.0-0084FF" alt="Version 0.6.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -24,13 +24,13 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It offers 27 patc
 3. **Check the source.** The HushMessenger card should show **27 patches**. Open **Patches** to browse the catalog. Every patch is selected by default, so use **Choose patches** when preparing Messenger if you want to leave some out. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend. Mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.5.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.5.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL, and the command below lists its 27 entries. Source refreshes download patches. They do not modify an installed Messenger app. S25 runs a patched build, updated in place with its existing sign-in preserved. S22 remains on stock Messenger.
+For a local source, download [`patches-0.6.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.6.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL, and the command below lists its 27 entries. Source refreshes download patches. They do not modify an installed Messenger app. S25 runs a patched build, updated in place with its existing sign-in preserved. S22 now runs a patched build too.
 
 ### If something doesn't work
 
 - **Can't find the settings:** Long-press the Messenger icon and tap **Patch controls**, or open **HushMessenger settings** from the app drawer. If you hid the drawer icon, the **HushMessenger** row in the Menu tab still opens them. If none of these appear, refresh the source and patch Messenger again.
-- **Switches have no effect:** The settings must be embedded in the patched Messenger APK. A separate settings preview cannot change stock Messenger. S25 has the embedded controls, while S22 still runs stock Messenger. Refreshing a Morphe source only downloads patches. Use **Restart Messenger** after changing inbox options.
-- **Patch missing:** Refresh the HushMessenger source, check that it shows v0.5.0 and open its **Patches** list. This public release doesn't require the pre-release switch.
+- **Switches have no effect:** The settings must be embedded in the patched Messenger APK. A separate settings preview cannot change stock Messenger. Both test phones run patched builds with the embedded controls. Refreshing a Morphe source only downloads patches. Use **Restart Messenger** after changing inbox options.
+- **Patch missing:** Refresh the HushMessenger source, check that it shows v0.6.0 and open its **Patches** list. This public release doesn't require the pre-release switch.
 - **APK rejected:** Use an unmodified arm64 Messenger 580.0.0.49.91 APK with version code `346013387`, `346013440`, `346013442`, `346013354` or `346013370`. If a permission or instruction check fails, the error names the tested builds.
 - **Android rejects installation over stock Messenger:** A re-signed APK can't replace Meta's signed copy. Keep your local data intact while you plan a backup. Future updates of your patched copy must reuse your key. See [Morphe's keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
 - **Local source still old:** Download the latest `.mpp` and replace the local source yourself.
@@ -171,11 +171,11 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 ## Verification and build
 
-The S25 took each update in place with the same signing key as its installed Messenger and Facebook apps, keeping its original install date, its sign-in and 19 enabled controls. With the v0.5.0 patch code it passed voice calls, one-to-one notifications, silence for muted chats, facebook.com links opening the Facebook app, and a same-key update and rollback that kept all data. Turning switches on and off showed the expected change for Facebook shortcuts, stories and notes, the Meta AI button, the "Ask Meta AI" search button, People You May Know on the Notifications tab, external links, system emoji and the avatar sticker tab. A two-phone check in an end-to-end encrypted chat showed no typing indicator with the switch on and the usual one while paused, and messages still arrived. Restart Messenger refuses requests from other apps, while the long-press shortcut and the App tab button still restart into the signed-in chat list. At Android's largest font size the chat list, chats and settings stayed usable. S22 remains stock.
+The S25 took each update in place with the same signing key as its installed Messenger and Facebook apps, keeping its original install date, its sign-in and 19 enabled controls. With the v0.5.0 patch code it passed voice calls, one-to-one notifications, silence for muted chats, facebook.com links opening the Facebook app, and a same-key update and rollback that kept all data. Turning switches on and off showed the expected change for Facebook shortcuts, stories and notes, the Meta AI button, the "Ask Meta AI" search button, People You May Know on the Notifications tab, external links, system emoji and the avatar sticker tab. A two-phone check in an end-to-end encrypted chat showed no typing indicator with the switch on and the usual one while paused, and messages still arrived. Restart Messenger refuses requests from other apps, while the long-press shortcut and the App tab button still restart into the signed-in chat list. At Android's largest font size the chat list, chats and settings stayed usable. The S22 now runs a patched build as well.
 
-The local suite has 64 Kotlin tests, 105 Android unit tests and 35 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and ten warnings, including two package-visibility notices for queries restricted to this app.
+The local suite has 72 Kotlin tests, 140 Android unit tests and 35 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and ten warnings, including two package-visibility notices for queries restricted to this app.
 
-For v0.5.0, Morphe Desktop 1.17.0 applied all 27 patches to private copies of the three APKs supported then, and Android verified their v3 signatures. Builds 346013354 and 346013370, added after that release, also took all 27 patches in Morphe Desktop. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
+For v0.6.0, Morphe Desktop 1.17.0 applied all 27 patches to private copies of all five supported APKs, and Android verified their v3 signatures. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check.
 
 The settings screens now run inside the patched Messenger on the S25, where both pages and themes were checked. Earlier checks used a clearly marked standalone UI preview, removed after each run, and the mirrored test language preserved multi-digit counts there. Automated tests cover API 28 and 36, short windows at 200% text, state restoration and accessible actions. These checks verify settings behavior. Live TalkBack speech hasn't been tested yet.
 
@@ -198,18 +198,18 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The output is `patches/build/libs/patches-0.5.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output is `patches/build/libs/patches-0.6.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 24 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 
-Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.5.0 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash.
+Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.6.0 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash.
 
 ### Check the bundle
 
-The [v0.5.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.5.0) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. Bundles up to v0.4.2 copied LICENSE and NOTICE with the line endings of the checkout they were built from, so a fresh clone of those tags can differ in those two files. Newer source normalizes them. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
+The [v0.6.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.6.0) includes a `SHA256SUMS.txt` file. Compare its `.mpp` hash with your download. You can also build the tagged source locally and compare the output. Bundles up to v0.4.2 copied LICENSE and NOTICE with the line endings of the checkout they were built from, so a fresh clone of those tags can differ in those two files. Newer source normalizes them. The checksum and bundle are hosted under the same GitHub account, so this check cannot independently rule out an account compromise.
 
 ```text
-8ce9bfacfe293973aff7586dd85e3cfe0a11101d0caef1dca2878b58618893f4  patches-0.5.0.mpp
+d5174c2b4c6910b6871c3722a7f9fb8a4b42ba9fd66055e67143aba43d16dba0  patches-0.6.0.mpp
 ```
 
 Morphe Manager 1.32.0 and Desktop 1.17.0 parse `signature_download_url` but do not verify a detached signature when importing patch bundles. An `.asc` link in the source index would not add automatic protection in those versions. Keep the source URL on the repository you trust, and review a new bundle before updating.
@@ -227,7 +227,6 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 - Builds `346013354` and `346013370` patch cleanly with every patch, but neither test phone could install them, because both run newer Messenger builds. They haven't been tried on a phone yet.
 - Live ad removal, inbox tabs, bubbles on a low-memory phone, group chat notifications, typing in encrypted group chats and screenshots in vanish mode haven't been checked on a phone yet. Structural APK checks don't establish those behaviors.
 - Keep unsent messages can't cover end-to-end encrypted chats. Messenger removes those messages below the part of the app HushMessenger can change.
-- S22 still runs stock Messenger. A source refresh alone cannot activate its patches.
 
 <p align="center">
   <a href="https://ko-fi.com/X8K126YVER"><img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi"></a>
