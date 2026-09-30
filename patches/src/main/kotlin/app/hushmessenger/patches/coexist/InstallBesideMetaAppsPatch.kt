@@ -97,7 +97,7 @@ internal val expectedDexSites = mapOf(
     "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@507" to APP_COMMUNICATION_FORMAT,
 )
 
-/** The same six loads in build 346013370, under that build's names. */
+/** The same six loads in build 346013370, under that build's names. Generated from its record. */
 internal val expectedDexSites346013370 = mapOf(
     "LX/0iY;->A04(Landroid/app/Application;)V@18" to APP_COMMUNICATION_FORMAT,
     "LX/15l;->A03()V@25" to APP_COMMUNICATION,
@@ -107,7 +107,7 @@ internal val expectedDexSites346013370 = mapOf(
     "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@894" to APP_COMMUNICATION_FORMAT,
 )
 
-/** Each supported build's permission loads, by version code. */
+/** Each supported build's permission loads, by version code, as scripts/profiles records them. */
 internal val expectedDexSitesByBuild: Map<Int, Map<String, String>> = mapOf(
     346013387 to expectedDexSites,
     346013440 to expectedDexSites,

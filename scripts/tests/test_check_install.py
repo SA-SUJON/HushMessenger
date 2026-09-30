@@ -521,5 +521,37 @@ class ParserAndCliChecks(unittest.TestCase):
                 self.assertEqual(checker.main(), result)
 
 
+class RecordedBuildChecks(unittest.TestCase):
+    def test_builds_and_checksums_come_from_compat_report_records(self):
+        with tempfile.TemporaryDirectory() as root:
+            for code, version in (
+                (347000001, "581.0.0.1.91"),
+                (346013370, "580.0.0.49.91"),
+            ):
+                Path(root, f"{code}.txt").write_text(
+                    f"# header\nversion {version}\ncode {code}\nsha256 {str(code) * 2}\n"
+                    "hook ads LX/A;->a()V\npluginSentinel LX/B;->c:Ljava/lang/Object;\n",
+                    encoding="utf-8",
+                )
+            builds = checker.recorded_builds(Path(root))
+            self.assertEqual(
+                builds,
+                {
+                    346013370: ("580.0.0.49.91", "346013370" * 2),
+                    347000001: ("581.0.0.1.91", "347000001" * 2),
+                },
+            )
+            with patch.object(checker, "BUILDS", builds):
+                self.assertEqual(
+                    checker.supported_builds(),
+                    "580.0.0.49.91, version code 346013370; 581.0.0.1.91, version code 347000001",
+                )
+        self.assertTrue(checker.BUILDS)
+        self.assertEqual(set(checker.STOCK_SHA256), set(checker.BUILDS))
+        for version, sha256 in checker.BUILDS.values():
+            self.assertRegex(version, r"^\d+(\.\d+)+$")
+            self.assertRegex(sha256, r"^[0-9a-f]{64}$")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,9 @@ package app.hushmessenger.patches.controls
  * What differs between the Redex builds of Messenger the controls support. It's the same app
  * under different obfuscated names and a few shifted instruction positions, so each build keeps its
  * own exact hook list and the references the validators pin. Nothing is matched by count alone.
+ *
+ * scripts/profiles records each build, and `CompatReport.java --kotlin` turns a record into a new
+ * profile. CompatProfileTest fails when a record and its profile here disagree.
  */
 internal class ControlProfile(
     val hooks: Map<String, Set<String>>,
@@ -36,7 +39,10 @@ internal val BASE_PROFILE = ControlProfile(
     adFilterExits = listOf(916, 931),
 )
 
-/** 346013370, the arm64 nodpi APK APKMirror serves as variant 19 of 580.0.0.49.91. */
+/**
+ * 346013370, the arm64 nodpi APK APKMirror serves as variant 19 of 580.0.0.49.91. It fills the
+ * sticker keyboard's tab list inline instead of returning it. Generated from its record.
+ */
 internal val PROFILE_346013370 = ControlProfile(
     hooks = mapOf(
         "ads" to setOf("LX/2Wk;->D2e(LX/1fw;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;)Lcom/google/common/collect/ImmutableList;"),
@@ -51,7 +57,6 @@ internal val PROFILE_346013370 = ControlProfile(
             "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
         ),
         "avatar_stickers" to setOf("LX/PT6;->A01(LX/PT6;)Z"),
-        // This build fills the sticker keyboard's tab list inline instead of returning it.
         "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A6U(LX/5n3;)V"),
         "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0M(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
         "bubbles" to setOf("LX/2ZV;->A00()Z"),

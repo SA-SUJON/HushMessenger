@@ -14,13 +14,37 @@ from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile
 
-STOCK_SHA256 = {
-    346013387: "128ec75e836f24328d2b28777091c03b20abba0adc536e7ee911ee5fe52e70bc",
-    346013440: "e7d3c64227a7d9a26adda4e89321a87a49c85ee9e9f28f2fa7ed7fa79ae15cf6",
-    346013442: "55636f34a49173f5607011a6dfdf635597f435047a8c105cb7fe420665a38c24",
-    346013354: "4f061acd57cbeb640fb547cb7191b18f0fea36df77a0f9ee01e8267ab6264c9d",
-    346013370: "c115c3fef9ceec8529f3c405db86b7222f6e29a6ff95e691edabd63641646355",
-}
+PROFILES = Path(__file__).resolve().parent / "profiles"
+
+
+def recorded_builds(directory: Path = PROFILES) -> dict[int, tuple[str, str]]:
+    """Version code to (version name, SHA-256) for each build CompatReport.java recorded."""
+    builds = {}
+    for path in sorted(directory.glob("*.txt")):
+        fields = {}
+        for line in path.read_text(encoding="utf-8").splitlines():
+            key, _, value = line.partition(" ")
+            if key in ("version", "code", "sha256"):
+                fields[key] = value
+        builds[int(fields["code"])] = (fields["version"], fields["sha256"])
+    return builds
+
+
+BUILDS = recorded_builds()
+STOCK_SHA256 = {code: sha256 for code, (_, sha256) in BUILDS.items()}
+
+
+def supported_builds() -> str:
+    """Each recorded version name with its version codes, for error messages."""
+    codes: dict[str, list[int]] = {}
+    for code, (version, _) in sorted(BUILDS.items()):
+        codes.setdefault(version, []).append(code)
+    return "; ".join(
+        f"{version}, version code {', '.join(map(str, numbers))}"
+        for version, numbers in codes.items()
+    )
+
+
 # Other patch sets' "Spoof package version" option raises the version code to Android's maximum.
 SPOOFED_VERSION_CODE = 2**31 - 1
 SPOOFED_HELP = (
@@ -471,15 +495,13 @@ def check(args: argparse.Namespace) -> int:
     if sdk < 28:
         raise ValueError("This preview requires Android 9 (API 28) or newer")
     candidate = read_apk(args.apk, args, sdk)
+    recorded = BUILDS.get(candidate.version_code)
     if (
         candidate.package != "com.facebook.orca"
-        or candidate.version_name != "580.0.0.49.91"
-        or candidate.version_code not in STOCK_SHA256
+        or recorded is None
+        or candidate.version_name != recorded[0]
     ):
-        raise ValueError(
-            "Use Messenger 580.0.0.49.91, version code "
-            + ", ".join(str(c) for c in sorted(STOCK_SHA256))
-        )
+        raise ValueError("Use Messenger " + supported_builds())
     if not candidate.permissions:
         raise ValueError("Messenger permission declarations are missing")
     with args.apk.open("rb") as source:
