@@ -225,7 +225,7 @@ val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receip
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 @Suppress("unused")
-val anonymousStoriesPatch = controlPatch("anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. The story still looks seen on your side.", "Privacy")
+val anonymousStoriesPatch = controlPatch("anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. For now the story still shows as new on your side.", "Privacy")
 
 private var menuRowApplied = false
 
