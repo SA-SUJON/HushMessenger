@@ -154,14 +154,16 @@ public final class Settings {
         return original;
     }
 
-    private static android.graphics.Typeface systemEmoji;
-    private static boolean systemEmojiMissing;
+    /** Where Android keeps its color emoji font. Tests point this at a missing file. */
+    static String systemEmojiFont = "/system/fonts/NotoColorEmoji.ttf";
+    static android.graphics.Typeface systemEmoji;
+    static boolean systemEmojiMissing;
     public static android.graphics.Typeface systemEmojiTypeface() {
         // Checked before enabled(), so a font that failed to load doesn't count as a use.
         if (systemEmojiMissing || !enabled("use_system_emoji")) return null;
         if (systemEmoji != null) return systemEmoji;
         try {
-            systemEmoji = android.graphics.Typeface.createFromFile("/system/fonts/NotoColorEmoji.ttf");
+            systemEmoji = android.graphics.Typeface.createFromFile(systemEmojiFont);
         } catch (Exception error) {
             // The font file won't appear later, so Messenger's own emoji stay without retrying on every draw.
             systemEmojiMissing = true;
