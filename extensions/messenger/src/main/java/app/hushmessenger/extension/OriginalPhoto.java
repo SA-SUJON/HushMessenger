@@ -23,9 +23,9 @@ import java.util.concurrent.Executors;
 
 /**
  * "Send photos at original quality". In encrypted chats Messenger hands every photo to DefaultMediaTranscoder, which
- * re-encodes it even with HD on (a 6.4 MB 4032x3024 JPEG went out as about 1.8 MB). For an HD send of an upright JPEG
- * these prologues hand back a copy of the photo's own image data, without its metadata, and Messenger encrypts and
- * uploads that. Anything else, and any failure here, falls through to Messenger's own transcode.
+ * re-encodes it even with HD on (a 6.4 MB 4032x3024 JPEG went out as about 1.8 MB). For an HD send of a JPEG these
+ * prologues hand back a copy of the photo's own image data, without its metadata except a rotation tag, and Messenger
+ * encrypts and uploads that. Anything else, and any failure here, falls through to Messenger's own transcode.
  */
 public final class OriginalPhoto {
     private OriginalPhoto() { }
@@ -40,15 +40,25 @@ public final class OriginalPhoto {
     /** Where the copies go; null is the app's cache, where Messenger's own transcoder writes its output too. */
     static File tempDir;
 
-    /** A prepared send: the copy to upload and its size in pixels. */
+    /** A prepared send: the copy to upload, its stored size in pixels and the EXIF rotation tag it kept (0 for none). */
     static final class Prepared {
         final File copy;
-        final int width, height;
+        final int width, height, orientation;
 
-        Prepared(File copy, int width, int height) {
+        Prepared(File copy, int width, int height, int orientation) {
             this.copy = copy;
             this.width = width;
             this.height = height;
+            this.orientation = orientation;
+        }
+
+        /** Tags 5 to 8 turn the photo a quarter turn, so it shows with its width and height swapped. */
+        boolean quarterTurn() {
+            return orientation >= ExifInterface.ORIENTATION_TRANSPOSE;
+        }
+
+        String describe() {
+            return copy.length() + " bytes, " + width + "x" + height + (orientation == 0 ? "" : ", rotation tag " + orientation);
         }
     }
 
@@ -63,9 +73,8 @@ public final class OriginalPhoto {
             Prepared prepared = prepare(url, maxWidth, maxHeight, extras);
             if (prepared == null) return null;
             try {
-                byte[] bytes = Files.readAllBytes(prepared.copy.toPath());
-                Log.i("HushMessenger", "Original photo: " + bytes.length + " bytes, " + prepared.width + "x" + prepared.height);
-                return bytes;
+                Log.i("HushMessenger", "Original photo: " + prepared.describe());
+                return Files.readAllBytes(prepared.copy.toPath());
             } finally {
                 prepared.copy.delete();
             }
@@ -85,7 +94,7 @@ public final class OriginalPhoto {
             prepared = prepare(url, maxWidth, maxHeight, extras);
             if (prepared == null) return false;
             Prepared sent = prepared;
-            Log.i("HushMessenger", "Original photo: " + sent.copy.length() + " bytes, " + sent.width + "x" + sent.height);
+            Log.i("HushMessenger", "Original photo: " + sent.describe());
             completion.execute(() -> report(callback, success, failure, sent));
             return true;
         } catch (IOException | ReflectiveOperationException | RuntimeException | OutOfMemoryError error) {
@@ -99,10 +108,13 @@ public final class OriginalPhoto {
     static void report(Object callback, Method success, Method failure, Prepared sent) {
         double width = sent.width, height = sent.height;
         try {
-            // Output URI, source size, output size, quality, PSNR (-1 is Messenger's "not measured"), rotated, then
-            // fields its wrapper zeroes anyway.
-            success.invoke(callback, Uri.fromFile(sent.copy).toString(), width, height, width, height, 100.0, -1.0,
-                false, 0, false, 0.0, 0.0, 0.0);
+            // Output URI, source size as stored, output size as shown, quality, PSNR (-1 is Messenger's "not measured"),
+            // rotated, then fields its wrapper zeroes anyway. Messenger's own transcoder turns the pixels upright and
+            // reports them that way; the copy's rotation tag makes any viewer show it the same way round.
+            boolean rotated = sent.orientation >= ExifInterface.ORIENTATION_ROTATE_180;
+            success.invoke(callback, Uri.fromFile(sent.copy).toString(), width, height,
+                sent.quarterTurn() ? height : width, sent.quarterTurn() ? width : height, 100.0, -1.0,
+                rotated, 0, false, 0.0, 0.0, 0.0);
         } catch (ReflectiveOperationException | RuntimeException error) {
             sent.copy.delete();
             Settings.hookFailedPrivately(KEY, "Original photo couldn't hand over its copy", error);
@@ -138,9 +150,12 @@ public final class OriginalPhoto {
         if (!file.isFile() || size <= 0) return skip("unreadable file");
         if (size > MAX_BYTES) return skip("over " + MAX_BYTES / 1024 / 1024 + " MB");
         if (!startsLikeJpeg(file)) return skip("not a JPEG");
-        // A rotation tag would leave the receiver to turn the photo, and Messenger's metadata assumes it's upright.
+        // Phones often save a portrait photo sideways with a tag saying how to turn it. The copy keeps that one tag.
         int orientation = new ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-        if (orientation != ExifInterface.ORIENTATION_NORMAL && orientation != ExifInterface.ORIENTATION_UNDEFINED) return skip("rotation tag " + orientation);
+        if (orientation < ExifInterface.ORIENTATION_UNDEFINED || orientation > ExifInterface.ORIENTATION_ROTATE_270) {
+            return skip("unknown rotation tag " + orientation);
+        }
+        if (orientation == ExifInterface.ORIENTATION_NORMAL) orientation = ExifInterface.ORIENTATION_UNDEFINED;
         int[] bounds = bounds(path);
         if (bounds == null) return skip("no image size");
         int longSide = Math.max(bounds[0], bounds[1]), shortSide = Math.min(bounds[0], bounds[1]);
@@ -149,9 +164,11 @@ public final class OriginalPhoto {
         }
         File copy = File.createTempFile("hush-photo", ".jpg", tempDir);
         try {
-            copyImageData(file, copy);
+            copyImageData(file, copy, orientation);
             int[] copied = bounds(copy.getPath());
             if (copied == null || copied[0] != bounds[0] || copied[1] != bounds[1]) throw new NotPassable("copy decodes differently");
+            int kept = new ExifInterface(copy.getPath()).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+            if (kept != orientation) throw new NotPassable("rotation tag didn't carry over");
         } catch (NotPassable error) {
             copy.delete();
             return skip(error.getMessage());
@@ -164,7 +181,7 @@ public final class OriginalPhoto {
             copy.delete();
             return null;
         }
-        return new Prepared(copy, bounds[0], bounds[1]);
+        return new Prepared(copy, bounds[0], bounds[1], orientation);
     }
 
     static int[] bounds(String path) throws IOException {
@@ -193,14 +210,16 @@ public final class OriginalPhoto {
      * Copies a JPEG's image data and nothing else, the way Messenger's own re-encode leaves out the metadata. JFIF, the
      * ICC color profile and Adobe's color transform stay, since they change how the pixels look. EXIF (location, camera,
      * time and its thumbnail), XMP, IPTC, comments, JFXX thumbnails, multi-picture data and anything after the end of the
-     * image, such as a motion photo's video, are left out. The scan data is copied byte for byte.
+     * image, such as a motion photo's video, are left out. The scan data is copied byte for byte. A rotation tag other
+     * than 0 goes into a new EXIF segment of its own, right after JFIF.
      */
-    static void copyImageData(File source, File target) throws IOException {
+    static void copyImageData(File source, File target, int orientation) throws IOException {
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(source), 65536));
              OutputStream out = new BufferedOutputStream(new FileOutputStream(target), 65536)) {
             if (in.readUnsignedByte() != 0xFF || in.readUnsignedByte() != 0xD8) throw new NotPassable("not a JPEG");
             out.write(0xFF);
             out.write(0xD8);
+            boolean exifDue = orientation != 0;
             int marker = nextMarker(in);
             while (true) {
                 if (marker == 0xD9) {
@@ -214,17 +233,32 @@ public final class OriginalPhoto {
                 byte[] payload = new byte[length - 2];
                 in.readFully(payload);
                 if (keep(marker, payload)) {
-                    out.write(0xFF);
-                    out.write(marker);
-                    out.write(length >> 8);
-                    out.write(length & 0xFF);
-                    out.write(payload);
+                    if (exifDue && marker != 0xE0) {
+                        writeSegment(out, 0xE1, orientationExif(orientation));
+                        exifDue = false;
+                    }
+                    writeSegment(out, marker, payload);
                 }
                 marker = marker == 0xDA ? copyScan(in, out) : nextMarker(in);
             }
         } catch (EOFException truncated) {
             throw new NotPassable("ends early");
         }
+    }
+
+    static void writeSegment(OutputStream out, int marker, byte[] payload) throws IOException {
+        int length = payload.length + 2;
+        out.write(0xFF);
+        out.write(marker);
+        out.write(length >> 8);
+        out.write(length & 0xFF);
+        out.write(payload);
+    }
+
+    /** EXIF with nothing in it but the rotation tag: one big-endian TIFF directory holding a single SHORT entry. */
+    static byte[] orientationExif(int orientation) {
+        return new byte[] {'E', 'x', 'i', 'f', 0, 0, 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1,
+            0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, (byte) orientation, 0, 0, 0, 0, 0, 0};
     }
 
     /** Reads the next marker code, skipping the fill bytes JPEG allows before it. */

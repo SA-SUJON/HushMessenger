@@ -218,11 +218,11 @@ public class OriginalPhotoTest {
         }
         assertNull("over the size cap", OriginalPhoto.sync(huge.getPath(), 4096, 4096, null, hd()));
 
-        File rotated = jpeg(1600, 1200);
-        ExifInterface exif = new ExifInterface(rotated.getPath());
-        exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_ROTATE_90));
+        File unknown = jpeg(1600, 1200);
+        ExifInterface exif = new ExifInterface(unknown.getPath());
+        exif.setAttribute(ExifInterface.TAG_ORIENTATION, "9");
         exif.saveAttributes();
-        assertNull("rotation tag", OriginalPhoto.sync(rotated.getPath(), 4096, 4096, null, hd()));
+        assertNull("unknown rotation tag", OriginalPhoto.sync(unknown.getPath(), 4096, 4096, null, hd()));
 
         byte[] whole = Files.readAllBytes(photo.toPath());
         File cut = write(Arrays.copyOf(whole, whole.length / 2));
@@ -322,6 +322,73 @@ public class OriginalPhotoTest {
         assertEquals(100.0, call[5]);
         assertEquals(false, call[6]);
         copy.delete();
+    }
+
+    private File tagged(int orientation) throws IOException {
+        File photo = jpeg(1600, 1200);
+        ExifInterface exif = new ExifInterface(photo.getPath());
+        exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(orientation));
+        exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE, "40/1,44/1,5424/100");
+        exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N");
+        exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "73/1,59/1,834/100");
+        exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "W");
+        exif.setAttribute(ExifInterface.TAG_MAKE, "HushCam");
+        exif.saveAttributes();
+        return photo;
+    }
+
+    @Test public void aSidewaysPhotoKeepsItsRotationTagAndNothingElse() throws Exception {
+        File photo = tagged(ExifInterface.ORIENTATION_ROTATE_90);
+        byte[] original = Files.readAllBytes(photo.toPath());
+        switchOn();
+        byte[] sent = OriginalPhoto.sync(photo.getPath(), 4096, 4096, null, hd());
+        assertNotNull(sent);
+        // The only EXIF is the new 32-byte one, straight after JFIF, the order cameras write them in.
+        List<int[]> segments = headerSegments(sent);
+        assertEquals(0xE0, segments.get(0)[0]);
+        assertArrayEquals(OriginalPhoto.orientationExif(6), Arrays.copyOfRange(sent, segments.get(1)[1] + 4, segments.get(1)[2]));
+        assertEquals(1, segments.stream().filter(s -> s[0] == 0xE1).count());
+        assertArrayEquals(Arrays.copyOfRange(original, scanStart(original), endOfImage(original)),
+            Arrays.copyOfRange(sent, scanStart(sent), sent.length));
+
+        ExifInterface result = new ExifInterface(write(sent).getPath());
+        assertEquals(ExifInterface.ORIENTATION_ROTATE_90, result.getAttributeInt(ExifInterface.TAG_ORIENTATION, 0));
+        assertFalse(result.getLatLong(new float[2]));
+        assertNull(result.getAttribute(ExifInterface.TAG_MAKE));
+        assertTrue(logs().contains("Original photo: " + sent.length + " bytes, 1600x1200, rotation tag 6"));
+        assertTrue(Settings.lastActive(OriginalPhoto.KEY) > 0);
+    }
+
+    @Test public void aSidewaysPhotoReportsItsUprightSizeTheWayMessengersTranscoderDoes() throws Exception {
+        switchOn();
+        // Tag, then the size it shows at and whether Messenger's own transcoder would have turned it.
+        Object[][] cases = {
+            {ExifInterface.ORIENTATION_NORMAL, 1600.0, 1200.0, false},
+            {ExifInterface.ORIENTATION_FLIP_HORIZONTAL, 1600.0, 1200.0, false},
+            {ExifInterface.ORIENTATION_ROTATE_180, 1600.0, 1200.0, true},
+            {ExifInterface.ORIENTATION_TRANSPOSE, 1200.0, 1600.0, true},
+            {ExifInterface.ORIENTATION_ROTATE_90, 1200.0, 1600.0, true},
+            {ExifInterface.ORIENTATION_ROTATE_270, 1200.0, 1600.0, true},
+        };
+        for (Object[] c : cases) {
+            int orientation = (int) c[0];
+            Callback callback = new Callback();
+            assertTrue(OriginalPhoto.async(tagged(orientation).getPath(), 4096, 4096, null, hd(), callback));
+            Object[] call = callback.successes.get(0);
+            String label = "tag " + orientation;
+            assertEquals(label, 1600.0, call[1]);
+            assertEquals(label, 1200.0, call[2]);
+            assertEquals(label, c[1], call[3]);
+            assertEquals(label, c[2], call[4]);
+            assertEquals(label, c[3], call[6]);
+            File[] copies = OriginalPhoto.tempDir.listFiles();
+            assertEquals(label, 1, copies.length);
+            File copy = copies[0];
+            assertTrue(label, ((String) call[0]).endsWith(copy.getName()));
+            int kept = new ExifInterface(copy.getPath()).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0);
+            assertEquals(label, orientation == ExifInterface.ORIENTATION_NORMAL ? 0 : orientation, kept);
+            assertTrue(copy.delete());
+        }
     }
 
     @Test public void anAsyncSendItCantHandleIsLeftToMessenger() throws Exception {
