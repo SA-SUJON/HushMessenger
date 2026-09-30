@@ -14,6 +14,8 @@ import org.xml.sax.InputSource
 
 /** Local tooling only. This class is excluded from the distributed bundle. */
 object CatalogTool {
+    private const val CONTROL_KEYS = 27
+
     private fun dependency(patch: Patch<*>, ancestors: Set<Patch<*>> = emptySet()): JsonObject {
         require(patch !in ancestors) { "Cyclic patch dependency" }
         require(!patch.name.isNullOrBlank() || !patch.description.isNullOrBlank()) {
@@ -79,10 +81,10 @@ object CatalogTool {
                 it.getAttribute("android:name").removePrefix("hush.feature.")
             }
         val keys = declarations.map { it.first }
-        require(keys.size == 27 && keys.distinct().size == keys.size) { "Expected 27 distinct patch control keys" }
+        require(keys.size == CONTROL_KEYS && keys.distinct().size == keys.size) { "Expected $CONTROL_KEYS distinct patch control keys" }
         require(uiKeys.size == keys.size && uiKeys.toSet() == keys.toSet()) { "Extension control keys differ from patches" }
         require(manifestKeys.size == keys.size && manifestKeys.toSet() == keys.toSet()) { "Manifest capabilities differ from patches" }
-        require(declarations.map { it.second }.toSet().size == 27 &&
+        require(declarations.map { it.second }.toSet().size == CONTROL_KEYS &&
             names == declarations.map { it.second }.toSet() + "Install beside Meta apps" + "Open settings from menu" + "Restore screens on re-signed builds") { "Built patch names differ from control declarations" }
     }
 
@@ -118,6 +120,6 @@ object CatalogTool {
         else require(published.isFile && Json.parseToJsonElement(published.readText()) == document) {
             "Public catalog differs from the built MPP; run :patches:generatePatchCatalog"
         }
-        println("Catalog ${args[0]} passed: ${patches.size} patches, 25 control keys, built bundle $version")
+        println("Catalog ${args[0]} passed: ${patches.size} patches, $CONTROL_KEYS control keys, built bundle $version")
     }
 }
