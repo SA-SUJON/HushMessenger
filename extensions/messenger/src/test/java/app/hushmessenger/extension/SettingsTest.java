@@ -23,7 +23,20 @@ public class SettingsTest {
         Settings.initialize(RuntimeEnvironment.getApplication());
         Settings.preferences.edit().clear().commit();
         Settings.hookErrors.clear();
+        Settings.metaAiTab = null;
         CrashGuard.resetForTests();
+    }
+
+    @Test public void theMetaAiTabKeepsItsFirstAnswerUntilARestart() {
+        assertFalse(Settings.hideMetaAiTab());
+        Settings.preferences.edit().putBoolean("meta_ai", true).commit();
+        assertTrue(Settings.hideMetaAi());
+        assertFalse(Settings.hideMetaAiTab());
+        Settings.metaAiTab = null;
+        assertTrue(Settings.hideMetaAiTab());
+        Settings.preferences.edit().putBoolean("paused", true).commit();
+        assertFalse(Settings.hideMetaAi());
+        assertTrue(Settings.hideMetaAiTab());
     }
 
     @Test public void allControlsPreserveStockUntilEnabled() {

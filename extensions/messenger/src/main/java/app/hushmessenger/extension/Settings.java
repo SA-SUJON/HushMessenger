@@ -135,6 +135,20 @@ public final class Settings {
     public static boolean hideStories() { return enabled("stories"); }
     public static boolean hideFacebook() { return enabled("facebook"); }
     public static boolean hideMetaAi() { return enabled("meta_ai"); }
+
+    /** First answer this process gave for the Meta AI tab, or null before the bottom bar asked. */
+    static volatile Boolean metaAiTab;
+
+    /**
+     * The bottom bar keeps the tab list it counted first, but checks each tab again when it draws, the way Messenger's own
+     * kill switch never changes while it runs. So the tab keeps its first answer until a restart instead of following the
+     * switch mid-session and leaving the bar and its list out of step.
+     */
+    public static boolean hideMetaAiTab() {
+        Boolean hidden = metaAiTab;
+        if (hidden == null) metaAiTab = hidden = hideMetaAi();
+        return hidden;
+    }
     public static boolean showSubtabs(boolean original) { return original && !enabled("subtabs"); }
     public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean keepPeopleSection(boolean original) { return original && !enabled("people"); }

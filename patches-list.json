@@ -289,7 +289,7 @@
         },
         {
             "name": "Hide Meta AI",
-            "description": "Hides the floating button, toolbar button, menu entries and search AI. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Hides the floating button, toolbar button, Meta AI tab, menu entries and search AI. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [

@@ -122,7 +122,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(81, found.values.sumOf { it.size })
+        assertEquals(82, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 
@@ -206,5 +206,17 @@ class ControlDiscoveryTest {
         assertTrue(findControls(classes).getValue("avatar_stickers").isEmpty())
         (classes.single() as MutableClass).methods.single().setAccessFlags(AccessFlags.PUBLIC.value or AccessFlags.STATIC.value)
         validateControls(findControls(classes), setOf("avatar_stickers"))
+    }
+
+    // The tab's kill switch also gates its own toolbar buttons; only the gate that builds the tab content is the tab.
+    @Test fun theMetaAiTabIsTheTabContentGateNotItsToolbarButtons() {
+        val killSwitch = "com.facebook.messaging.aibot.plugins.tab.AibotTabKillSwitch"
+        val toolbar = fixtureMethod("LX/GRu;->A03()Z", pluginBody(killSwitch).replaceFirst(
+            "const-string", "const-string v1, \"com.facebook.messaging.aibot.plugins.tab.tabcontent.history.MetaAiHistoryTabToolbarButtonImplementation\"\n    const-string"))
+        val withToolbar = completeFixture() + fixtureClass(toolbar.definingClass, listOf(toolbar))
+        val found = findControls(withToolbar)
+        assertEquals(listOf("LX/1iN;->A02(LX/1iN;)Z"), found.getValue("ai_tab").map { it.hookId() })
+        validateControls(found, setOf("ai_tab"))
+        assertTrue(findControls(completeFixture().filter { it.type != "LX/1iN;" }).getValue("ai_tab").isEmpty())
     }
 }

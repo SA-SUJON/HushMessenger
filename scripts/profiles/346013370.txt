@@ -13,6 +13,7 @@ hook ai_search LX/5OE;->A0B(LX/5OE;)Z
 hook ai_search_chip LX/O7T;->render(LX/2MY;)LX/1GF;
 hook ai_stickers LX/PT6;->A03(LX/PT6;)Z
 hook ai_stickers LX/PTo;->A07(LX/PTo;)Z
+hook ai_tab LX/1iM;->A02(LX/1iM;)Z
 hook ai_toolbar LX/2aO;->A04()Z
 hook allow_screenshot LX/4nb;->A00(Landroid/view/Window;)V
 hook allow_screenshot LX/8wJ;->onScreenCaptured()V

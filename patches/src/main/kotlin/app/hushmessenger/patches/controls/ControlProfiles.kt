@@ -51,6 +51,7 @@ internal val PROFILE_346013370 = ControlProfile(
         "ai_search" to setOf("LX/5OE;->A0A(LX/5OE;)Z", "LX/5OE;->A0B(LX/5OE;)Z"),
         "ai_search_chip" to setOf("LX/O7T;->render(LX/2MY;)LX/1GF;"),
         "ai_stickers" to setOf("LX/PT6;->A03(LX/PT6;)Z", "LX/PTo;->A07(LX/PTo;)Z"),
+        "ai_tab" to setOf("LX/1iM;->A02(LX/1iM;)Z"),
         "ai_toolbar" to setOf("LX/2aO;->A04()Z"),
         "allow_screenshot" to setOf(
             "LX/4nb;->A00(Landroid/view/Window;)V", "LX/8wJ;->onScreenCaptured()V", "LX/N1j;->run()V",
@@ -121,6 +122,7 @@ internal val PROFILE_346013423 = ControlProfile(
         "ai_search" to setOf("LX/5RV;->A0A(LX/5RV;)Z", "LX/5RV;->A0B(LX/5RV;)Z"),
         "ai_search_chip" to setOf("LX/DB7;->render(LX/2Nf;)LX/1Gf;"),
         "ai_stickers" to setOf("LX/YAk;->A03(LX/YAk;)Z", "LX/YBZ;->A07(LX/YBZ;)Z"),
+        "ai_tab" to setOf("LX/1jI;->A02(LX/1jI;)Z"),
         "ai_toolbar" to setOf("LX/2bd;->A04()Z"),
         "allow_screenshot" to setOf(
             "LX/4qp;->A00(Landroid/view/Window;)V", "LX/8zQ;->onScreenCaptured()V", "LX/Pf4;->run()V",
@@ -191,6 +193,7 @@ internal val PROFILE_346013357 = ControlProfile(
         "ai_search" to setOf("LX/5O3;->A0A(LX/5O3;)Z", "LX/5O3;->A0B(LX/5O3;)Z"),
         "ai_search_chip" to setOf("LX/D7q;->render(LX/2MZ;)LX/1GG;"),
         "ai_stickers" to setOf("LX/PN4;->A03(LX/PN4;)Z", "LX/PNb;->A07(LX/PNb;)Z"),
+        "ai_tab" to setOf("LX/1iN;->A02(LX/1iN;)Z"),
         "ai_toolbar" to setOf("LX/2aP;->A04()Z"),
         "allow_screenshot" to setOf(
             "LX/4nQ;->A00(Landroid/view/Window;)V", "LX/8xP;->onScreenCaptured()V", "LX/N1s;->run()V",
@@ -261,6 +264,7 @@ internal val PROFILE_346013374 = ControlProfile(
         "ai_search" to setOf("LX/5Q1;->A0A(LX/5Q1;)Z", "LX/5Q1;->A0B(LX/5Q1;)Z"),
         "ai_search_chip" to setOf("LX/D5Q;->render(LX/2MY;)LX/1GF;"),
         "ai_stickers" to setOf("LX/MEX;->A03(LX/MEX;)Z", "LX/MEu;->A07(LX/MEu;)Z"),
+        "ai_tab" to setOf("LX/1iM;->A02(LX/1iM;)Z"),
         "ai_toolbar" to setOf("LX/2aO;->A04()Z"),
         "allow_screenshot" to setOf(
             "LX/4pO;->A00(Landroid/view/Window;)V", "LX/8yJ;->onScreenCaptured()V", "LX/YOO;->run()V",

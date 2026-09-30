@@ -75,7 +75,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Hide stories and notes | Hides the horizontal tray above chats. |
 | Hide inbox tabs | Hides the Home and Channels subtabs. |
 | Hide Facebook shortcuts | Removes Facebook toolbar, profile and sharing shortcuts. |
-| Hide Meta AI | Hides the floating button, toolbar button and AI menu entries, plus the "Ask Meta AI" button in search and the AI agent behind it. People, message and group results still show, and existing AI chats stay available. |
+| Hide Meta AI | Hides the floating button, toolbar button, AI menu entries and the Meta AI tab some accounts get in the bottom bar, plus the "Ask Meta AI" button in search and the AI agent behind it. People, message and group results still show, and existing AI chats stay available. |
 | Hide Chat Moments | Removes Chat Moments from the menu. |
 | Hide Reels badge | Hides the Reels notification badge. |
 | Hide AI sticker tools | Hides the generated-sticker tab and AI sticker suggestions. |
