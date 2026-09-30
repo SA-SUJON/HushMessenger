@@ -8,6 +8,7 @@ None of this is in a release yet. It'll ship together in the next one.
 
 - Messenger 580 builds `346013394` and `346013423` are supported now. They were the last two arm64 "nodpi" builds on APKMirror that the patch turned away, so all six of those work. All 27 patches apply to both in Morphe Desktop 1.17.0. Build `346013423` checks the Notifications tab's suggestions setting one step earlier than the others, so that check now finds its spot instead of counting on a fixed position.
 - Adding a Messenger build now starts with running `scripts/CompatReport.java <apk> --save` (dexlib2 and Guava on the classpath). It records the build under `scripts/profiles/` and prints the Kotlin to paste. If a control doesn't resolve or any other check fails, it lists what failed and writes nothing. The install checker and the changed-APK check read those records, so each build is listed in one place, and a Gradle test fails if a record and the Kotlin tables disagree.
+- A switch whose code fails inside Messenger now says so. Its usage line reads "Stopped with an error" and how long ago, until the next time it works. **Copy setup** adds a line for each control that failed, with the error's type, the spot in HushMessenger's code where it happened and the time. The error's message is left out because it could quote a chat. The last failure is kept across restarts, so it's still there to copy after Messenger comes back up. The sticker keyboard, system emoji and Menu tab row are covered today. Before this, those failures only reached the system log.
 
 ### Changed and fixed
 

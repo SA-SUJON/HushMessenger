@@ -139,6 +139,8 @@ final class SettingsText {
             case "active_now": return "Used just now";
             case "active_ago": return "Used %s ago";
             case "not_active": return "Nothing to change yet since restart";
+            case "error_now": return "Stopped with an error just now";
+            case "error_ago": return "Stopped with an error %s ago";
             case "changes_paused": return "Changes paused";
             case "changes_resumed": return "Changes resumed";
             case "safe_mode": return "Safe mode";

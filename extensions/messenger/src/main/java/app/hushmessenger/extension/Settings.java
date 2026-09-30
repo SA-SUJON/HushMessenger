@@ -52,6 +52,59 @@ public final class Settings {
         return ts != null ? ts : 0;
     }
 
+    /**
+     * Each control's last caught hook failure as "<exception class> at <first HushMessenger frame>|<time>".
+     * The exception's message is never kept, since it could hold chat content.
+     */
+    static final ConcurrentHashMap<String, String> hookErrors = new ConcurrentHashMap<>();
+    private static final String HOOK_ERROR = "hook_error_";
+
+    static void hookFailed(String key, String what, Throwable error) {
+        android.util.Log.e("HushMessenger", what, error);
+        StackTraceElement[] stack = error.getStackTrace();
+        StackTraceElement frame = stack.length == 0 ? null : stack[0];
+        for (StackTraceElement element : stack) {
+            if (element.getClassName().startsWith("app.hushmessenger.")) { frame = element; break; }
+        }
+        String where = frame == null ? "unknown" : frame.getClassName().substring(frame.getClassName().lastIndexOf('.') + 1)
+            + "." + frame.getMethodName() + (frame.getLineNumber() >= 0 ? ":" + frame.getLineNumber() : "");
+        String failure = error.getClass().getName() + " at " + where;
+        long now = System.currentTimeMillis();
+        String previous = hookErrors.put(key, failure + "|" + now);
+        SharedPreferences prefs = preferences;
+        // A hook can fail on every screen draw, so the saved copy changes only for a new failure or once a minute.
+        if (prefs != null && (previous == null || !previous.startsWith(failure + "|") || now - hookErrorTime(previous) >= 60_000))
+            prefs.edit().putString(HOOK_ERROR + key, failure + "|" + now).apply();
+    }
+
+    static long hookErrorTime(String record) {
+        try {
+            return Long.parseLong(record.substring(record.lastIndexOf('|') + 1));
+        } catch (RuntimeException malformed) {
+            return 0;
+        }
+    }
+
+    /** When the control's hook last failed, this run or an earlier one, or 0 if it never did. */
+    static long hookErrorAt(String key) {
+        String record = hookErrors.get(key);
+        SharedPreferences prefs = preferences;
+        if (record == null && prefs != null) record = prefs.getString(HOOK_ERROR + key, null);
+        return record == null ? 0 : hookErrorTime(record);
+    }
+
+    /** Control key to its last failure record, with this run's failures over the saved ones. */
+    static Map<String, String> lastHookErrors() {
+        Map<String, String> errors = new java.util.TreeMap<>();
+        SharedPreferences prefs = preferences;
+        if (prefs != null) for (Map.Entry<String, ?> saved : prefs.getAll().entrySet()) {
+            if (saved.getKey().startsWith(HOOK_ERROR) && saved.getValue() instanceof String)
+                errors.put(saved.getKey().substring(HOOK_ERROR.length()), (String) saved.getValue());
+        }
+        errors.putAll(hookErrors);
+        return errors;
+    }
+
     public static boolean hideStories() { return enabled("stories"); }
     public static boolean hideFacebook() { return enabled("facebook"); }
     public static boolean hideMetaAi() { return enabled("meta_ai"); }
@@ -102,12 +155,18 @@ public final class Settings {
     }
 
     private static android.graphics.Typeface systemEmoji;
+    private static boolean systemEmojiMissing;
     public static android.graphics.Typeface systemEmojiTypeface() {
-        if (!enabled("use_system_emoji")) return null;
+        // Checked before enabled(), so a font that failed to load doesn't count as a use.
+        if (systemEmojiMissing || !enabled("use_system_emoji")) return null;
         if (systemEmoji != null) return systemEmoji;
         try {
             systemEmoji = android.graphics.Typeface.createFromFile("/system/fonts/NotoColorEmoji.ttf");
-        } catch (Exception ignored) { }
+        } catch (Exception error) {
+            // The font file won't appear later, so Messenger's own emoji stay without retrying on every draw.
+            systemEmojiMissing = true;
+            hookFailed("use_system_emoji", "Can't load the system emoji font", error);
+        }
         return systemEmoji;
     }
 
@@ -143,7 +202,7 @@ public final class Settings {
         try {
             ((java.util.Collection<?>) tabs).removeIf(Settings::opensAvatarTab);
         } catch (RuntimeException error) {
-            android.util.Log.e("HushMessenger", "Can't filter the sticker keyboard tabs", error);
+            hookFailed("avatar_stickers", "Can't filter the sticker keyboard tabs", error);
         }
     }
 
@@ -216,7 +275,7 @@ public final class Settings {
             title.set(clone, "HushMessenger");
             list.add(clone);
         } catch (Exception e) {
-            android.util.Log.e("HushMessenger", "addMenuSettingsEntry failed", e);
+            hookFailed("menu_row", "addMenuSettingsEntry failed", e);
         }
     }
 
@@ -242,7 +301,7 @@ public final class Settings {
             context.startActivity(intent);
             return null;
         } catch (Exception e) {
-            android.util.Log.e("HushMessenger", "drawerFolderClicked failed", e);
+            hookFailed("menu_row", "drawerFolderClicked failed", e);
             return item;
         }
     }
@@ -274,7 +333,7 @@ public final class Settings {
             result.add(clone);
             return result;
         } catch (Exception e) {
-            android.util.Log.e("HushMessenger", "addMenuDrawerEntry failed", e);
+            hookFailed("menu_row", "addMenuDrawerEntry failed", e);
             return list;
         }
     }
@@ -304,7 +363,7 @@ public final class Settings {
                 ctx.startActivity(intent);
             });
         } catch (Exception e) {
-            android.util.Log.e("HushMessenger", "handleMenuItemBound failed", e);
+            hookFailed("menu_row", "handleMenuItemBound failed", e);
         }
     }
 
@@ -330,7 +389,7 @@ public final class Settings {
             }
             return dst;
         } catch (Exception e) {
-            android.util.Log.e("HushMessenger", "shallowClone failed", e);
+            hookFailed("menu_row", "shallowClone failed", e);
             return null;
         }
     }

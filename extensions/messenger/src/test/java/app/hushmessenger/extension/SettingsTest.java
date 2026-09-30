@@ -22,6 +22,7 @@ public class SettingsTest {
     @Before public void reset() {
         Settings.initialize(RuntimeEnvironment.getApplication());
         Settings.preferences.edit().clear().commit();
+        Settings.hookErrors.clear();
         CrashGuard.resetForTests();
     }
 
@@ -243,8 +244,10 @@ public class SettingsTest {
         Settings.preferences.edit().putBoolean("avatar_stickers", true).apply();
         Settings.removeAvatarTabs(tabs);
         assertEquals(java.util.List.of(stickers, text), tabs);
-        // Anything that isn't a changeable collection is left alone.
+        // Anything that isn't a changeable collection is left alone, and a list that refuses the change is kept as a hook error.
+        assertEquals(0, Settings.hookErrorAt("avatar_stickers"));
         Settings.removeAvatarTabs(java.util.List.of(avatar));
+        assertTrue(Settings.hookErrorAt("avatar_stickers") > 0);
         Settings.removeAvatarTabs(null);
     }
 

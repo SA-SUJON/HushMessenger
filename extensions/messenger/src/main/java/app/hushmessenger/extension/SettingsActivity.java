@@ -33,6 +33,7 @@ import android.util.TypedValue;
 import android.text.TextWatcher;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 /** A launcher entry keeps settings discoverable without replacing a Messenger menu action. */
@@ -460,11 +461,15 @@ public final class SettingsActivity extends Activity {
         ui.add(labels, titleLine, 0);
         if (!description.isEmpty()) ui.add(labels, ui.text(text.display(description), 14, ui.muted, false), 6);
         // A switch records a use only when Messenger reaches its screen or event, so an off switch shows nothing.
+        // A failure newer than the last use means the switch isn't doing its job, so that shows instead.
         TextView activeLabel = null;
         if (divided) {
             long lastActive = Settings.lastActive(key);
-            String status = lastActive == 0 ? text.get("not_active") : formatActive(lastActive);
-            activeLabel = ui.text(status, 12, lastActive > 0 ? ui.accent : ui.muted, false);
+            long failedAt = Settings.hookErrorAt(key);
+            boolean failed = failedAt > 0 && failedAt >= lastActive;
+            String status = failed ? formatSince(failedAt, "error_now", "error_ago")
+                : lastActive == 0 ? text.get("not_active") : formatSince(lastActive, "active_now", "active_ago");
+            activeLabel = ui.text(status, 12, failed ? ui.warning : lastActive > 0 ? ui.accent : ui.muted, false);
             activeLabel.setAlpha(0.7f);
             activeLabel.setTag("active_" + key);
             activeLabel.setVisibility(Settings.preferences.getBoolean(key, false) ? View.VISIBLE : View.GONE);
@@ -606,6 +611,16 @@ public final class SettingsActivity extends Activity {
                     .append('\n');
             }
             summary.append("Facebook caller checks: ").append(MessengerSignature.callerSummary()).append('\n');
+            // Only controls that failed get a line: the exception's class, where it hit HushMessenger's code and when.
+            Map<String, String> errors = Settings.lastHookErrors();
+            if (!errors.isEmpty()) summary.append("Hook errors:\n");
+            for (Map.Entry<String, String> error : errors.entrySet()) {
+                String record = error.getValue();
+                int split = record.lastIndexOf('|');
+                summary.append(error.getKey()).append(": ").append(split < 0 ? record : record.substring(0, split)).append(", ")
+                    .append(java.time.Instant.ofEpochMilli(Settings.hookErrorTime(record)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS))
+                    .append('\n');
+            }
             ClipData clip = ClipData.newPlainText(text.get("clipboard"), summary.toString());
             PersistableBundle extras = new PersistableBundle();
             extras.putBoolean(Build.VERSION.SDK_INT >= 33 ? ClipDescription.EXTRA_IS_SENSITIVE : "android.content.extra.IS_SENSITIVE", true);
@@ -713,14 +728,14 @@ public final class SettingsActivity extends Activity {
         }).start();
     }
 
-    private String formatActive(long timestamp) {
+    private String formatSince(long timestamp, String now, String ago) {
         long seconds = (System.currentTimeMillis() - timestamp) / 1000;
-        if (seconds < 10) return text.get("active_now");
-        if (seconds < 60) return text.get("active_ago", seconds + "s");
+        if (seconds < 10) return text.get(now);
+        if (seconds < 60) return text.get(ago, seconds + "s");
         long minutes = seconds / 60;
-        if (minutes < 60) return text.get("active_ago", minutes + "m");
+        if (minutes < 60) return text.get(ago, minutes + "m");
         long hours = minutes / 60;
-        return text.get("active_ago", hours + "h");
+        return text.get(ago, hours + "h");
     }
 
     private static final String EXPORT_HEADER = "hushmessenger:choices";
