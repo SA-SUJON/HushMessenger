@@ -14,6 +14,7 @@ import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -159,9 +160,18 @@ public final class SettingsActivity extends Activity {
         root.setBackgroundColor(ui.background);
         root.setFocusableInTouchMode(true);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
-            view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
-                insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
-            return insets.consumeSystemWindowInsets();
+            // Edge-to-edge windows can sit under a camera cutout, which the system window insets leave out.
+            DisplayCutout cutout = insets.getDisplayCutout();
+            int left = insets.getSystemWindowInsetLeft(), top = insets.getSystemWindowInsetTop();
+            int right = insets.getSystemWindowInsetRight(), bottom = insets.getSystemWindowInsetBottom();
+            if (cutout != null) {
+                left = Math.max(left, cutout.getSafeInsetLeft());
+                top = Math.max(top, cutout.getSafeInsetTop());
+                right = Math.max(right, cutout.getSafeInsetRight());
+                bottom = Math.max(bottom, cutout.getSafeInsetBottom());
+            }
+            view.setPadding(left, top, right, bottom);
+            return insets.consumeSystemWindowInsets().consumeDisplayCutout();
         });
         setContentView(root);
         buildHeader(root);
