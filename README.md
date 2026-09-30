@@ -116,6 +116,16 @@ Messenger and Android already handle this, so there's no HushMessenger switch fo
 
 A chat only keeps its own setting once you change it, so doing step 1 first matters. Chats you haven't changed follow **Chats** and arrive quietly. On the S25, a chat set to **Alert** still alerted after **Chats** was silenced. Each chat's **Notifications & sounds** page also has separate switches for messages, reactions, chat heads and calls. On Samsung phones, Do not disturb's contact exceptions don't reliably match Messenger senders, so use the chat settings instead.
 
+### Chat heads, photo quality and updates
+
+These are already in Messenger, so there's no patch for them.
+
+**Chat heads.** Turn them on in Messenger's **Settings > Chat heads**. Messenger then sends you to Android's **Appear on top** list, where you switch Messenger on. On Android 12 and newer you also need to set Messenger's battery use to **Unrestricted** (app info > **Battery**). Without that, Android won't let the chat head start while Messenger is in the background, and a new message only shows up as a notification. On the S22 (Android 16), heads appeared as soon as battery use was Unrestricted.
+
+**Photo quality.** The gallery picker has an **HD** switch above your photos, and Messenger remembers it between sends. A 4032x3024 photo sent with HD off arrived at 2048x1536. With HD on it arrived at the full 4032x3024.
+
+**Update prompts.** You won't see Google Play's "update available" prompt in a patched Messenger. That check fails for apps Play didn't install. To update, patch a newer supported build with the same key.
+
 ## What the patches change
 
 The [patch catalog](patches-list.json) lists all 27 patches with their categories, default selections, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
