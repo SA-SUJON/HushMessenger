@@ -127,7 +127,7 @@ These are already in Messenger, so there's no patch for them.
 
 **Photo quality.** The gallery picker has an **HD** switch above your photos, and Messenger remembers it between sends. A 4032x3024 photo sent with HD off arrived at 2048x1536. With HD on it arrived at the full 4032x3024.
 
-**Update prompts.** You won't see Google Play's "update available" prompt in a patched Messenger. That check fails for apps Play didn't install. To update, patch a newer supported build with the same key.
+**Update prompts.** You won't see Google Play's "update available" prompt in a patched Messenger. That check fails for apps Play didn't install. Phones that ship with Facebook App Manager (many Samsung models do) don't offer one either. With App Manager turned on, a patched Messenger showed no **App updates** row in its settings and no update offer, and a stock update couldn't install over it anyway because the signatures differ. To update, patch a newer supported build with the same key.
 
 ## What the patches change
 
