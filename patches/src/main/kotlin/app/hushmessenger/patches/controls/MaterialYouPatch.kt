@@ -51,7 +51,7 @@ private val materialYouResources = resourcePatch(description = "Record HushMesse
 @Suppress("unused")
 val materialYouPatch = bytecodePatch(
     name = "Material You theme",
-    description = "Gives Messenger's dark mode the colours of your wallpaper on Android 12 and newer, and a fixed blue palette on Android 11. Light mode stays as it is. Turn on dark mode in Messenger first.",
+    description = "Gives Messenger's dark mode the colors of your wallpaper on Android 12 and newer, and a fixed blue palette on Android 11. Light mode stays as it is. Turn on dark mode in Messenger first.",
     default = false,
 ) {
     category("Theme")
