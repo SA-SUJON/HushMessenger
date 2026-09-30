@@ -169,39 +169,66 @@ public final class Settings {
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
     public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }
 
-    private static final String ANON_SEEN_KEY = "anonymous_seen_cards";
-    private static final long ANON_SEEN_TTL = 48 * 60 * 60 * 1000L;
+    /** Story cards read on this phone, as "account:card:time kept". A story is up for a day; each entry lasts two. */
+    static final String SEEN_STORIES = "anonymous_seen_stories";
+    static final long SEEN_STORY_TTL = 48 * 60 * 60 * 1000L;
+    private static final Object SEEN_STORIES_LOCK = new Object();
 
-    public static void markStorySeen(String cardId) {
+    /** Messenger's session hashes its user ID, so an account keeps its key across restarts and never shares it. */
+    static String storyAccount(Object session) { return session == null ? "-" : Integer.toHexString(session.hashCode()); }
+
+    /**
+     * Messenger just marked a story card read on this phone. With the switch on, the server never hears about it, so
+     * the card is kept for its account until the next launch can hand it back.
+     */
+    public static void markStorySeen(Object session, String cardId) {
         if (cardId == null || cardId.isEmpty()) return;
-        SharedPreferences prefs = preferences;
-        if (prefs == null) return;
-        long now = System.currentTimeMillis();
-        Set<String> entries = new HashSet<>(prefs.getStringSet(ANON_SEEN_KEY, Collections.emptySet()));
-        entries.add(cardId + ":" + now);
-        entries.removeIf(e -> {
-            int sep = e.lastIndexOf(':');
-            if (sep < 0) return true;
-            try { return now - Long.parseLong(e.substring(sep + 1)) > ANON_SEEN_TTL; }
-            catch (NumberFormatException x) { return true; }
-        });
-        prefs.edit().putStringSet(ANON_SEEN_KEY, entries).apply();
+        try {
+            if (!enabled("anonymous_stories")) return;
+            String card = storyAccount(session) + ":" + cardId + ":";
+            long now = System.currentTimeMillis();
+            synchronized (SEEN_STORIES_LOCK) {
+                Set<String> kept = new HashSet<>();
+                for (String entry : preferences.getStringSet(SEEN_STORIES, Collections.emptySet())) {
+                    if (!entry.startsWith(card) && !seenStoryExpired(entry, now)) kept.add(entry);
+                }
+                kept.add(card + now);
+                preferences.edit().putStringSet(SEEN_STORIES, kept).apply();
+            }
+        } catch (RuntimeException error) {
+            hookFailed("anonymous_stories", "Can't keep a story marked seen", error);
+        }
     }
 
-    public static boolean isStorySeen(String cardId) {
-        if (cardId == null || cardId.isEmpty()) return false;
-        SharedPreferences prefs = preferences;
-        if (prefs == null) return false;
-        long now = System.currentTimeMillis();
-        for (String entry : prefs.getStringSet(ANON_SEEN_KEY, Collections.emptySet())) {
-            int sep = entry.lastIndexOf(':');
-            if (sep < 0) continue;
-            if (entry.substring(0, sep).equals(cardId)) {
-                try { if (now - Long.parseLong(entry.substring(sep + 1)) <= ANON_SEEN_TTL) return true; }
-                catch (NumberFormatException x) { /* pruned on next write */ }
+    /**
+     * Each session starts Messenger's set of cards read on this phone empty, and its story lists count a card in it
+     * as seen. This puts back the cards the session's account opened while the switch was on.
+     */
+    public static void seedSeenStories(Set<String> readOnPhone, Object session) {
+        if (readOnPhone == null) return;
+        try {
+            if (!wouldUse("anonymous_stories")) return;
+            String account = storyAccount(session) + ":";
+            long now = System.currentTimeMillis();
+            for (String entry : preferences.getStringSet(SEEN_STORIES, Collections.emptySet())) {
+                int time = entry.lastIndexOf(':');
+                if (entry.startsWith(account) && time > account.length() && !seenStoryExpired(entry, now)) {
+                    readOnPhone.add(entry.substring(account.length(), time));
+                }
             }
+        } catch (RuntimeException error) {
+            hookFailed("anonymous_stories", "Can't restore stories marked seen", error);
         }
-        return false;
+    }
+
+    static boolean seenStoryExpired(String entry, long now) {
+        int time = entry.lastIndexOf(':');
+        if (time < 0) return true;
+        try {
+            return now - Long.parseLong(entry.substring(time + 1)) > SEEN_STORY_TTL;
+        } catch (NumberFormatException error) {
+            return true;
+        }
     }
 
     /** The icon stays hidden only while the Menu row that replaces it exists. */

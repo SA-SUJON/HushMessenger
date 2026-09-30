@@ -2,14 +2,11 @@ package app.hushmessenger.patches.controls
 
 import app.hushmessenger.patches.MessengerTarget
 import app.hushmessenger.patches.coexist.validateVersionCode
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
-import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.BytecodePatch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
-import app.morphe.patcher.util.smali.ExternalLabel
 import com.android.tools.smali.dexlib2.iface.Method
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -266,27 +263,15 @@ val anonymousStoriesPatch = bytecodePatch(
     dependsOn(settingsExtension, anonymousStoriesResources)
     execute {
         validateControls(discoveredControls, setOf("anonymous_stories"))
-        val methods = mapOf("anonymous_stories" to discoveredControls.getValue("anonymous_stories").map { original ->
+        val handler = discoveredControls.getValue("anonymous_stories").single().let { original ->
             mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
-        })
-        injectControl("anonymous_stories", methods)
-
-        val montageCard = mutableClassDefBy(MONTAGE_CARD)
-        for (ctor in montageCard.methods) {
-            if (ctor.name != "<init>" || ctor.implementation == null) continue
-            val code = ctor.implementation!!.instructions.toList()
-            val returnIndex = code.indexOfLast { it.opcode == com.android.tools.smali.dexlib2.Opcode.RETURN_VOID }
-            if (returnIndex < 0) continue
-            ctor.addInstructionsWithLabels(returnIndex, """
-                iget-object v0, p0, $MONTAGE_CARD->A0K:Ljava/lang/String;
-                invoke-static {v0}, $SETTINGS->isStorySeen(Ljava/lang/String;)Z
-                move-result v0
-                if-eqz v0, :not_anon_seen
-                const/4 v0, 0x1
-                iput-boolean v0, p0, $MONTAGE_CARD->A0U:Z
-            """.trimIndent(), ExternalLabel("not_anon_seen", ctor.getInstruction(returnIndex)))
         }
-
+        // The read set is checked before the first edit, so a build that moved it fails with the APK untouched.
+        val readSetClass = mutableClassDefBy(handler.storyReadSetAdd().definingClass)
+        val readSet = readSetClass.validateStoryReadSet(handler.storyReadSetAdd())
+        injectControl("anonymous_stories", mapOf("anonymous_stories" to listOf(handler)))
+        readSetClass.methods.single { it.hookId() == readSet.add }.injectStoryReadSetAdd(readSet)
+        readSetClass.methods.single { it.name == "<init>" }.injectStoryReadSetSeed(readSet)
         recordControl("anonymous_stories")
         anonymousStoriesApplied = true
     }

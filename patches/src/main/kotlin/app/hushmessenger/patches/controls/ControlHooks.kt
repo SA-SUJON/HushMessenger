@@ -998,14 +998,98 @@ internal fun MutableMethod.validateStorySeen(): Int {
 
 internal fun MutableMethod.injectStorySeen() {
     val cache = validateStorySeen()
-    val card = implementation!!.registerCount - 2
     addInstructionsWithLabels(1, """
         invoke-static {}, $SETTINGS->viewStoriesAnonymously()Z
         move-result v0
         if-eqz v0, :stock_behavior
-        iget-object v0, v$card, $MONTAGE_CARD->A0K:Ljava/lang/String;
-        invoke-static {v0}, $SETTINGS->markStorySeen(Ljava/lang/String;)V
         const/4 v0, 0x0
         goto/16 :local_seen
     """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(1)), ExternalLabel("local_seen", getInstruction(cache)))
+}
+
+internal const val FB_USER_SESSION = "Lcom/facebook/auth/usersession/FbUserSession;"
+private const val SET_ADD = "Ljava/util/Set;->add(Ljava/lang/Object;)Z"
+
+/**
+ * Messenger's set of story cards read on this phone. Its story lists count a card in the set as seen whatever the
+ * server says, and each account's session starts it empty.
+ */
+internal class StoryReadSet(val type: String, val set: String, val session: String, val cardId: String, val add: String)
+
+private fun Method.locals() = implementation!!.registerCount -
+    parameterTypes.sumOf { type -> if (type.toString() == "J" || type.toString() == "D") 2 else 1 } -
+    if (AccessFlags.STATIC.isSet(accessFlags)) 0 else 1
+
+/** The handler's local update ends by handing the card itself to the read set; nothing else there takes the card. */
+internal fun MutableMethod.storyReadSetAdd(): DexMethodReference {
+    val cache = validateStorySeen()
+    val card = implementation!!.registerCount - 2
+    val calls = implementation!!.instructions.drop(cache).filter { insn ->
+        val call = (insn as? ReferenceInstruction)?.reference as? DexMethodReference
+        insn.opcode == Opcode.INVOKE_VIRTUAL && call != null && call.returnType == "V" &&
+            call.parameterTypes.firstOrNull()?.toString() == MONTAGE_CARD
+    }
+    val add = calls.singleOrNull() as? FiveRegisterInstruction
+    if (add == null || add.registerCount < 2 || add.registerD != card) {
+        throw PatchException("Messenger controls: the story mark-read handler no longer hands the card to one read set")
+    }
+    return (add as ReferenceInstruction).reference as DexMethodReference
+}
+
+internal fun ClassDef.validateStoryReadSet(add: DexMethodReference): StoryReadSet {
+    fun fail(what: String): Nothing = throw PatchException("Messenger controls: the story read set $type $what")
+    val instanceFields = fields.filter { !AccessFlags.STATIC.isSet(it.accessFlags) }
+    val set = instanceFields.singleOrNull { it.type == "Ljava/util/Set;" } ?: fail("no longer holds exactly one set")
+    val session = instanceFields.singleOrNull { it.type == FB_USER_SESSION } ?: fail("no longer holds exactly one session")
+    val setField = "$type->${set.name}:Ljava/util/Set;"
+    val sessionField = "$type->${session.name}:$FB_USER_SESSION"
+    fun List<Instruction>.writes(field: String) =
+        any { it.opcode == Opcode.IPUT_OBJECT && (it as ReferenceInstruction).reference.toString() == field }
+
+    // The seed goes just before the constructor's return, so nothing may branch past it.
+    val constructor = methods.filter { it.name == "<init>" }.singleOrNull() ?: fail("no longer has one constructor")
+    val built = constructor.implementation?.instructions?.toList() ?: fail("constructor has no code")
+    if (built.lastOrNull()?.opcode != Opcode.RETURN_VOID || built.count { it.opcode == Opcode.RETURN_VOID } != 1 ||
+        built.any { it is OffsetInstruction } || constructor.implementation!!.tryBlocks.isNotEmpty() ||
+        !built.writes(setField) || !built.writes(sessionField) || constructor.locals() !in 2..15) {
+        fail("constructor no longer matches the tested build")
+    }
+
+    val addId = "${add.definingClass}->${add.name}(${add.parameterTypes.joinToString("")})${add.returnType}"
+    val adder = methods.singleOrNull { it.hookId() == addId } ?: fail("no longer has ${add.name}")
+    val code = adder.implementation?.instructions?.toList() ?: fail("${add.name} has no code")
+    // The hook reads p0 and p1 into v0 and v1 at the method's entry, where no local holds a value yet.
+    if (AccessFlags.STATIC.isSet(adder.accessFlags) || adder.locals() !in 2..14) fail("${add.name} no longer matches the tested build")
+    val adds = code.indices.filter { code[it].opcode == Opcode.INVOKE_INTERFACE && (code[it] as ReferenceInstruction).reference.toString() == SET_ADD }
+    val at = adds.singleOrNull()?.takeIf { it >= 2 } ?: fail("${add.name} no longer adds one card ID")
+    val call = code[at] as FiveRegisterInstruction
+    val readSet = code[at - 2]
+    val readId = code[at - 1]
+    val idField = (readId as? ReferenceInstruction)?.reference as? FieldReference
+    if (readSet.opcode != Opcode.IGET_OBJECT || (readSet as ReferenceInstruction).reference.toString() != setField ||
+        (readSet as TwoRegisterInstruction).registerA != call.registerC || readId.opcode != Opcode.IGET_OBJECT ||
+        idField?.definingClass != MONTAGE_CARD || idField.type != "Ljava/lang/String;" ||
+        (readId as TwoRegisterInstruction).registerA != call.registerD) {
+        fail("${add.name} no longer adds the card's ID to its set")
+    }
+    return StoryReadSet(type, setField, sessionField, idField.toString(), addId)
+}
+
+/** Every card Messenger marks read on this phone passes through here; the extension keeps it while the switch is on. */
+internal fun MutableMethod.injectStoryReadSetAdd(readSet: StoryReadSet) {
+    addInstructions(0, """
+        iget-object v0, p0, ${readSet.session}
+        iget-object v1, p1, ${readSet.cardId}
+        invoke-static {v0, v1}, $SETTINGS->markStorySeen(Ljava/lang/Object;Ljava/lang/String;)V
+    """.trimIndent())
+}
+
+/** A new session's read set starts empty; the extension puts back the cards its account kept. */
+internal fun MutableMethod.injectStoryReadSetSeed(readSet: StoryReadSet) {
+    val exit = implementation!!.instructions.indexOfLast { it.opcode == Opcode.RETURN_VOID }
+    addInstructions(exit, """
+        iget-object v0, p0, ${readSet.set}
+        iget-object v1, p0, ${readSet.session}
+        invoke-static {v0, v1}, $SETTINGS->seedSeenStories(Ljava/util/Set;Ljava/lang/Object;)V
+    """.trimIndent())
 }

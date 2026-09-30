@@ -265,6 +265,9 @@ internal fun pluginBody(anchor: String, branch: String = "if-eq") = """
 """.trimIndent()
 
 internal const val STORY_MARK_READ_HOOK = "LX/HNV;->C1V(${MONTAGE_CARD}Z)V"
+internal const val STORY_READ_SET = "LX/2W3;"
+internal const val STORY_READ_SET_ADD = "$STORY_READ_SET->A01(${MONTAGE_CARD}LX/5Jf;LX/56l;)V"
+internal const val STORY_READ_SET_INIT = "$STORY_READ_SET-><init>($FB_USER_SESSION)V"
 
 internal const val STORY_MARK_READ_BODY = """const/4 v0, 0x0
 iget-object v1, p0, LX/HNV;->A00:Ljava/lang/Object;
@@ -281,4 +284,37 @@ invoke-static {v1, v2, v3}, LX/Erv;->A00(Ljava/lang/Object;Ljava/lang/String;Lja
 invoke-static {p1}, Lcom/google/common/collect/ImmutableList;->of(Ljava/lang/Object;)Lcom/google/common/collect/ImmutableList;
 move-result-object v1
 invoke-static {v1}, LX/5Jf;->A0C(Lcom/google/common/collect/ImmutableList;)V
+iget-object v2, p0, LX/HNV;->A05:LX/2W3;
+invoke-virtual {v2, p1, v1, v0}, $STORY_READ_SET_ADD
 return-void"""
+
+/** The read set's constructor: the session, then an empty set, then nothing that could skip the end. */
+internal const val STORY_READ_SET_INIT_BODY = """const/4 v1, 0x0
+invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+iput-object p1, p0, LX/2W3;->A02:$FB_USER_SESSION
+new-instance v0, Ljava/util/HashSet;
+invoke-direct {v0}, Ljava/util/HashSet;-><init>()V
+iput-object v0, p0, LX/2W3;->A01:Ljava/util/Set;
+return-void"""
+
+/** The local update adds each card's ID to the set, then tells the in-memory story lists. */
+internal const val STORY_READ_SET_ADD_BODY = """invoke-static {p1}, Lcom/google/common/collect/ImmutableList;->of(Ljava/lang/Object;)Lcom/google/common/collect/ImmutableList;
+move-result-object v4
+iget-object v1, p0, LX/2W3;->A01:Ljava/util/Set;
+iget-object v0, p1, $MONTAGE_CARD->A0K:Ljava/lang/String;
+invoke-interface {v1, v0}, Ljava/util/Set;->add(Ljava/lang/Object;)Z
+invoke-virtual {p2, v4, p3}, LX/5Jf;->A0C(Lcom/google/common/collect/ImmutableList;LX/56l;)V
+return-void"""
+
+internal fun storyReadSetClass(
+    init: String = STORY_READ_SET_INIT_BODY,
+    add: String = STORY_READ_SET_ADD_BODY,
+    fieldTypes: List<String> = listOf("Ljava/util/Set;", FB_USER_SESSION),
+    extraMethods: List<Method> = emptyList(),
+): MutableClass {
+    val fields = fieldTypes.mapIndexed { i, type -> ImmutableField(STORY_READ_SET, "A0${i + 1}", type, AccessFlags.FINAL.value, null, null, null) } +
+        ImmutableField(STORY_READ_SET, "A03", "Ljava/lang/String;", AccessFlags.STATIC.value or AccessFlags.FINAL.value, null, null, null)
+    val methods = listOf(fixtureMethod(STORY_READ_SET_INIT, init, registers = 4), fixtureMethod(STORY_READ_SET_ADD, add, registers = 9)) + extraMethods
+    return MutableClass(ImmutableClassDef(STORY_READ_SET, AccessFlags.PUBLIC.value or AccessFlags.FINAL.value, "Ljava/lang/Object;",
+        emptyList(), null, emptySet(), fields, methods))
+}
