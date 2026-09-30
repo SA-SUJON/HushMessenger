@@ -211,12 +211,14 @@ class ControlDiscoveryTest {
     // The tab's kill switch also gates its own toolbar buttons; only the gate that builds the tab content is the tab.
     @Test fun theMetaAiTabIsTheTabContentGateNotItsToolbarButtons() {
         val killSwitch = "com.facebook.messaging.aibot.plugins.tab.AibotTabKillSwitch"
-        val toolbar = fixtureMethod("LX/GRu;->A03()Z", pluginBody(killSwitch).replaceFirst(
-            "const-string", "const-string v1, \"com.facebook.messaging.aibot.plugins.tab.tabcontent.history.MetaAiHistoryTabToolbarButtonImplementation\"\n    const-string"))
+        // Same shape as the tab gate and the same kill switch, so only the anchor can tell the two apart.
+        val toolbar = fixtureMethod("LX/GRu;->A02(LX/GRu;)Z", pluginBody(killSwitch).replaceFirst(
+            "const-string", "const-string v1, \"com.facebook.messaging.aibot.plugins.tab.tabcontent.history.MetaAiHistoryTabToolbarButtonImplementation\"\n    const-string"),
+            flags = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value)
         val withToolbar = completeFixture() + fixtureClass(toolbar.definingClass, listOf(toolbar))
         val found = findControls(withToolbar)
         assertEquals(listOf("LX/1iN;->A02(LX/1iN;)Z"), found.getValue("ai_tab").map { it.hookId() })
         validateControls(found, setOf("ai_tab"))
-        assertTrue(findControls(completeFixture().filter { it.type != "LX/1iN;" }).getValue("ai_tab").isEmpty())
+        assertTrue(findControls(withToolbar.filter { it.type != "LX/1iN;" }).getValue("ai_tab").isEmpty())
     }
 }

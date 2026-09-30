@@ -147,9 +147,15 @@ public final class Settings {
      */
     public static boolean hideMetaAiTab() {
         Boolean hidden = metaAiTab;
-        if (hidden == null) metaAiTab = hidden = hideMetaAi();
-        return hidden;
+        if (hidden != null) return hidden;
+        // Its own lock, so two first askers can't get different answers if the switch flips between them.
+        synchronized (META_AI_TAB) {
+            if (metaAiTab == null) metaAiTab = hideMetaAi();
+            return metaAiTab;
+        }
     }
+
+    private static final Object META_AI_TAB = new Object();
     public static boolean showSubtabs(boolean original) { return original && !enabled("subtabs"); }
     public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean keepPeopleSection(boolean original) { return original && !enabled("people"); }
