@@ -132,6 +132,15 @@ class CertificateChecks(unittest.TestCase):
                 self.assertIn("INSTALL_FAILED_VERSION_DOWNGRADE", problems[0])
         self.assertIn("uninstalled with its data kept", leftover_only[0])
 
+    def test_spoofed_help_names_a_readme_section_that_exists(self):
+        readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
+        section = readme.split("### If something doesn't work", 1)
+        self.assertEqual(len(section), 2)
+        self.assertIn('"If something doesn\'t work"', checker.SPOOFED_HELP)
+        self.assertIn(
+            "INSTALL_FAILED_VERSION_DOWNGRADE", section[1].split("\n### ", 1)[0]
+        )
+
     def test_leftover_data_only_conflicts_when_newer(self):
         self.assertIn(
             "Android refuses anything lower",

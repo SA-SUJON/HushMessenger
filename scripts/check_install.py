@@ -26,7 +26,7 @@ SPOOFED_VERSION_CODE = 2**31 - 1
 SPOOFED_HELP = (
     " That's the highest version code Android allows, which usually means a Messenger build from "
     'another patch set with "Spoof package version" on. See "INSTALL_FAILED_VERSION_DOWNGRADE" '
-    "under Troubleshooting in the README to remove it."
+    """under "If something doesn't work" in the README to remove it."""
 )
 
 
