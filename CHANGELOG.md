@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+None of this is in a release yet. It'll ship together in the next one.
+
+### Changed and fixed
+
+- The build now uses the Kotlin Gradle plugin 2.4.20 instead of 2.4.10, which had an unsafe deserialization flaw in its build cache (CVE-2026-53914). Bouncy Castle, which the build uses for signing, is now 1.86 everywhere. The 1.77 and 1.79 copies it replaces predate fixes for several published advisories. This only changes how the bundle is built. All 27 patches still apply in Morphe Desktop.
+
 ## 0.6.0 (2026-09-29)
 
 ### New
