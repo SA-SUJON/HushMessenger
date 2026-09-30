@@ -31,7 +31,7 @@ For a local source, download [`patches-0.6.0.mpp`](https://github.com/SysAdminDo
 - **Can't find the settings:** Long-press the Messenger icon and tap **Patch controls**, or open **HushMessenger settings** from the app drawer. If you hid the drawer icon, the **HushMessenger** row in the Menu tab still opens them. If none of these appear, refresh the source and patch Messenger again.
 - **Switches have no effect:** The settings must be embedded in the patched Messenger APK. A separate settings preview cannot change stock Messenger. Both test phones run patched builds with the embedded controls. Refreshing a Morphe source only downloads patches. Use **Restart Messenger** after changing inbox options.
 - **Patch missing:** Refresh the HushMessenger source, check that it shows v0.6.0 and open its **Patches** list. This public release doesn't require the pre-release switch.
-- **APK rejected:** Use an unmodified arm64 Messenger 580.0.0.49.91 APK with version code `346013387`, `346013440`, `346013442`, `346013354`, `346013370`, `346013394` or `346013423`. If a permission or instruction check fails, the error names the tested builds.
+- **APK rejected:** Use an unmodified arm64 Messenger 580.0.0.49.91 APK. Every arm64 variant APKMirror has for that version works, and the version codes are listed under [Supported Messenger builds](#supported-messenger-builds). If a permission or instruction check fails, the error names the tested builds.
 - **Android rejects installation over stock Messenger:** A re-signed APK can't replace Meta's signed copy. Keep your local data intact while you plan a backup. Future updates of your patched copy must reuse your key. See [Morphe's keystore guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/backup-and-keystore.md).
 - **Local source still old:** Download the latest `.mpp` and replace the local source yourself.
 - **"INSTALL_FAILED_VERSION_DOWNGRADE ... older than current 2147483647":** An earlier Messenger build from another patch set raised its version number to the maximum, and it was uninstalled with its data kept, so Android refuses anything lower. Remove the leftover data first. With a computer, run `adb uninstall com.facebook.orca`. Without one, install that earlier build again and uninstall it without keeping its data. Both wipe that old copy's local data, so back up what you need first.
@@ -162,12 +162,12 @@ Always on. It adds a **HushMessenger** row right under Settings in Messenger's *
 | --- | --- |
 | Package | `com.facebook.orca` |
 | Version | `580.0.0.49.91` |
-| Version codes | `346013387`, `346013440`, `346013442`, `346013354`, `346013370`, `346013394`, `346013423` |
+| Version codes | `346013354`, `346013355`, `346013356`, `346013357`, `346013358`, `346013359`, `346013370`, `346013372`, `346013374`, `346013375`, `346013387`, `346013391`, `346013394`, `346013423`, `346013427`, `346013440`, `346013441`, `346013442`, `346013443`, `346013444`, `346013445` |
 | Architecture | `arm64-v8a` |
 | Minimum Android version | Android 9 (API 28) |
-| APKMirror downloads | [346013440](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-5-android-apk-download/), [346013387](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-11-android-apk-download/), [346013370](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-19-android-apk-download/), [346013394](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-21-android-apk-download/), [346013423](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-13-android-apk-download/) |
+| APKMirror downloads | [All variants of 580.0.0.49.91](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/). Every arm64 one works. |
 
-APKMirror's 580.0.0.49.91 release has 25 variants. Six are arm64 "nodpi" builds that look alike: `346013354` (a bundle), `346013370`, `346013387`, `346013394`, `346013423` and `346013440`. All six are supported. Build `346013442` is an arm64 213-240dpi variant from APKPure. The other 14 arm64 builds are each made for one screen density and haven't been checked yet. If Morphe's download link picks one of those, the patch rejects it before changing anything. Builds `346013354` ([issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3)) and `346013370` ([issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1), [issue 8](https://github.com/SysAdminDoc/HushMessenger/issues/8)) are supported now. `346013370` and `346013423` have the same features under different internal names, so each has its own checked list.
+APKMirror's 580.0.0.49.91 release has 25 variants, and all 21 arm64 ones are supported. Six are "nodpi" builds: `346013354` (a bundle), `346013370`, `346013387`, `346013394`, `346013423` and `346013440`. The other 15 are each made for one screen density, and `346013442` is also on APKPure. The four 32-bit (armeabi-v7a) variants aren't supported. Meta's build tooling gives the same code different internal names from one build to the next, so the patch keeps a checked list per naming. One list covers eight builds, and four more cover the other 13. A build that isn't listed here is rejected before anything changes. Builds `346013354` ([issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3)) and `346013370` ([issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1), [issue 8](https://github.com/SysAdminDoc/HushMessenger/issues/8)) were the first ones people ran into.
 
 SHA-256 of the stock base APKs used for the off-device checks:
 
@@ -179,6 +179,20 @@ SHA-256 of the stock base APKs used for the off-device checks:
 346013370  c115c3fef9ceec8529f3c405db86b7222f6e29a6ff95e691edabd63641646355
 346013394  668e1d5e129d2fc039e99a5ddc8f1106be5e4c70c8087e6b63345ea571836b84
 346013423  868bdc3abb221b72ca05bce77b9870df79b706d8f5fdcde42ac5ff2f391f3e95
+346013355  024d7f6923c7a02ea9d89ee37262a6da8e3d8b7bca2f038e9a05824ba4ae84fb
+346013356  af9e358d89d56cd85ed88d359603e795ce644feda52af8b602c220011715b400
+346013357  bd7227b3231cc3fe5a6029923bacb6275083b67746df10ee7b878e7b62da3215
+346013358  a2cdf18e7af34288376cfd1f88f10c77e605ad3573e00b491362529ce324f856
+346013359  e2df0d8811755dd54c3f8e190e5e6b30ec9071f166eb1035f793cfd3558dbab3
+346013372  c60104bae063960517299116b6995aa82643b40c01d9084b67d67b67d824c921
+346013374  f1c602a3a1626b44b09cf0e1522e9a52fb941c0fe0e9bb2f97d74c6031060658
+346013375  c21514940c7b51e41d0f0f78d7deb8951c1f72bdf62eab619ec12e9e24455864
+346013391  ccd1505d49858ebb06e0d63bc434d16c32b448ca194b690cc61b3190dc366f56
+346013427  fdfbdd7344cd8f000d58dfb6687abaf2e92de2bec516282cb3a622e34711fa28
+346013441  c9da455895a2f3b13f8eea566697e85a7a55986e8a9afc03c23763debe72bd77
+346013443  5b53b33818e7b5378047581d5fe4aa4c8d93643cc7e1856359eb7a6b7e63042b
+346013444  1a154fb73e4a3e26313972f0e40a878d22073ce89ae814028ac401be8ebeacbf
+346013445  927a238854c21a8e23106a725c72a24c5d068b9190a73aff1b86002e878279e7
 ```
 
 On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.apk`. Meta can publish different APKs under one version name. If the hash differs, don't assume the off-device result applies to your file. The patch also checks its permission layout and instruction sites.
@@ -189,7 +203,7 @@ The S25 took each update in place with the same signing key as its installed Mes
 
 The local suite has 80 Kotlin tests, 162 Android unit tests and 44 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and ten warnings, including two package-visibility notices for queries restricted to this app.
 
-For v0.6.0, Morphe Desktop 1.17.0 applied all 27 patches to private copies of all five supported APKs, and Android verified their v3 signatures. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check. On 2026-09-30, builds `346013394` and `346013423` took all 27 patches in Desktop 1.17.0 too, and both outputs passed Android's v3 signature check and 16KB alignment.
+For v0.6.0, Morphe Desktop 1.17.0 applied all 27 patches to private copies of all five supported APKs, and Android verified their v3 signatures. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check. On 2026-09-30, builds `346013394` and `346013423` took all 27 patches in Desktop 1.17.0 too, and both outputs passed Android's v3 signature check and 16KB alignment. Later that day the 14 single-density builds did the same.
 
 The settings screens now run inside the patched Messenger on the S25, where both pages and themes were checked. Earlier checks used a clearly marked standalone UI preview, removed after each run, and the mirrored test language preserved multi-digit counts there. Automated tests cover API 28 and 36, short windows at 200% text, state restoration and accessible actions. These checks verify settings behavior. Live TalkBack speech hasn't been tested yet.
 

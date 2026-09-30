@@ -117,6 +117,26 @@ internal val expectedDexSites346013423 = mapOf(
     "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@772" to APP_COMMUNICATION_FORMAT,
 )
 
+/** The same six loads in builds 346013357, 346013358, 346013359, 346013391, 346013443, 346013444 and 346013445. Generated from 346013357's record. */
+internal val expectedDexSites346013357 = mapOf(
+    "LX/0iX;->A04(Landroid/app/Application;)V@18" to APP_COMMUNICATION_FORMAT,
+    "LX/15l;->A03()V@25" to APP_COMMUNICATION,
+    "LX/1f4;->A05(Lcom/facebook/auth/usersession/FbUserSession;LX/1f4;Ljava/lang/String;Ljava/lang/String;)V@36" to APP_COMMUNICATION,
+    "LX/2Qr;->A01(Landroid/content/Intent;LX/2Qr;)V@24" to APP_COMMUNICATION_FORMAT,
+    "LX/33K;->A04(LX/5Ww;Ljava/lang/Object;II)Ljava/lang/Object;@1433" to APP_COMMUNICATION_FORMAT,
+    "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@507" to APP_COMMUNICATION_FORMAT,
+)
+
+/** The same six loads in builds 346013374 and 346013375. Generated from 346013374's record. */
+internal val expectedDexSites346013374 = mapOf(
+    "LX/0iY;->A04(Landroid/app/Application;)V@18" to APP_COMMUNICATION_FORMAT,
+    "LX/15l;->A03()V@25" to APP_COMMUNICATION,
+    "LX/1f3;->A05(Lcom/facebook/auth/usersession/FbUserSession;LX/1f3;Ljava/lang/String;Ljava/lang/String;)V@36" to APP_COMMUNICATION,
+    "LX/2Qq;->A01(Landroid/content/Intent;LX/2Qq;)V@24" to APP_COMMUNICATION_FORMAT,
+    "LX/33J;->A03(Ljava/lang/Object;LX/5Yu;II)Ljava/lang/Object;@1514" to APP_COMMUNICATION_FORMAT,
+    "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@821" to APP_COMMUNICATION_FORMAT,
+)
+
 /** Each supported build's permission loads, by version code, as scripts/profiles records them. */
 internal val expectedDexSitesByBuild: Map<Int, Map<String, String>> = mapOf(
     346013387 to expectedDexSites,
@@ -126,6 +146,20 @@ internal val expectedDexSitesByBuild: Map<Int, Map<String, String>> = mapOf(
     346013370 to expectedDexSites346013370,
     346013394 to expectedDexSites,
     346013423 to expectedDexSites346013423,
+    346013355 to expectedDexSites,
+    346013356 to expectedDexSites,
+    346013357 to expectedDexSites346013357,
+    346013358 to expectedDexSites346013357,
+    346013359 to expectedDexSites346013357,
+    346013372 to expectedDexSites346013370,
+    346013374 to expectedDexSites346013374,
+    346013375 to expectedDexSites346013374,
+    346013391 to expectedDexSites346013357,
+    346013427 to expectedDexSites346013423,
+    346013441 to expectedDexSites,
+    346013443 to expectedDexSites346013357,
+    346013444 to expectedDexSites346013357,
+    346013445 to expectedDexSites346013357,
 )
 
 internal fun expectedDexSitesFor(

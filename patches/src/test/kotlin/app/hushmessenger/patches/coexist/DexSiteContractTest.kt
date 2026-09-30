@@ -7,10 +7,13 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
+/** Every supported 580 build as a failure names them, in VERSIONS order. */
+internal val CODES_580 = MessengerTarget.VERSIONS.getValue("580.0.0.49.91").joinToString(" or ")
+
 class DexSiteContractTest {
     private fun assertActionable(failure: PatchException) {
         assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK")
-        assertContains(failure.message.orEmpty(), "version code 346013387 or 346013440 or 346013442 or 346013354 or 346013370 or 346013394 or 346013423)")
+        assertContains(failure.message.orEmpty(), "version code $CODES_580)")
     }
 
     @Test
@@ -37,7 +40,7 @@ class DexSiteContractTest {
             validateDexSites(expectedDexSites.toList(), expectedDexSitesFor("347000001", sites), versions)
         }
         assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK (version code " +
-            "346013387 or 346013440 or 346013442 or 346013354 or 346013370 or 346013394 or 346013423) or 581.0.0.1.91 APK (version code 347000001).")
+            "$CODES_580) or 581.0.0.1.91 APK (version code 347000001).")
     }
 
     @Test

@@ -50,7 +50,7 @@ class ControlProfileTest {
         activeProfile = controlProfileFor("346013387", profiles)
         val failure = assertFailsWith<PatchException> { validateControls(found, setOf("people"), versions) }
         assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK (version code " +
-            "346013387 or 346013440 or 346013442 or 346013354 or 346013370 or 346013394 or 346013423) or 581.0.0.1.91 APK (version code 347000001).")
+            "${app.hushmessenger.patches.coexist.CODES_580}) or 581.0.0.1.91 APK (version code 347000001).")
     }
 
     @Test fun validationFollowsTheActiveBuild() {
