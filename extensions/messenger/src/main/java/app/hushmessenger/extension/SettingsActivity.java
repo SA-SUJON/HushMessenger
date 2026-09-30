@@ -68,7 +68,7 @@ public final class SettingsActivity extends Activity {
         {"inbox_promotions", "Hide inbox promotions", "Hides Messenger's quick-promotion banners in the chat list.", "inbox"},
         {"stories", "Hide stories and notes", "Removes the horizontal tray above your chats.", "inbox"},
         {"subtabs", "Hide inbox tabs", "Hides the Home and Channels tabs inside the inbox.", "inbox"},
-        {"facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile shortcuts and sharing shortcuts.", "navigation"},
+        {"facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and Also from Meta in the Menu tab.", "navigation"},
         {"meta_ai", "Hide Meta AI", "Hides the floating button, toolbar button, Meta AI tab, menu entries and search AI.", "navigation"},
         {"moments", "Hide Chat Moments", "Hides Chat Moments from the menu.", "navigation"},
         {"reels_badge", "Hide Reels badge", "Hides the Reels notification badge.", "navigation"},

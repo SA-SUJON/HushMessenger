@@ -196,7 +196,7 @@ val hideStoriesPatch = controlPatch("stories", "Hide stories and notes", "Hides 
 @Suppress("unused")
 val hideSubtabsPatch = controlPatch("subtabs", "Hide inbox tabs", "Hides the Home and Channels subtabs.", "Inbox")
 @Suppress("unused")
-val hideFacebookPatch = controlPatch("facebook", "Hide Facebook shortcuts", "Hides Facebook toolbar, profile and sharing shortcuts.", "Navigation")
+val hideFacebookPatch = controlPatch("facebook", "Hide Facebook shortcuts", "Hides Facebook toolbar, profile and sharing shortcuts, and Also from Meta in the Menu tab.", "Navigation")
 @Suppress("unused")
 val hideMetaAiPatch = controlPatch("meta_ai", "Hide Meta AI", "Hides the floating button, toolbar button, Meta AI tab, menu entries and search AI.", "Navigation", "ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip")
 @Suppress("unused")
