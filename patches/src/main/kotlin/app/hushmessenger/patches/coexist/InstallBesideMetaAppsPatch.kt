@@ -107,20 +107,29 @@ internal val expectedDexSites346013370 = mapOf(
     "Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;->A0Z(Lcom/facebook/common/appinit/invoker/OnApplicationInitInvoker;I)V@894" to APP_COMMUNICATION_FORMAT,
 )
 
-internal fun expectedDexSitesFor(versionCode: String?): Map<String, String> =
-    if (versionCode == "346013370") expectedDexSites346013370 else expectedDexSites
+/** Each supported build's permission loads, by version code. */
+internal val expectedDexSitesByBuild: Map<Int, Map<String, String>> = mapOf(
+    346013387 to expectedDexSites,
+    346013440 to expectedDexSites,
+    346013442 to expectedDexSites,
+    346013354 to expectedDexSites,
+    346013370 to expectedDexSites346013370,
+)
+
+internal fun expectedDexSitesFor(
+    versionCode: String?,
+    sites: Map<Int, Map<String, String>> = expectedDexSitesByBuild,
+): Map<String, String> = versionCode?.toIntOrNull()?.let(sites::get) ?: expectedDexSites
 
 private fun renamed(name: String): String =
     SHARED_PREFIX + name.removePrefix(META_PREFIX)
 
-private fun unsupportedApk(reason: String): PatchException = PatchException(
-    "$PATCH_NAME: $reason. Use an unmodified arm64 Messenger ${MessengerTarget.VERSION} " +
-        "APK (version code ${MessengerTarget.VERSION_CODES.joinToString(" or ")}).",
-)
+private fun unsupportedApk(reason: String, versions: Map<String, List<Int>> = MessengerTarget.VERSIONS) =
+    PatchException("$PATCH_NAME: $reason. Use an unmodified arm64 Messenger ${MessengerTarget.supportedApks(versions)}.")
 
-internal fun validateVersionCode(versionCode: String) {
-    if (versionCode.toIntOrNull() !in MessengerTarget.VERSION_CODES) {
-        throw unsupportedApk("version code $versionCode is not supported")
+internal fun validateVersionCode(versionCode: String, versions: Map<String, List<Int>> = MessengerTarget.VERSIONS) {
+    if (versions.values.none { versionCode.toIntOrNull() in it }) {
+        throw unsupportedApk("version code $versionCode is not supported", versions)
     }
 }
 
@@ -211,12 +220,16 @@ private fun Method.hasSharedName(): Boolean =
 private fun Method.siteId(index: Int): String =
     "$definingClass->$name(${parameterTypes.joinToString("")})$returnType@$index"
 
-internal fun validateDexSites(sites: List<Pair<String, String>>, expected: Map<String, String> = expectedDexSites) {
+internal fun validateDexSites(
+    sites: List<Pair<String, String>>,
+    expected: Map<String, String> = expectedDexSites,
+    versions: Map<String, List<Int>> = MessengerTarget.VERSIONS,
+) {
     if (sites.size != expected.size) {
-        throw unsupportedApk("expected ${expected.size} permission loads, found ${sites.size}")
+        throw unsupportedApk("expected ${expected.size} permission loads, found ${sites.size}", versions)
     }
     if (sites.toMap() != expected) {
-        throw unsupportedApk("permission instruction sites differ from the tested build")
+        throw unsupportedApk("permission instruction sites differ from the tested build", versions)
     }
 }
 

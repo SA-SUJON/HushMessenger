@@ -1,7 +1,7 @@
 package app.hushmessenger.patches.controls
 
 /**
- * What differs between the Redex builds of Messenger 580 the controls support. It's the same app
+ * What differs between the Redex builds of Messenger the controls support. It's the same app
  * under different obfuscated names and a few shifted instruction positions, so each build keeps its
  * own exact hook list and the references the validators pin. Nothing is matched by count alone.
  */
@@ -100,8 +100,18 @@ internal val PROFILE_346013370 = ControlProfile(
     adFilterExits = listOf(915, 930),
 )
 
-internal fun controlProfileFor(versionCode: String?): ControlProfile =
-    if (versionCode == "346013370") PROFILE_346013370 else BASE_PROFILE
+/** Each supported build's profile, by version code. Builds that share a mapping share a profile. */
+internal val controlProfiles: Map<Int, ControlProfile> = mapOf(
+    346013387 to BASE_PROFILE,
+    346013440 to BASE_PROFILE,
+    346013442 to BASE_PROFILE,
+    346013354 to BASE_PROFILE,
+    346013370 to PROFILE_346013370,
+)
+
+/** An unknown build gets the base profile, whose exact hooks then refuse it. */
+internal fun controlProfileFor(versionCode: String?, profiles: Map<Int, ControlProfile> = controlProfiles): ControlProfile =
+    versionCode?.toIntOrNull()?.let(profiles::get) ?: BASE_PROFILE
 
 /** The profile of the APK being patched. The settings extension sets it before any control runs. */
 internal var activeProfile: ControlProfile = BASE_PROFILE

@@ -1,8 +1,10 @@
 package app.hushmessenger.patches.coexist
 
+import app.hushmessenger.patches.MessengerTarget
 import app.morphe.patcher.patch.PatchException
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class DexSiteContractTest {
@@ -18,9 +20,24 @@ class DexSiteContractTest {
 
     @Test
     fun eachBuildAcceptsOnlyItsOwnInstructionSites() {
+        assertEquals(MessengerTarget.VERSION_CODES.toSet(), expectedDexSitesByBuild.keys)
         validateDexSites(expectedDexSites346013370.toList(), expectedDexSitesFor("346013370"))
         assertFailsWith<PatchException> { validateDexSites(expectedDexSites346013370.toList(), expectedDexSitesFor("346013440")) }
         assertFailsWith<PatchException> { validateDexSites(expectedDexSites.toList(), expectedDexSitesFor("346013370")) }
+    }
+
+    @Test
+    fun aSecondVersionNameUsesItsOwnBuildsSitesAndIsNamedInFailures() {
+        val versions = MessengerTarget.VERSIONS + ("581.0.0.1.91" to listOf(347000001))
+        val sites = expectedDexSitesByBuild + (347000001 to expectedDexSites346013370)
+        validateVersionCode("347000001", versions)
+        assertFailsWith<PatchException> { validateVersionCode("347000001") }
+        validateDexSites(expectedDexSites346013370.toList(), expectedDexSitesFor("347000001", sites), versions)
+        val failure = assertFailsWith<PatchException> {
+            validateDexSites(expectedDexSites.toList(), expectedDexSitesFor("347000001", sites), versions)
+        }
+        assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger 580.0.0.49.91 APK (version code " +
+            "346013387 or 346013440 or 346013442 or 346013354 or 346013370) or 581.0.0.1.91 APK (version code 347000001).")
     }
 
     @Test
