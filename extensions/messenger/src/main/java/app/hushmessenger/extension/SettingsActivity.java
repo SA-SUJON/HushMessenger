@@ -409,7 +409,7 @@ public final class SettingsActivity extends Activity {
                 ui.add(content, group, 24);
                 groups.add(group);
             }
-            LinearLayout row = controlRow(spec[0], spec[1], spec[2], true);
+            LinearLayout row = controlRow(spec[0], text.control(spec, 1), text.control(spec, 2), true);
             row.setTag(spec[3]);
             ui.add(group, row, 0);
             controlRows.add(row);
@@ -863,8 +863,8 @@ public final class SettingsActivity extends Activity {
             String bucket = "inbox".equals(spec[3]) ? "inbox" :
                 ("conversations".equals(spec[3]) || "stickers".equals(spec[3])) ? "chats" : "more";
             boolean match = ("all".equals(category) || category.equals(bucket)) &&
-                (spec[1] + " " + spec[2] + " " + text.base(spec[3]) + " " +
-                    text.display(spec[1]) + " " + text.display(spec[2]) + " " + text.get(spec[3])).toLowerCase(Locale.ROOT).contains(needle);
+                (spec[1] + " " + spec[2] + " " + SettingsText.english(spec[3]) + " " +
+                    text.display(text.control(spec, 1)) + " " + text.display(text.control(spec, 2)) + " " + text.get(spec[3])).toLowerCase(Locale.ROOT).contains(needle);
             controlRows.get(i).setVisibility(match ? View.VISIBLE : View.GONE);
             if (match) visible++;
         }
