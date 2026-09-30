@@ -19,6 +19,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowApplication;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
@@ -174,6 +175,40 @@ public class HostScreensTest {
         assertNull(Settings.preferences);
         HostScreens.applicationCreated(null);
         assertFalse(Settings.enabled("people"));
+    }
+
+    @Test public void messengersOtherProcessesStayStockLikeOnANormalInstall() {
+        Application app = RuntimeEnvironment.getApplication();
+        Settings.preferences = null;
+        Settings.installed = Set.of();
+        HostScreens.applicationCreated(app);
+        app.getSharedPreferences("hushmessenger", 0).edit().putBoolean("people", true).commit();
+        ShadowApplication.setProcessName(app.getPackageName() + ":mqtt");
+        try {
+            assertFalse(Settings.enabled("people"));
+            assertNull(Settings.preferences);
+            assertFalse(HostScreens.started);
+        } finally {
+            ShadowApplication.setProcessName(app.getPackageName());
+        }
+        assertTrue(Settings.enabled("people"));
+        assertTrue(HostScreens.started);
+    }
+
+    @Test public void aSettingsScreenThatStartsTheProcessChecksSafeModeFirst() {
+        Settings.preferences.edit().putBoolean("safe_mode", true).commit();
+        Settings.preferences = null;
+        Settings.installed = Set.of();
+        Robolectric.buildActivity(SettingsActivity.class).create();
+        assertTrue(HostScreens.started);
+        assertTrue(CrashGuard.isSafeMode());
+    }
+
+    @Test public void aStockLaunchOfAHostKeepsItsExtrasReadable() {
+        Intent stock = new Intent().putExtra("stock", "value");
+        assertNull(HostScreens.activityFor(HostScreens.SCREEN_HOST, stock));
+        assertEquals(HostScreens.class.getClassLoader(), stock.getExtras().getClassLoader());
+        assertEquals("value", stock.getStringExtra("stock"));
     }
 
     @Test public void thePatchedControlListIsReadLikeTheManifest() {

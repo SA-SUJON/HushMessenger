@@ -113,6 +113,8 @@ public final class SettingsActivity extends Activity {
     }
 
     @Override @SuppressWarnings("deprecation") public void onCreate(Bundle state) {
+        // On a Root Mount install this screen can be the first thing in the process, before any hook.
+        HostScreens.start(this);
         Settings.initialize(this);
         syncDrawerIcon(this);
         boolean light = Settings.preferences.getBoolean("light", false);

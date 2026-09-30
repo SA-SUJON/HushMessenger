@@ -25,6 +25,8 @@ public final class HostScreens {
     static final String SHORTCUT_HOST = "com.facebook.zero.upsell.activity.ZeroUpsellBuyConfirmInterstitialActivity";
 
     private static volatile Application application;
+    /** Settings and CrashGuard have started in this process, from SettingsProvider, a settings screen or a hook. */
+    static volatile boolean started;
 
     private HostScreens() {}
 
@@ -37,6 +39,9 @@ public final class HostScreens {
     public static Activity activityFor(String className, Intent intent) {
         if (intent == null || !(SCREEN_HOST.equals(className) || SHORTCUT_HOST.equals(className))) return null;
         try {
+            // Android sets this right after the factory returns. Reading extras without it would drop a stock launch's
+            // own Parcelables on Android 12 and older.
+            intent.setExtrasClassLoader(HostScreens.class.getClassLoader());
             String screen = intent.getStringExtra(EXTRA);
             if (!SETTINGS.equals(screen) && !RESTART.equals(screen)) return null;
             if (SHORTCUT_HOST.equals(className)) return new ShortcutTrampoline();
@@ -52,15 +57,28 @@ public final class HostScreens {
         return "";
     }
 
-    /** Starts settings once per process when SettingsProvider never ran, as on a Root Mount install. */
+    /**
+     * Starts settings when SettingsProvider never ran, as on a Root Mount install. Only in Messenger's main process,
+     * the one SettingsProvider runs in, so the other processes stay stock the way they are on a normal install.
+     */
     static void initializeLate() {
+        if (started) return;
         Application app = application;
-        if (app == null || app.getBaseContext() == null) return;
+        if (app == null || app.getBaseContext() == null || !app.getPackageName().equals(Application.getProcessName())) return;
+        start(app);
+    }
+
+    /**
+     * Settings, then CrashGuard, once per process. Hooks on other threads wait here until safe mode is known, and a
+     * settings screen that starts the process runs CrashGuard the same way SettingsProvider does.
+     */
+    static void start(Context context) {
         synchronized (HostScreens.class) {
-            if (Settings.preferences != null) return;
+            if (started) return;
             try {
-                Settings.initialize(app);
-                CrashGuard.onProcessStart(app);
+                if (Settings.preferences == null) Settings.initialize(context);
+                CrashGuard.onProcessStart(context);
+                started = true;
             } catch (RuntimeException error) {
                 Log.e("HushMessenger", "Can't start settings", error);
             }
