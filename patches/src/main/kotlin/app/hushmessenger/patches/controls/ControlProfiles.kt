@@ -46,7 +46,6 @@ internal val PROFILE_346013370 = ControlProfile(
         "ai_search_chip" to setOf("LX/O7T;->render(LX/2MY;)LX/1GF;"),
         "ai_stickers" to setOf("LX/PT6;->A03(LX/PT6;)Z", "LX/PTo;->A07(LX/PTo;)Z"),
         "ai_toolbar" to setOf("LX/2aO;->A04()Z"),
-        "anonymous_stories" to setOf("LX/Ncx;->C1W(${MONTAGE_CARD}Z)V"),
         "allow_screenshot" to setOf(
             "LX/4nb;->A00(Landroid/view/Window;)V", "LX/8wJ;->onScreenCaptured()V", "LX/N1j;->run()V",
             "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",

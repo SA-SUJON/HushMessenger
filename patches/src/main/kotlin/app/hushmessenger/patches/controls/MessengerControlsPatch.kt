@@ -113,7 +113,6 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "emoji_typeface" -> method.validateScratch()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
-            "anonymous_stories" -> method.validateStorySeen()
             else -> method.validateSwitch()
         }
     }
@@ -136,7 +135,6 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "emoji_typeface" -> method.injectEmojiTypeface()
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
-            "anonymous_stories" -> method.injectStorySeen()
             else -> method.injectFeatureSwitch(key)
         }
     }
@@ -224,8 +222,6 @@ val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots",
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt. In end-to-end encrypted chats, chats you open stay unread until you reply.", "Privacy", "hide_read_receipts", "read_mailbox")
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
-@Suppress("unused")
-val anonymousStoriesPatch = controlPatch("anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. For now the story still shows as new on your side.", "Privacy")
 
 private var menuRowApplied = false
 
