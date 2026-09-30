@@ -59,6 +59,7 @@ public final class Settings {
     /** Whether a control is in effect right now, without counting it as a use. */
     static boolean wouldUse(String key) {
         if (!HostScreens.started) HostScreens.initializeLate();
+        if (HostScreens.failed) return false;
         SharedPreferences prefs = preferences;
         return installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
                 && !CrashGuard.isSafeMode() && prefs.getBoolean(key, false);

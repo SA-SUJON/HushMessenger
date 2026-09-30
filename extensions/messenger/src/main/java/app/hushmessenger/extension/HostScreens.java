@@ -27,6 +27,8 @@ public final class HostScreens {
     private static volatile Application application;
     /** Settings and CrashGuard have started in this process, from SettingsProvider, a settings screen or a hook. */
     static volatile boolean started;
+    /** Starting threw, so safe mode is unknown. Every control stays stock until Messenger restarts, with no retries. */
+    static volatile boolean failed;
 
     private HostScreens() {}
 
@@ -62,7 +64,7 @@ public final class HostScreens {
      * the one SettingsProvider runs in, so the other processes stay stock the way they are on a normal install.
      */
     static void initializeLate() {
-        if (started) return;
+        if (started || failed) return;
         Application app = application;
         if (app == null || app.getBaseContext() == null || !app.getPackageName().equals(Application.getProcessName())) return;
         start(app);
@@ -74,12 +76,13 @@ public final class HostScreens {
      */
     static void start(Context context) {
         synchronized (HostScreens.class) {
-            if (started) return;
+            if (started || failed) return;
             try {
                 if (Settings.preferences == null) Settings.initialize(context);
                 CrashGuard.onProcessStart(context);
                 started = true;
             } catch (RuntimeException error) {
+                failed = true;
                 Log.e("HushMessenger", "Can't start settings", error);
             }
         }

@@ -20,6 +20,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowApplication;
+import org.robolectric.shadows.ShadowLog;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
@@ -204,8 +205,26 @@ public class HostScreensTest {
         assertTrue(CrashGuard.isSafeMode());
     }
 
+    @Test public void aStartThatFailsLeavesEveryControlStockUntilTheNextProcess() {
+        Application app = RuntimeEnvironment.getApplication();
+        Settings.preferences = null;
+        Settings.installed = Set.of();
+        HostScreens.applicationCreated(app);
+        // A safe-mode flag stored as the wrong type makes CrashGuard throw while reading it.
+        app.getSharedPreferences("hushmessenger", 0).edit().putBoolean("people", true).putString("safe_mode", "on").commit();
+        ShadowLog.clear();
+        assertFalse(Settings.enabled("people"));
+        assertTrue(HostScreens.failed);
+        assertFalse(HostScreens.started);
+        assertFalse(Settings.enabled("people"));
+        assertEquals("tried once", 1, ShadowLog.getLogsForTag("HushMessenger").stream()
+            .filter(item -> "Can't start settings".equals(item.msg)).count());
+    }
+
     @Test public void aStockLaunchOfAHostKeepsItsExtrasReadable() {
         Intent stock = new Intent().putExtra("stock", "value");
+        // Stands in for the loader Android would otherwise leave on the extras until after the factory returns.
+        stock.setExtrasClassLoader(new ClassLoader(null) { });
         assertNull(HostScreens.activityFor(HostScreens.SCREEN_HOST, stock));
         assertEquals(HostScreens.class.getClassLoader(), stock.getExtras().getClassLoader());
         assertEquals("value", stock.getStringExtra("stock"));
