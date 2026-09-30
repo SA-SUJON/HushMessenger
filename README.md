@@ -10,7 +10,7 @@
 
 # HushMessenger
 
-HushMessenger is a Morphe patch source for Facebook Messenger. It offers 27 patches. 24 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
+HushMessenger is a Morphe patch source for Facebook Messenger. It offers 28 patches. 25 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
@@ -21,10 +21,10 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It offers 27 patc
 
 1. **Check the APK.** This patch targets seven arm64 Messenger builds, with version codes `346013387`, `346013440`, `346013442`, `346013354`, `346013370`, `346013394` and `346013423`. The version name alone isn't enough. APKMirror lists 21 arm64 builds of 580.0.0.49.91 under the same name. All six of its "nodpi" ones work, but only one of the builds made for a single screen density has been checked. Download [build 346013440](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-5-android-apk-download/) or [build 346013387](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/facebook-messenger-580-0-0-49-91-11-android-apk-download/) directly and check the version code on the page before you patch. Build 346013370 is what Morphe's download link handed two people who reported it, build 346013354 is APKMirror's arm64 nodpi bundle of the same release, and build 346013442 comes from APKPure. The [supported builds](#supported-messenger-builds) have the full details.
 2. **Add the source.** Open the link above on Android with Morphe Manager installed. You can also open **Sources**, tap **+**, choose **Remote**, and enter `github.com/SysAdminDoc/HushMessenger`.
-3. **Check the source.** The HushMessenger card should show **27 patches**. Open **Patches** to browse the catalog. Every patch is selected by default, so use **Choose patches** when preparing Messenger if you want to leave some out. Tap the card's refresh button if it stays on an old version.
+3. **Check the source.** The HushMessenger card should show **28 patches**. Open **Patches** to browse the catalog. Every patch is selected by default, so use **Choose patches** when preparing Messenger if you want to leave some out. Tap the card's refresh button if it stays on an old version.
 4. **Choose one source.** Use the remote or local HushMessenger source. Adding both creates two cards with the same name, which can point to different versions. If other sources offer Messenger patches, choose the one you intend. Mixing independent patches can cause conflicts.
 
-For a local source, download [`patches-0.6.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.6.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL, and the command below lists its 27 entries. Source refreshes download patches. They do not modify an installed Messenger app. S25 runs a patched build, updated in place with its existing sign-in preserved. S22 now runs a patched build too.
+For a local source, download [`patches-0.6.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.6.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL, and the command below lists its 28 entries. Source refreshes download patches. They do not modify an installed Messenger app. S25 runs a patched build, updated in place with its existing sign-in preserved. S22 now runs a patched build too.
 
 ### If something doesn't work
 
@@ -87,6 +87,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Keep unsent messages | Keeps messages other people unsend and marks them "[unsent]". It doesn't work in end-to-end encrypted chats, and your own unsend may be limited while it's on. |
 | Allow screenshots | Lets you screenshot photos, media and video that Messenger protects in a chat, and stops it telling the other person you took a screenshot. View-once media stays protected. |
 | Use system emoji | Draws emoji with your phone's font instead of Messenger's. Messenger's set stays if the phone has no emoji font. |
+| Send photos at original quality | With HD on, a JPEG photo goes out as the file itself instead of Messenger's smaller re-encoded copy, with its location tags removed. Photos saved with a rotation tag, photos over 20 MB and videos still get Messenger's compression. |
 | Open web links externally | Uses the stock external-browser branch for HTTP and HTTPS. |
 | Allow chat bubbles | Removes the low-memory gate on Android 11 or newer. Android permissions still apply. |
 
@@ -108,7 +109,7 @@ The **App** tab starts with quick access and a restart button. Appearance and se
   <img src="assets/settings-app-light.png" width="300" alt="App tab in the light theme">
 </p>
 
-The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. Meta stopped selling ads in the Messenger inbox on November 11, 2025 and in Messenger Stories on August 27, 2026, which is likely why no test account has ever shown one. So there's nothing live to check it against, and the filter stays in case they return. It doesn't remove story ads. Messages from businesses you've subscribed to are ordinary chats and stay. Media-transcoding changes remain unavailable until the upload path is verified.
+The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. Meta stopped selling ads in the Messenger inbox on November 11, 2025 and in Messenger Stories on August 27, 2026, which is likely why no test account has ever shown one. So there's nothing live to check it against, and the filter stays in case they return. It doesn't remove story ads. Messages from businesses you've subscribed to are ordinary chats and stay.
 
 ### Alerts from only some chats
 
@@ -121,17 +122,19 @@ A chat only keeps its own setting once you change it, so doing step 1 first matt
 
 ### Chat heads, photo quality and updates
 
-These are already in Messenger, so there's no patch for them.
+Chat heads and update prompts are already in Messenger, so there's no patch for them. Photo quality has one switch on top of Messenger's own.
 
 **Chat heads.** Turn them on in Messenger's **Settings > Chat heads**. Messenger then sends you to Android's **Appear on top** list, where you switch Messenger on. On Android 12 and newer you also need to set Messenger's battery use to **Unrestricted** (app info > **Battery**). Without that, Android won't let the chat head start while Messenger is in the background, and a new message only shows up as a notification. On the S22 (Android 16), heads appeared as soon as battery use was Unrestricted.
 
-**Photo quality.** The gallery picker has an **HD** switch above your photos, and Messenger remembers it between sends. A 4032x3024 photo sent with HD off arrived at 2048x1536. With HD on it arrived at the full 4032x3024.
+**Photo quality.** The gallery picker has an **HD** switch above your photos, and Messenger remembers it between sends. A 4032x3024 photo sent with HD off arrived at 2048x1536. With HD on it arrived at the full 4032x3024, but Messenger still re-encoded it on the phone first, so a 6.4 MB photo went out as about 1.8 MB.
+
+Turn on **Send photos at original quality** and an HD photo goes out as the file itself. Sent that way between two accounts in an end-to-end encrypted chat, the same kind of 6.4 MB photo arrived identical to the original, byte for byte. The switch only takes JPEG photos up to 20 MB, and it removes GPS location tags from the copy it sends, since Messenger's own copy leaves them out too. A photo saved with a rotation tag still gets Messenger's compression for now. Many phones save portrait shots that way. Videos aren't affected.
 
 **Update prompts.** You won't see Google Play's "update available" prompt in a patched Messenger. That check fails for apps Play didn't install. Phones that ship with Facebook App Manager (many Samsung models do) don't offer one either. With App Manager turned on, a patched Messenger showed no **App updates** row in its settings and no update offer, and a stock update couldn't install over it anyway because the signatures differ. To update, patch a newer supported build with the same key.
 
 ## What the patches change
 
-The [patch catalog](patches-list.json) lists all 27 patches with their categories, default selections, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
+The [patch catalog](patches-list.json) lists all 28 patches with their categories, default selections, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
 
 ### Independent optional controls
 
@@ -202,9 +205,9 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 The S25 took each update in place with the same signing key as its installed Messenger and Facebook apps, keeping its original install date, its sign-in and 19 enabled controls. With the v0.5.0 patch code it passed voice calls, one-to-one notifications, silence for muted chats, facebook.com links opening the Facebook app, and a same-key update and rollback that kept all data. Turning switches on and off showed the expected change for Facebook shortcuts, stories and notes, the Meta AI button, the "Ask Meta AI" search button, People You May Know on the Notifications tab, external links, system emoji and the avatar sticker tab. A two-phone check in an end-to-end encrypted chat showed no typing indicator with the switch on and the usual one while paused, and messages still arrived. Restart Messenger refuses requests from other apps, while the long-press shortcut and the App tab button still restart into the signed-in chat list. At Android's largest font size the chat list, chats and settings stayed usable. The S22 now runs a patched build as well.
 
-The local suite has 81 Kotlin tests, 166 Android unit tests and 44 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and ten warnings, including two package-visibility notices for queries restricted to this app.
+The local suite has 83 Kotlin tests, 176 Android unit tests and 44 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and ten warnings, including two package-visibility notices for queries restricted to this app.
 
-For v0.6.0, Morphe Desktop 1.17.0 applied all 27 patches to private copies of all five supported APKs, and Android verified their v3 signatures. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check. On 2026-09-30, builds `346013394` and `346013423` took all 27 patches in Desktop 1.17.0 too, and both outputs passed Android's v3 signature check and 16KB alignment. Later that day the 14 single-density builds did the same.
+For v0.6.0, Morphe Desktop 1.17.0 applied all 27 patches to private copies of all five supported APKs, and Android verified their v3 signatures. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check. On 2026-09-30, builds `346013394` and `346013423` took all 27 patches in Desktop 1.17.0 too, and both outputs passed Android's v3 signature check and 16KB alignment. Later that day the 14 single-density builds did the same. With the photo switch added, all 21 builds pass the hook check for 28 patches, and Desktop applied all 28 to `346013440`.
 
 The settings screens now run inside the patched Messenger on the S25, where both pages and themes were checked. Earlier checks used a clearly marked standalone UI preview, removed after each run, and the mirrored test language preserved multi-digit counts there. Automated tests cover API 28 and 36, short windows at 200% text, state restoration and accessible actions. These checks verify settings behavior. Live TalkBack speech hasn't been tested yet.
 

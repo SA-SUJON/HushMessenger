@@ -43,6 +43,12 @@ internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
 internal const val SCREEN_CAPTURE_CALLBACK = "Landroid/app/Activity\$ScreenCaptureCallback;"
+/** Encrypted chats hand every photo to this transcoder; its two image entry points keep their names in every build. */
+internal const val MEDIA_TRANSCODER = "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;"
+internal const val TRANSCODE_IMAGE = "$MEDIA_TRANSCODER->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B"
+internal const val TRANSCODE_IMAGE_ASYNC = "$MEDIA_TRANSCODER->transcodeImageAsync(" +
+    "Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V"
+private const val ORIGINAL_PHOTO = "Lapp/hushmessenger/extension/OriginalPhoto;"
 private const val FLAG_SECURE = 0x2000
 
 private val facebookPlugins = setOf(
@@ -90,6 +96,7 @@ internal val expectedHooks = mapOf(
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "ai_search_chip" to setOf("LX/D8E;->render(LX/2MZ;)LX/1GG;"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
+    "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
         "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
@@ -216,6 +223,7 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 !AccessFlags.STATIC.isSet(method.accessFlags) &&
                 instructions.any { (it as? NarrowLiteralInstruction)?.narrowLiteral == FLAG_SECURE } &&
                 refs.any { it.toString() == "Landroid/view/Window;->addFlags(I)V" }) add("allow_screenshot")
+            if (cls.type == MEDIA_TRANSCODER && method.hookId().let { it == TRANSCODE_IMAGE || it == TRANSCODE_IMAGE_ASYNC }) add("original_photo")
             if (method.returnType == "V" && method.parameterTypes.size == 3 &&
                 method.parameterTypes[0] == "Landroid/content/Intent;" &&
                 strings.any { "ACTION_REVOKE_MESSAGE" in it }) add("keep_unsent")
@@ -432,6 +440,31 @@ internal fun MutableMethod.injectEmojiTypeface() {
         if-eqz v0, :stock_behavior
         return-object v0
     """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
+}
+
+internal fun MutableMethod.validateOriginalPhoto() {
+    validateScratch()
+    if (AccessFlags.STATIC.isSet(accessFlags) || (hookId() != TRANSCODE_IMAGE && hookId() != TRANSCODE_IMAGE_ASYNC)) {
+        throw PatchException("Messenger controls: unexpected photo transcoder ${hookId()}")
+    }
+}
+
+/** Hands an HD photo back as its own file; OriginalPhoto returns null or false to let the stock transcode run. */
+internal fun MutableMethod.injectOriginalPhoto() {
+    validateOriginalPhoto()
+    // The URL, target width and height, options, extras and (async) callback sit in one run of parameter registers.
+    val call = if (returnType == "[B") """
+        invoke-static/range {p1 .. p7}, $ORIGINAL_PHOTO->sync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B
+        move-result-object v0
+        if-eqz v0, :stock_behavior
+        return-object v0
+    """ else """
+        invoke-static/range {p1 .. p8}, $ORIGINAL_PHOTO->async(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Ljava/lang/Object;)Z
+        move-result v0
+        if-eqz v0, :stock_behavior
+        return-void
+    """
+    addInstructionsWithLabels(0, call.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
 }
 
 internal fun MutableMethod.validateSubtabs() {

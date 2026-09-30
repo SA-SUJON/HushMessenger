@@ -80,6 +80,7 @@ public final class SettingsActivity extends Activity {
         {"event_prompts", "Hide event prompts", "Hides event quick-promotion prompts inside chats.", "conversations"},
         {"typing", "Hide typing indicator", "Stops your outgoing active-typing signal, including in end-to-end encrypted chats.", "conversations"},
         {"use_system_emoji", "Use system emoji", "Renders emoji with your phone's own font instead of Messenger's built-in set.", "conversations"},
+        {"original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo as the file itself instead of Messenger's re-encoded copy, with its location removed. Photos saved with a rotation tag, photos over 20 MB and videos still get Messenger's compression.", "conversations"},
         {"external_browser", "Open web links externally", "Uses your default browser for HTTP and HTTPS links. Other link types keep their original behavior.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected.", "privacy"},

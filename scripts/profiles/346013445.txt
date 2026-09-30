@@ -66,6 +66,8 @@ hook menu_settings LX/U8O;->CAm(LX/4jq;I)V
 hook menu_settings LX/U8R;->A0J(Ljava/util/List;)V
 hook moments LX/HEz;->A05()Z
 hook moments LX/JiI;->A05()Z
+hook original_photo Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B
+hook original_photo Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V
 hook people LX/1pm;->A0C()Z
 hook people LX/2Wl;->A04()Z
 hook people_jewel LX/H9p;->A01(LX/H9p;)Z

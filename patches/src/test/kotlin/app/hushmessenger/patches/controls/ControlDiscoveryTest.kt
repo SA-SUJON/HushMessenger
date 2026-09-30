@@ -50,6 +50,7 @@ class ControlDiscoveryTest {
                     "allow_screenshot" -> if (id.contains("(Landroid/view/Window;)")) SECURE_WINDOW_BODY else "return-void"
                     "keep_unsent" -> "const-string v0, \"com.facebook.stella.ipc.messenger.ACTION_REVOKE_MESSAGE\"\nreturn-void"
                     "ai_search" -> "const-string v0, \"com.facebook.messaging.search.aiagent.plugins.implementations.SearchAiagentImplementationsKillSwitch\"\nconst/4 v0, 0x1\nreturn v0"
+                    "original_photo" -> if (id.endsWith(")[B")) "const/4 v0, 0x0\nreturn-object v0" else "return-void"
                     "emoji_typeface" -> "const-string v0, \"FacebookEmojiTypefaceProviderImpl\"\nconst/4 v0, 0x0\nreturn-object v0"
                     "avatar_tabs" -> "sget-object v0, $AVATAR_TAB_EVENT->A03:$AVATAR_TAB_EVENT\nreturn-object v0"
                     "ai_search_chip" -> "const/4 v0, 0x0\nreturn-object v0"
@@ -85,7 +86,7 @@ class ControlDiscoveryTest {
                     else -> error("Missing synthetic resolver fixture for $key")
                 }
                 val staticGate = (key in pluginGates || key == "ai_search") && !id.substringAfter('(').startsWith(')')
-                fixtureMethod(id, body, flags = AccessFlags.PUBLIC.value or
+                fixtureMethod(id, body, registers = if (key == "original_photo") 22 else 8, flags = AccessFlags.PUBLIC.value or
                     if (staticGate) AccessFlags.STATIC.value else 0)
             }
         }
@@ -121,7 +122,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(79, found.values.sumOf { it.size })
+        assertEquals(81, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 
@@ -137,6 +138,17 @@ class ControlDiscoveryTest {
         val otherFlag = fixtureMethod("LX/4nW;->A00(Landroid/view/Window;)V", SECURE_WINDOW_BODY.replace("0x2000", "0x80"))
         val notSecure = fixture.filter { it !== helper } + fixtureClass(helper.type, listOf(otherFlag))
         assertFailsWith<PatchException> { validateControls(findControls(notSecure), setOf("allow_screenshot")) }
+    }
+
+    @Test fun photoHooksAreOnlyTheTranscodersOwnEntryPoints() {
+        val fixture = completeFixture()
+        assertEquals(setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC), findControls(fixture).getValue("original_photo").map { it.hookId() }.toSet())
+        // The same entry points on some other class aren't the encrypted-chat photo path.
+        val lookalike = fixtureClass("LX/Fixture;", listOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC).map {
+            fixtureMethod(it.replace(MEDIA_TRANSCODER, "LX/Fixture;"), "return-void", registers = 22)
+        })
+        validateControls(findControls(fixture + lookalike), setOf("original_photo"))
+        assertTrue(findControls(fixture.filter { it.type != MEDIA_TRANSCODER } + lookalike).getValue("original_photo").isEmpty())
     }
 
     @Test fun notificationsSuggestionsReaderNeedsTheStockKeyAndGetter() {

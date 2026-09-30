@@ -148,11 +148,16 @@ public class CompatReport {
         PATCHES.put("Open web links externally", List.of("browser"));
         PATCHES.put("Allow chat bubbles", List.of("bubbles"));
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
+        PATCHES.put("Send photos at original quality", List.of("original_photo"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
+
+    static final Set<String> ORIGINAL_PHOTO_HOOKS = Set.of(
+        "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
+        "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V");
 
     /** Every control key, in patch order. */
     static final Set<String> CONTROL_KEYS = new LinkedHashSet<>();
@@ -880,6 +885,12 @@ public class CompatReport {
                     paramTypes.equals(List.of(cls.getType())) &&
                     strings.stream().anyMatch(s -> s.contains("SearchAiagentImplementationsKillSwitch"))) {
                     found.get("ai_search").add(method);
+                }
+
+                // original_photo: the encrypted-chat photo transcoder's two entry points, named the same in every build
+                if ("Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;".equals(cls.getType()) &&
+                    !isStatic && ORIGINAL_PHOTO_HOOKS.contains(hookId(method))) {
+                    found.get("original_photo").add(method);
                 }
 
                 // emoji_typeface

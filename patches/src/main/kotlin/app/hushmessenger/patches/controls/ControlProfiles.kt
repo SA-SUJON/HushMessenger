@@ -82,6 +82,10 @@ internal val PROFILE_346013370 = ControlProfile(
             "LX/NjG;->CAp(LX/4k1;I)V", "LX/WnD;->A0J(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HC4;->A05()Z", "LX/Jdr;->A05()Z"),
+        "original_photo" to setOf(
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V",
+        ),
         "people" to setOf("LX/1pl;->A0C()Z", "LX/2Wk;->A04()Z"),
         "people_jewel" to setOf("LX/NRn;->A01(LX/NRn;)Z"),
         "people_list_end" to setOf("LX/1pl;->A0B()Z", "LX/2Wk;->A03()Z"),
@@ -148,6 +152,10 @@ internal val PROFILE_346013423 = ControlProfile(
             "LX/Wh6;->CB5(LX/4nF;I)V", "LX/Wh7;->A0I(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HBB;->A05()Z", "LX/JdK;->A05()Z"),
+        "original_photo" to setOf(
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V",
+        ),
         "people" to setOf("LX/1qi;->A0C()Z", "LX/2Xz;->A04()Z"),
         "people_jewel" to setOf("LX/H9F;->A01(LX/H9F;)Z"),
         "people_list_end" to setOf("LX/1qi;->A0B()Z", "LX/2Xz;->A03()Z"),
@@ -214,6 +222,10 @@ internal val PROFILE_346013357 = ControlProfile(
             "LX/U8O;->CAm(LX/4jq;I)V", "LX/U8R;->A0J(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HEz;->A05()Z", "LX/JiI;->A05()Z"),
+        "original_photo" to setOf(
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V",
+        ),
         "people" to setOf("LX/1pm;->A0C()Z", "LX/2Wl;->A04()Z"),
         "people_jewel" to setOf("LX/H9p;->A01(LX/H9p;)Z"),
         "people_list_end" to setOf("LX/1pm;->A0B()Z", "LX/2Wl;->A03()Z"),
@@ -280,6 +292,10 @@ internal val PROFILE_346013374 = ControlProfile(
             "LX/Khk;->CAn(LX/4lo;I)V", "LX/Khr;->A0I(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HKQ;->A05()Z", "LX/Jk4;->A05()Z"),
+        "original_photo" to setOf(
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
+            "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V",
+        ),
         "people" to setOf("LX/1pl;->A0C()Z", "LX/2Wk;->A04()Z"),
         "people_jewel" to setOf("LX/TCu;->A01(LX/TCu;)Z"),
         "people_list_end" to setOf("LX/1pl;->A0B()Z", "LX/2Wk;->A03()Z"),
