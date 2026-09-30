@@ -638,7 +638,9 @@ public final class SettingsActivity extends Activity {
 
     /** The release page to offer, or "" when the response points anywhere but this project's releases. */
     static String releasePage(String htmlUrl) {
-        return htmlUrl.startsWith("https://github.com/SysAdminDoc/HushMessenger/releases/") ? htmlUrl : "";
+        // A plain tag page only, so "../" or an encoded path can't walk out of this project.
+        return htmlUrl.matches("https://github\\.com/SysAdminDoc/HushMessenger/releases/tag/[0-9A-Za-z._+-]+")
+            && !htmlUrl.contains("..") ? htmlUrl : "";
     }
 
     private void checkForUpdates(TextView status) {

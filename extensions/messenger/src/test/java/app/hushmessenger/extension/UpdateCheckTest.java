@@ -10,6 +10,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
@@ -31,6 +33,7 @@ public class UpdateCheckTest {
     private interface Reply { void send(OutputStream out) throws IOException; }
 
     private ServerSocket server;
+    private final CountDownLatch hold = new CountDownLatch(1);
     private final AtomicInteger requests = new AtomicInteger();
     private volatile Reply reply;
 
@@ -53,6 +56,7 @@ public class UpdateCheckTest {
     }
 
     @After public void stop() throws IOException {
+        hold.countDown();
         server.close();
         SettingsActivity.releasesUrl = DEFAULT_URL;
         SettingsActivity.updateTimeoutMillis = 5000;
@@ -74,6 +78,11 @@ public class UpdateCheckTest {
         assertEquals("", SettingsActivity.releasePage("https://github.com/someone/else/releases/tag/v99.0.0"));
         assertEquals("", SettingsActivity.releasePage("https://github.com/SysAdminDoc/HushMessenger.evil/releases/x"));
         assertEquals("", SettingsActivity.releasePage("http://github.com/SysAdminDoc/HushMessenger/releases/tag/v1"));
+        assertEquals("", SettingsActivity.releasePage("https://github.com/SysAdminDoc/HushMessenger/releases/../../../evil/x"));
+        assertEquals("", SettingsActivity.releasePage("https://github.com/SysAdminDoc/HushMessenger/releases/tag/%2e%2e/x"));
+        assertEquals("", SettingsActivity.releasePage("https://github.com/SysAdminDoc/HushMessenger/releases/tag/.."));
+        assertEquals("", SettingsActivity.releasePage("https://github.com/SysAdminDoc/HushMessenger/releases/tag/v1?x=https://evil"));
+        assertEquals("", SettingsActivity.releasePage("https://github.com.evil/SysAdminDoc/HushMessenger/releases/tag/v1"));
         assertEquals("", SettingsActivity.releasePage(""));
     }
 
@@ -109,10 +118,14 @@ public class UpdateCheckTest {
     }
 
     @Test public void aServerThatNeverAnswersTimesOut() throws Exception {
+        // Hold the connection open past awaitStatus's window, so only the read timeout can end the wait.
         reply = out -> {
-            try { Thread.sleep(3000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+            try { hold.await(20, TimeUnit.SECONDS); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
         };
+        long started = System.nanoTime();
         assertEquals("Couldn't check for updates.", awaitStatus(openWithCheckOn()).getText().toString());
+        long waited = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+        assertTrue("Gave up after " + waited + " ms with a 500 ms timeout", waited < 3000);
     }
 
     @Test public void nothingIsFetchedWhileTheSwitchIsOff() throws Exception {
