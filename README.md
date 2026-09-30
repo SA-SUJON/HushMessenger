@@ -93,7 +93,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Send photos at original quality | With HD on, a JPEG photo goes out with its own image data instead of Messenger's smaller re-encoded copy. Its metadata, such as location and camera details, is left out, as it is from Messenger's copy. Only the tag that turns a sideways photo upright stays. Photos over 20 MB and videos still get Messenger's compression. |
 | Open web links externally | Uses the stock external-browser branch for HTTP and HTTPS. |
 | Allow chat bubbles | Removes the low-memory gate on Android 11 or newer. Android permissions still apply. |
-| Material You theme | In dark mode on Android 12 and newer, Messenger's blue takes the accent color Android picks from your wallpaper, with the same contrast. Android 11 gets a fixed blue palette. Black backgrounds, chat themes and light mode stay as they are. Turn on dark mode in Messenger first. |
+| Material You theme | In dark mode on Android 12 and newer, Messenger's blue takes the accent color Android picks from your wallpaper and its grays get a matching tint, with the same contrast as before. Android 11 gets a fixed blue palette. Black backgrounds and chat themes stay as they are, and so does light mode. Turn on dark mode in Messenger first. |
 
 <p>
   <img src="assets/settings-dark.png" width="300" alt="Controls tab in the dark theme, with search and category filters">

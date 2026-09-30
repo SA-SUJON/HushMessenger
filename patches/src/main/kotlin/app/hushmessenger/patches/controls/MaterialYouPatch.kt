@@ -166,6 +166,7 @@ val materialYouPatch = bytecodePatch(
             0xFF1C1C1D.toInt() to "DARK_1C1C1D",
             0xFF252728.toInt() to "DARK_252728",
             0xFF333334.toInt() to "DARK_333334",
+            0xFF323339.toInt() to "DARK_323339",
         )
         val extensionPackage = "Lapp/hushmessenger/extension/"
         var route3Count = 0

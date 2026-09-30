@@ -60,19 +60,21 @@ public final class MaterialYouTheme {
      * 0xFF1C2B33 (count=26) - dark blue-tinted (Messenger's signature blue-dark)
      * 0xFF1C1C1D (count=9) - neutral dark grey (shared with Facebook)
      * 0xFF252728 (count=8) - card/surface grey (shared with Facebook)
-     * 0xFF333334 (count=8) - elevated surface
+     * 0xFF333334 (count=8) - elevated surface: the search bar, message box and note bubbles
      * 0xFF5C5E62 (count=11) - border/divider grey
+     * 0xFF323339 (count=2) - dark grey of three tokens in the DSP ColorData resolver
      */
-    static final String SURFACES = "080809 1C1C1D 252728 333334";
+    static final String SURFACES = "080809 1C1C1D 252728 333334 323339";
 
     private static final int[] SURFACE_VALUES = parseSurfaces(SURFACES);
 
     // Route 3 fields: the patch replaces "const vX, 0xFF080809" with a read of DARK_080809.
-    // In dark mode they hold the palette's colours; in light mode they hold Messenger's own.
+    // In dark mode with the switch on they hold the palette's colours; otherwise Messenger's own.
     public static volatile int DARK_080809;
     public static volatile int DARK_1C1C1D;
     public static volatile int DARK_252728;
     public static volatile int DARK_333334;
+    public static volatile int DARK_323339;
 
     /** Held while route 3 fields are written. */
     private static final Object PUBLISHING = new Object();
@@ -183,8 +185,8 @@ public final class MaterialYouTheme {
     }
 
     /**
-     * Called by Settings when the context is ready. Reads the phone's wallpaper palette and
-     * listens for configuration changes (new wallpaper).
+     * Runs from palette() the first time a hook needs a colour. Reads the phone's wallpaper
+     * palette and listens for configuration changes (new wallpaper).
      */
     public static void bind() {
         if (bound) return;
@@ -222,16 +224,17 @@ public final class MaterialYouTheme {
     }
 
     /**
-     * Writes route 3 fields from the palette in use: its surfaces in dark mode, Messenger's
-     * own in light mode.
+     * Writes route 3 fields from the palette in use: its surfaces in dark mode with the switch on,
+     * Messenger's own otherwise.
      */
     private static void publish() {
         synchronized (PUBLISHING) {
-            TonePalette p = isDarkMode() ? palette : null;
+            TonePalette p = isDarkMode() && Settings.wouldUse(KEY) ? palette : null;
             DARK_080809 = surface(p, 0x080809);
             DARK_1C1C1D = surface(p, 0x1C1C1D);
             DARK_252728 = surface(p, 0x252728);
             DARK_333334 = surface(p, 0x333334);
+            DARK_323339 = surface(p, 0x323339);
         }
     }
 

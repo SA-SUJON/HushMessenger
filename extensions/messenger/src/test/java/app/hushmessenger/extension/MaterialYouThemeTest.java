@@ -134,6 +134,7 @@ public class MaterialYouThemeTest {
         assertTrue(MaterialYouTheme.isSurface(0xFF1C1C1D));
         assertTrue(MaterialYouTheme.isSurface(0xFF252728));
         assertTrue(MaterialYouTheme.isSurface(0xFF333334));
+        assertTrue(MaterialYouTheme.isSurface(0xFF323339));
     }
 
     @Test public void unknownColoursAreNotSurfaces() {
@@ -150,6 +151,7 @@ public class MaterialYouThemeTest {
         TonePalette p = TonePalette.fallback();
         assertEquals(p.sameLightness(TonePalette.NEUTRAL, 0xFF080809), MaterialYouTheme.DARK_080809);
         assertEquals(p.sameLightness(TonePalette.NEUTRAL, 0xFF252728), MaterialYouTheme.DARK_252728);
+        assertEquals(p.sameLightness(TonePalette.NEUTRAL, 0xFF323339), MaterialYouTheme.DARK_323339);
     }
 
     @Test public void route3FieldsAreOriginalColoursInLightMode() {
@@ -159,6 +161,17 @@ public class MaterialYouThemeTest {
         assertEquals(0xFF1C1C1D, MaterialYouTheme.DARK_1C1C1D);
         assertEquals(0xFF252728, MaterialYouTheme.DARK_252728);
         assertEquals(0xFF333334, MaterialYouTheme.DARK_333334);
+        assertEquals(0xFF323339, MaterialYouTheme.DARK_323339);
+    }
+
+    @Test public void route3FieldsAreOriginalColoursWhenSwitchIsOff() {
+        Settings.preferences.edit().putBoolean(MaterialYouTheme.KEY, false).apply();
+        MaterialYouTheme.use(TonePalette.fallback());
+        assertEquals(0xFF080809, MaterialYouTheme.DARK_080809);
+        assertEquals(0xFF1C1C1D, MaterialYouTheme.DARK_1C1C1D);
+        assertEquals(0xFF252728, MaterialYouTheme.DARK_252728);
+        assertEquals(0xFF333334, MaterialYouTheme.DARK_333334);
+        assertEquals(0xFF323339, MaterialYouTheme.DARK_323339);
     }
 
     // --- Dark mode answer ---
