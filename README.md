@@ -101,7 +101,7 @@ Settings use stable page and category IDs, so changing the language keeps naviga
 The **App** tab starts with quick access and a restart button. Appearance and setup details follow. **Copy setup** copies the extension and host versions, Android version, pause state and each control's installed, selected and active flags. It excludes account details, chats, device identifiers and recovery material. Nothing is sent. You choose where to paste it. **Open** in the header returns to Messenger. Refreshing the source in Morphe downloads the patch bundle, but new controls only reach Messenger once you rebuild and install its APK.
 
 <p>
-  <img src="assets/settings-app-dark.png" width="300" alt="App tab in the dark theme with quick access and Restart Messenger">
+  <img src="assets/settings-app-dark.png" width="300" alt="App tab in the dark theme with quick access, Restart Messenger and Hide app drawer icon">
   <img src="assets/settings-app-light.png" width="300" alt="App tab in the light theme">
 </p>
 
