@@ -73,9 +73,12 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         val classes = mutableListOf<com.android.tools.smali.dexlib2.iface.ClassDef>()
         classDefForEach { classes.add(it) }
         discoveredControls = findControls(classes)
+        bundledControls.clear()
+        hookScreenHosts()
     }
     finalize {
         discoveredControls = emptyMap()
+        bundledControls.clear()
         activeProfile = BASE_PROFILE
     }
 }
@@ -171,6 +174,7 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
                 }
             }
             injectControl(key, methods)
+            recordControl(key)
             applied = true
         }
     }
@@ -270,6 +274,7 @@ val menuSettingsPatch = bytecodePatch(
             .single { it.hookId() == drawerMethod.hookId() }
             .injectMenuDrawerAdd()
         clickTarget.injectMenuFolderClick(folderItemType)
+        recordControl("menu_row")
         menuRowApplied = true
     }
 }

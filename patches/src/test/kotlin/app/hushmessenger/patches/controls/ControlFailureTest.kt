@@ -57,7 +57,7 @@ class ControlFailureTest {
                 fixtureMethod("LX/2Wl;->A03()Z", pluginBody(listEnd)),
                 peopleJewelMethod(),
             ).groupBy { it.definingClass }.map { (type, methods) -> fixtureClass(type, methods) }
-                .plus(peopleJewelKeyHolder()).toSet()
+                .plus(peopleJewelKeyHolder()).plus(screenHostClasses()).toSet()
             val context = BytecodePatchContext::class.java.declaredConstructors.single()
                 .newInstance(config, resources.packageMetadata) as BytecodePatchContext
             val patchClasses = Class.forName("app.morphe.patcher.util.PatchClasses")
@@ -71,6 +71,8 @@ class ControlFailureTest {
                     else hidePeoplePatch.execute(context)
                     feature.finalize(resources)
                     assertEquals(!broken, resources.hasPeopleFeature())
+                    // A Root Mount install reads the same list from the patched code.
+                    assertEquals(if (broken) emptySet() else setOf("people"), bundledControls.toSet())
                 } finally {
                     discovery.finalize(context)
                 }

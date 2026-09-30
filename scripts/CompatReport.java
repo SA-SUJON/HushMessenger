@@ -1,7 +1,7 @@
 /*
  * Dry-run compatibility report for Messenger APKs, and the source of each build's profile.
  *
- * Checks whether a given APK is compatible with all 27 HushMessenger patches
+ * Checks whether a given APK is compatible with every HushMessenger patch
  * without modifying the file. Prints package, version code, ABI, signer and
  * PASS/FAIL per patch, then exits non-zero on any failure.
  *
@@ -1160,6 +1160,90 @@ public class CompatReport {
         }
     }
 
+    static final String APP_COMPONENT_FACTORY = "com.facebook.common.appcomponentfactory.m4a.M4aAppComponentFactory";
+    static final String SCREEN_HOST = "com.facebook.messaging.about.preference.NeueAboutPreferenceActivity";
+    static final String SHORTCUT_HOST = "com.facebook.zero.upsell.activity.ZeroUpsellBuyConfirmInterstitialActivity";
+
+    /**
+     * What SettingsShortcut.kt and ScreenHosts.kt need for settings on a Root Mount install: the stock factory's two
+     * entry points in the shape the hooks expect, and two stock activities with exactly the tested attributes.
+     */
+    static List<String> screenHostProblems(File apk, List<ClassDef> classes) {
+        var problems = new ArrayList<String>();
+        String factory = "L" + APP_COMPONENT_FACTORY.replace('.', '/') + ";";
+        ClassDef factoryClass = classes.stream().filter(c -> c.getType().equals(factory)).findFirst().orElse(null);
+        if (factoryClass == null) {
+            problems.add("no " + APP_COMPONENT_FACTORY);
+        } else {
+            Method activity = null, application = null;
+            for (Method m : factoryClass.getMethods()) {
+                String id = hookId(m);
+                if (id.equals(factory + "->instantiateActivity(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Intent;)Landroid/app/Activity;")) activity = m;
+                if (id.equals(factory + "->instantiateApplication(Ljava/lang/ClassLoader;Ljava/lang/String;)Landroid/app/Application;")) application = m;
+            }
+            if (activity == null || AccessFlags.STATIC.isSet(activity.getAccessFlags()) || activity.getImplementation() == null ||
+                activity.getImplementation().getRegisterCount() <= 4) problems.add("instantiateActivity has no local register to use");
+            if (application == null || AccessFlags.STATIC.isSet(application.getAccessFlags()) || application.getImplementation() == null) {
+                problems.add("no instantiateApplication");
+            } else {
+                var code = instructions(application);
+                if (code.stream().filter(i -> i.getOpcode() == Opcode.RETURN_OBJECT).count() != 1 ||
+                    code.stream().anyMatch(i -> i.getOpcode().name.startsWith("if-") || i.getOpcode().name.startsWith("goto")
+                        || i.getOpcode().name.endsWith("-switch")))
+                    problems.add("instantiateApplication isn't one straight path to its return");
+            }
+        }
+        String aapt2 = findTool("aapt2");
+        if (aapt2 == null) {
+            problems.add("aapt2 unavailable, cannot check the stock activities");
+            return problems;
+        }
+        List<String> lines;
+        try {
+            var proc = new ProcessBuilder(aapt2, "dump", "xmltree", apk.getAbsolutePath(), "--file", "AndroidManifest.xml")
+                .redirectErrorStream(true).start();
+            lines = Arrays.asList(new String(proc.getInputStream().readAllBytes()).split("\\r?\\n"));
+            proc.waitFor();
+        } catch (Exception e) {
+            problems.add("aapt2 failed: " + e);
+            return problems;
+        }
+        var attribute = Pattern.compile("^\\s*A: http://schemas.android.com/apk/res/android:(\\w+)\\(0x[0-9a-f]+\\)=(\"[^\"]*\"|\\S+)");
+        if (lines.stream().noneMatch(l -> l.contains(":appComponentFactory(") && l.contains("=\"" + APP_COMPONENT_FACTORY + "\"")))
+            problems.add("the manifest's app component factory differs");
+        Map<String, Map<String, String>> expected = Map.of(
+            SCREEN_HOST, Map.of("exported", "false", "parentActivityName", "\"com.facebook.messenger.neue.MainActivity\""),
+            SHORTCUT_HOST, Map.of("exported", "false", "taskAffinity", "\"\"", "theme", "@0x01030010", "configChanges", "*"));
+        for (var host : expected.entrySet()) {
+            int found = 0;
+            for (int i = 0; i < lines.size(); i++) {
+                if (!lines.get(i).trim().startsWith("E: activity ")) continue;
+                int depth = lines.get(i).indexOf('E');
+                var attributes = new TreeMap<String, String>();
+                var children = new TreeSet<String>();
+                for (int j = i + 1; j < lines.size() && lines.get(j).indexOf(lines.get(j).trim()) > depth; j++) {
+                    String line = lines.get(j);
+                    int indent = line.indexOf(line.trim());
+                    Matcher m = attribute.matcher(line);
+                    if (indent == depth + 2 && m.find()) attributes.put(m.group(1), m.group(2));
+                    else if (line.trim().startsWith("E: ")) children.add(line.trim().split(" ")[1]);
+                }
+                if (!("\"" + host.getKey() + "\"").equals(attributes.remove("name"))) continue;
+                found++;
+                for (var want : host.getValue().entrySet()) {
+                    String value = attributes.remove(want.getKey());
+                    if (value == null || !(want.getValue().equals("*") || want.getValue().equals(value)))
+                        problems.add(host.getKey() + " " + want.getKey() + " is " + value);
+                }
+                if (!attributes.isEmpty()) problems.add(host.getKey() + " has " + attributes);
+                children.remove("meta-data");
+                if (!children.isEmpty()) problems.add(host.getKey() + " has " + children);
+            }
+            if (found != 1) problems.add("expected one " + host.getKey() + ", found " + found);
+        }
+        return problems;
+    }
+
     static int countManifestMentions(File apk, String permName) {
         String aapt2 = findTool("aapt2");
         if (aapt2 == null) return -1;
@@ -1284,6 +1368,19 @@ public class CompatReport {
                 System.out.println("[FAIL] Install beside Meta apps");
                 for (var f : failures) System.out.println("       " + f);
                 blockers.add("Install beside Meta apps");
+                anyFail = true;
+            }
+        }
+
+        // Check what settings need on a Root Mount install (every patch depends on them)
+        {
+            var failures = screenHostProblems(apk, classes);
+            if (failures.isEmpty()) {
+                System.out.println("[PASS] Settings on Root Mount installs");
+            } else {
+                System.out.println("[FAIL] Settings on Root Mount installs");
+                for (var f : failures) System.out.println("       " + f);
+                blockers.add("Settings on Root Mount installs");
                 anyFail = true;
             }
         }

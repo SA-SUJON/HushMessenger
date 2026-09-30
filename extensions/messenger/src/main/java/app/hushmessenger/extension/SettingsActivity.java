@@ -122,6 +122,8 @@ public final class SettingsActivity extends Activity {
         text = new SettingsText(this);
         ui = new SettingsUi(this, light);
         setTitle(text.get(Settings.preview ? "preview_title" : "settings"));
+        // Hosted in a stock Messenger screen, recents would otherwise label this task "Messenger".
+        if (HostScreens.hosted(this)) setTaskDescription(new android.app.ActivityManager.TaskDescription(getTitle().toString()));
         getWindow().setNavigationBarColor(ui.background);
         getWindow().setStatusBarColor(ui.background);
         getWindow().getDecorView().setSystemUiVisibility(light ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0);
@@ -515,15 +517,18 @@ public final class SettingsActivity extends Activity {
         ui.add(content, ui.heading(text.get("quick_access")), 4);
         LinearLayout access = ui.panel();
         // The Menu tab row is its own patch, recorded as menu_row only when it applied.
-        TextView accessHelp = ui.text(text.get(Settings.installed.contains("menu_row") ? "access_help_menu" : "access_help"), 14, ui.muted, false);
+        boolean menuRow = Settings.installed.contains("menu_row");
+        // A Root Mount install has no drawer entry to mention or hide.
+        boolean hosted = HostScreens.hosted(this);
+        TextView accessHelp = ui.text(text.get((hosted ? "access_help_hosted" : "access_help") + (menuRow ? "_menu" : "")), 14, ui.muted, false);
         accessHelp.setTag("access_help");
         ui.add(access, accessHelp, 0);
         Button restart = ui.button(text.get("restart"));
         restart.setTag("restart_messenger");
-        restart.setOnClickListener(view -> startActivity(new Intent(this, RestartActivity.class)));
+        restart.setOnClickListener(view -> HostScreens.open(this, HostScreens.RESTART));
         ui.add(access, restart, 14);
         // Without the Menu row, a launcher that has no app shortcuts would leave no way back in.
-        if (Settings.installed.contains("menu_row")) {
+        if (menuRow && !hosted) {
             ui.rule(access, 14);
             ui.add(access, controlRow("hide_drawer_icon", text.format("hide_drawer_icon"), text.format("hide_drawer_icon_help"), false), 14);
         }

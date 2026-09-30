@@ -41,6 +41,30 @@ internal fun fixtureClass(
         interfaces, null, emptySet(), fields, methods))
 }
 
+/** The stock app component factory's two entry points, cut down to the shape the screen-host hooks check. */
+internal fun factoryActivity(registers: Int = 12, id: String = INSTANTIATE_ACTIVITY) = fixtureMethod(id, """
+    const/4 v0, 0x0
+    invoke-super {p0, p1, p2, p3}, Landroid/app/AppComponentFactory;->instantiateActivity(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Intent;)Landroid/app/Activity;
+    move-result-object v0
+    return-object v0
+""".trimIndent(), registers)
+
+internal fun factoryApplication(body: String = """
+    invoke-super {p0, p1, p2}, Landroid/app/AppComponentFactory;->instantiateApplication(Ljava/lang/ClassLoader;Ljava/lang/String;)Landroid/app/Application;
+    move-result-object v1
+    sput-object v1, $FACTORY_TYPE->messengerApp:Landroid/app/Application;
+    return-object v1
+""".trimIndent()) = fixtureMethod(INSTANTIATE_APPLICATION, body, 5)
+
+internal fun bundledControlsMethod(body: String = "const-string v0, \"\"\nreturn-object v0") =
+    fixtureMethod(BUNDLED_CONTROLS, body, 1, AccessFlags.STATIC.value)
+
+/** The factory and the extension class every settings run touches, as a supported APK plus the extension has them. */
+internal fun screenHostClasses() = listOf(
+    fixtureClass(FACTORY_TYPE, listOf(factoryActivity(), factoryApplication())),
+    fixtureClass(HOST_SCREENS, listOf(bundledControlsMethod())),
+)
+
 internal const val PEOPLE_JEWEL_HOOK = "LX/HAR;->A01(LX/HAR;)Z"
 
 /**

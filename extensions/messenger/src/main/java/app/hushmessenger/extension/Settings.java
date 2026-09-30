@@ -23,8 +23,9 @@ public final class Settings {
     static final ConcurrentHashMap<String, Long> activeAt = new ConcurrentHashMap<>();
 
     public static void initialize(Context context) {
-        appContext = context.getApplicationContext();
-        preferences = appContext.getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
+        Context app = context.getApplicationContext();
+        // Messenger's Application has no application context of its own until Android finishes attaching it.
+        appContext = app != null ? app : context;
         Set<String> features = new HashSet<>();
         preview = false;
         try {
@@ -36,7 +37,17 @@ public final class Settings {
         } catch (PackageManager.NameNotFoundException error) {
             android.util.Log.e("HushMessenger", "Can't read installed controls", error);
         }
+        // A Root Mount install keeps the stock manifest, so the controls come from the patched code instead.
+        features.addAll(bundled(HostScreens.bundledControls()));
         installed = Collections.unmodifiableSet(features);
+        // Set last: a hook that sees preferences also sees the installed controls.
+        preferences = appContext.getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
+    }
+
+    static Set<String> bundled(String list) {
+        Set<String> keys = new HashSet<>();
+        if (list != null) for (String key : list.split(",")) if (!key.isEmpty()) keys.add(key);
+        return keys;
     }
 
     public static boolean enabled(String key) {
@@ -47,6 +58,7 @@ public final class Settings {
 
     /** Whether a control is in effect right now, without counting it as a use. */
     static boolean wouldUse(String key) {
+        if (preferences == null) HostScreens.initializeLate();
         SharedPreferences prefs = preferences;
         return installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
                 && !CrashGuard.isSafeMode() && prefs.getBoolean(key, false);
@@ -312,10 +324,7 @@ public final class Settings {
                 else if (value != null && value.getClass().getName().endsWith("SettingsFolderKey")) settingsKey = true;
             }
             if (!titled || !settingsKey || context == null) return item;
-            android.content.Intent intent = new android.content.Intent();
-            intent.setClassName(context.getPackageName(), "app.hushmessenger.extension.SettingsActivity");
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            HostScreens.open(context, HostScreens.SETTINGS);
             return null;
         } catch (Exception e) {
             hookFailed("menu_row", "drawerFolderClicked failed", e);
@@ -373,11 +382,11 @@ public final class Settings {
             android.view.View itemView = (android.view.View) viewField.get(viewHolder);
             if (itemView == null) return;
             itemView.setOnClickListener(v -> {
-                android.content.Context ctx = v.getContext();
-                android.content.Intent intent = new android.content.Intent();
-                intent.setClassName(ctx.getPackageName(), "app.hushmessenger.extension.SettingsActivity");
-                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                ctx.startActivity(intent);
+                try {
+                    HostScreens.open(v.getContext(), HostScreens.SETTINGS);
+                } catch (RuntimeException e) {
+                    hookFailed("menu_row", "Opening settings failed", e);
+                }
             });
         } catch (Exception e) {
             hookFailed("menu_row", "handleMenuItemBound failed", e);

@@ -97,6 +97,8 @@ final class SettingsText {
         ENGLISH.put("access_help", "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from your app drawer.");
         ENGLISH.put("hide_drawer_icon", "Hide app drawer icon");
         ENGLISH.put("hide_drawer_icon_help", "Removes HushMessenger settings from your app list. Open it from Messenger's Menu tab, or long-press Messenger's icon and tap Patch controls.");
+        ENGLISH.put("access_help_hosted", "Long-press Messenger's icon for Patch controls or Restart Messenger. A Root Mount install has no separate settings icon in your app drawer.");
+        ENGLISH.put("access_help_hosted_menu", "Long-press Messenger's icon for Patch controls or Restart Messenger, or open HushMessenger settings from its row in Messenger's Menu tab. A Root Mount install has no separate settings icon in your app drawer.");
         ENGLISH.put("access_help_menu", "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from its row in Messenger's Menu tab or from your app drawer.");
         ENGLISH.put("restart", "Restart Messenger");
         ENGLISH.put("restarting", "Restarting Messenger...");
