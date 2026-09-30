@@ -46,7 +46,7 @@ internal fun Document.addSettingsEntry() {
         "theme" to "@android:style/Theme.Material.NoActionBar")
 }
 
-private val settingsResources = resourcePatch(description = "Install HushMessenger settings") {
+internal val settingsResources = resourcePatch(description = "Install HushMessenger settings") {
     execute {
         validateVersionCode(packageMetadata.versionCode)
         val shortcutsPath = resolveShortcutsPath(listApkEntries("res/")) { path ->
@@ -83,7 +83,7 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
     }
 }
 
-private fun Document.requireFeatureAbsent(key: String): Element {
+internal fun Document.requireFeatureAbsent(key: String): Element {
     val application = getElementsByTagName("application").item(0) as Element
     val name = "hush.feature.$key"
     val metadata = application.getElementsByTagName("meta-data")

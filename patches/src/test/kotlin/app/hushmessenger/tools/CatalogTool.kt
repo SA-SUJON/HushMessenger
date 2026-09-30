@@ -63,8 +63,10 @@ object CatalogTool {
     ))
 
     fun validateDefinitions(patchSource: String, uiSource: String, manifest: String, names: Set<String>) {
-        val declarations = Regex("""controlPatch\("([a-z_]+)",\s*"([^"]+)"""").findAll(patchSource)
-            .map { it.groupValues[1] to it.groupValues[2] }.toList()
+        val declarations = (Regex("""controlPatch\("([a-z_]+)",\s*"([^"]+)"""").findAll(patchSource)
+            .map { it.groupValues[1] to it.groupValues[2] } +
+            // Standalone patches that use recordControl directly instead of controlPatch:
+            sequenceOf("material_you" to "Material You theme")).toList()
         val uiKeys = Regex("""^\s*\{"([a-z_]+)",""", RegexOption.MULTILINE).findAll(uiSource)
             .map { it.groupValues[1] }.toList()
         val factory = DocumentBuilderFactory.newInstance().apply {
@@ -77,10 +79,10 @@ object CatalogTool {
                 it.getAttribute("android:name").removePrefix("hush.feature.")
             }
         val keys = declarations.map { it.first }
-        require(keys.size == 25 && keys.distinct().size == keys.size) { "Expected 25 distinct patch control keys" }
+        require(keys.size == 26 && keys.distinct().size == keys.size) { "Expected 26 distinct patch control keys" }
         require(uiKeys.size == keys.size && uiKeys.toSet() == keys.toSet()) { "Extension control keys differ from patches" }
         require(manifestKeys.size == keys.size && manifestKeys.toSet() == keys.toSet()) { "Manifest capabilities differ from patches" }
-        require(declarations.map { it.second }.toSet().size == 25 &&
+        require(declarations.map { it.second }.toSet().size == 26 &&
             names == declarations.map { it.second }.toSet() + "Install beside Meta apps" + "Open settings from menu" + "Restore screens on re-signed builds") { "Built patch names differ from control declarations" }
     }
 
@@ -99,7 +101,7 @@ object CatalogTool {
         require(version == properties.getProperty("version")) { "Bundle version differs from source" }
         val patches = loadPatchesFromJar(setOf(bundle))
         val patchNames = patches.map { requireNotNull(it.name) }.toSet()
-        require(patches.size == 28 && patchNames.size == 28) { "Expected 28 distinct visible patches but found ${patches.size} (names: ${patchNames.joinToString()})" }
+        require(patches.size == 29 && patchNames.size == 29) { "Expected 29 distinct visible patches but found ${patches.size} (names: ${patchNames.joinToString()})" }
         validateDefinitions(
             root.resolve("patches/src/main/kotlin/app/hushmessenger/patches/controls/MessengerControlsPatch.kt").readText(),
             root.resolve("extensions/messenger/src/main/java/app/hushmessenger/extension/SettingsActivity.java").readText(),

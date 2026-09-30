@@ -86,6 +86,7 @@ public final class SettingsActivity extends Activity {
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected.", "privacy"},
         {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. In end-to-end encrypted chats, chats you open stay unread until you reply.", "privacy"},
         {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited.", "privacy"},
+        {"material_you", "Material You theme", "Tints Messenger's dark mode with the colours Android takes from your wallpaper on Android 12 and newer. Android 11 gets a fixed blue palette. Turn on dark mode in Messenger first.", "theme"},
     };
 
     static final String DRAWER_ALIAS = "app.hushmessenger.extension.SettingsLauncher";

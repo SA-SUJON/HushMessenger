@@ -99,11 +99,10 @@ public final class MaterialYouTheme {
     // --- Route 1: FDS colours ---
 
     /**
-     * The colour an FDS resolver returns for a token. Only recoloured when the colour matches
-     * a known dark-theme value for that token (not yet built: this is a placeholder for when
-     * the Messenger FDS token table is populated).
+     * The colour an FDS resolver returns. In dark mode, greys and blues are recoloured to the
+     * palette at the same lightness. Light mode colours pass through.
      */
-    public static int fds(int color, Object token) {
+    public static int fds(int color) {
         if (!Settings.enabled(KEY)) return color;
         if ((color >>> 24) != 0xFF || !isDarkMode()) return color;
         return recolour(palette(), color);

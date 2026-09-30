@@ -116,16 +116,15 @@ public class MaterialYouThemeTest {
     // --- FDS hook ---
 
     @Test public void fdsRecoloursInDarkMode() {
-        // Using a mock token-like object (Enum)
         int grey = 0xFF333334;
-        int result = MaterialYouTheme.fds(grey, TestToken.CARD_BACKGROUND);
+        int result = MaterialYouTheme.fds(grey);
         assertNotEquals("grey recoloured via FDS", grey, result);
     }
 
     @Test public void fdsLeavesLightModeAlone() {
         MaterialYouTheme.darkModeAnswer(false);
         int grey = 0xFF333334;
-        assertEquals("light mode passthrough", grey, MaterialYouTheme.fds(grey, TestToken.CARD_BACKGROUND));
+        assertEquals("light mode passthrough", grey, MaterialYouTheme.fds(grey));
     }
 
     // --- Dark surface detection ---
@@ -220,9 +219,4 @@ public class MaterialYouThemeTest {
         assertEquals("switch off passthrough", grey, MaterialYouTheme.mig(grey));
     }
 
-    // --- Test token enum ---
-
-    private enum TestToken {
-        CARD_BACKGROUND, PRIMARY_TEXT, ACCENT
-    }
 }

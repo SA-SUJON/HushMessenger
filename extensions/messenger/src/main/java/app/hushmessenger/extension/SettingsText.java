@@ -86,6 +86,7 @@ final class SettingsText {
         ENGLISH.put("conversations", "Conversations");
         ENGLISH.put("links_bubbles", "Links and bubbles");
         ENGLISH.put("privacy", "Privacy");
+        ENGLISH.put("theme", "Theme");
         ENGLISH.put("settings", "HushMessenger settings");
         ENGLISH.put("preview_title", "HushMessenger UI preview");
         ENGLISH.put("preview_notice", "UI preview. These switches don't change Messenger.");
