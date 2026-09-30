@@ -64,7 +64,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 
 | Patch / switch | What it changes |
 | --- | --- |
-| Hide inbox ads | Experimental filter for Messenger's typed inbox ad cards. Live removal isn't verified yet. |
+| Hide inbox ads | Filters Messenger's typed inbox ad cards. Meta stopped selling Messenger inbox ads in November 2025, so it's a guard in case they come back. |
 | Hide People You May Know | Removes suggested people from chats, the end of the chat list and the Notifications tab. |
 | Hide friend request cards | Hides inbox cards without accepting or rejecting requests. |
 | Hide growth prompts | Removes the inbox's add-more-people promotion unit. |
@@ -105,7 +105,7 @@ The **App** tab starts with quick access and a restart button. Appearance and se
   <img src="assets/settings-app-light.png" width="300" alt="App tab in the light theme">
 </p>
 
-The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. An affected-account before/after check is still needed. It doesn't claim to remove story ads. Media-transcoding changes remain unavailable until the upload path is verified.
+The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. Meta stopped selling ads in the Messenger inbox on November 11, 2025 and in Messenger Stories on August 27, 2026, which is likely why no test account has ever shown one. So there's nothing live to check it against, and the filter stays in case they return. It doesn't remove story ads. Messages from businesses you've subscribed to are ordinary chats and stay. Media-transcoding changes remain unavailable until the upload path is verified.
 
 ### Alerts from only some chats
 
@@ -235,7 +235,7 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 - Fresh-install startup and encrypted-history recovery still need dedicated checks. The existing signed-in S25 installation passes updates and restarts.
 - Signing in to Messenger with **Continue as** through a patched Facebook app fails on the Facebook side. The fix belongs in [Hushfacebook](https://github.com/SysAdminDoc/Hushfacebook).
 - Builds `346013354` and `346013370` patch cleanly with every patch, but neither test phone could install them, because both run newer Messenger builds. They haven't been tried on a phone yet.
-- Live ad removal, inbox tabs, bubbles on a low-memory phone, group chat notifications, typing in encrypted group chats and screenshots in vanish mode haven't been checked on a phone yet. Structural APK checks don't establish those behaviors.
+- Inbox tabs, bubbles on a low-memory phone, group chat notifications, typing in encrypted group chats and a live screenshot notice haven't been checked on a phone yet. Structural APK checks don't establish those behaviors.
 - Keep unsent messages can't cover end-to-end encrypted chats. Messenger removes those messages below the part of the app HushMessenger can change.
 
 <p align="center">

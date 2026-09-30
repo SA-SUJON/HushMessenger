@@ -59,7 +59,7 @@ public final class SettingsActivity extends Activity {
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
     static final String[][] CONTROLS = {
-        {"ads", "Hide inbox ads", "Supported inbox ad cards. Live removal isn't verified yet.", "inbox"},
+        {"ads", "Hide inbox ads", "Removes inbox ad cards if Meta brings back the inbox ads it stopped selling in November 2025.", "inbox"},
         {"people", "Hide People You May Know", "Removes suggested people from chats and Notifications.", "inbox"},
         {"friend_requests", "Hide friend request cards", "Hides cards without accepting or rejecting requests.", "inbox"},
         {"growth", "Hide growth prompts", "Removes add-more-people prompts.", "inbox"},

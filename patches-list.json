@@ -859,7 +859,7 @@
         },
         {
             "name": "Hide inbox ads",
-            "description": "Filters typed inbox ad items. Live ad removal still needs an affected-account check. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Filters typed inbox ad items, in case Meta brings back the inbox ads it stopped selling in November 2025. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
