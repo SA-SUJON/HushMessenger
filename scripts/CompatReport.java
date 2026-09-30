@@ -72,6 +72,8 @@ public class CompatReport {
     static final String IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;";
     static final String PREFERENCES = "Lcom/facebook/prefs/shared/FbSharedPreferences;";
     static final String MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;";
+    static final String PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segments/friendrequests/usecase/"
+        + "PeopleTabPYMKHandler$fetchPymkSuggestions$$inlined$CoroutineExceptionHandler$1;";
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
     static final long PEOPLE_SERVER_FLAG = 72344235860374863L;
 
@@ -130,7 +132,7 @@ public class CompatReport {
     static final Map<String, List<String>> PATCHES = new LinkedHashMap<>();
     static {
         PATCHES.put("Hide inbox ads", List.of("ads"));
-        PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel"));
+        PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search"));
         PATCHES.put("Hide friend request cards", List.of("friend_requests"));
         PATCHES.put("Hide growth prompts", List.of("growth"));
         PATCHES.put("Hide inbox promotions", List.of("inbox_promotions"));
@@ -541,6 +543,15 @@ public class CompatReport {
         return m.getDefiningClass() + "->" + m.getName() + "(" + params + ")" + m.getReturnType();
     }
 
+    static boolean classReferencesType(ClassDef cls, String type) {
+        for (var m : cls.getMethods()) {
+            if (m.getImplementation() == null) continue;
+            for (var i : m.getImplementation().getInstructions())
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof TypeReference tr && type.equals(tr.getType())) return true;
+        }
+        return false;
+    }
+
     static List<ClassDef> loadDex(File apk) throws Exception {
         // The container API reads the same in upstream dexlib2 and in the patcher's fork the tests use.
         var classes = new ArrayList<ClassDef>();
@@ -918,6 +929,20 @@ public class CompatReport {
                 if ("V".equals(method.getReturnType()) && paramTypes.equals(List.of(MONTAGE_CARD, "Z")) &&
                     !isStatic && strings.contains("MontageMsysMarkReadHandler")) {
                     found.get("anonymous_stories").add(method);
+                }
+
+                // people_tab: the People tab suggestion handler handing its list and filter map to the tab
+                if ("V".equals(method.getReturnType()) && isStatic && paramTypes.equals(List.of(cls.getType())) &&
+                    refs.stream().anyMatch(r -> r instanceof MethodReference mr && "V".equals(mr.getReturnType()) &&
+                        mr.getParameterTypes().stream().map(CharSequence::toString).toList().equals(List.of(IMMUTABLE_LIST, "Ljava/util/Map;"))) &&
+                    classReferencesType(cls, PEOPLE_TAB_FETCH)) {
+                    found.get("people_tab").add(method);
+                }
+
+                // people_search: the search screen's empty-state suggestions source
+                if (!isStatic && strings.contains("PeopleYouMayKnowSectionDataSource") &&
+                    strings.contains("Failed to load people you may know")) {
+                    found.get("people_search").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder

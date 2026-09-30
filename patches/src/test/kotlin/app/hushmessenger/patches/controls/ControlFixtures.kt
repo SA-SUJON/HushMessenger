@@ -66,6 +66,49 @@ internal fun screenHostClasses() = listOf(
 )
 
 internal const val PEOPLE_JEWEL_HOOK = "LX/HAR;->A01(LX/HAR;)Z"
+internal const val PEOPLE_TAB_HOOK = "LX/JZ6;->A01(LX/JZ6;)V"
+
+/** The People tab handler's publish step as 346013440 has it: list and filter map to the listener it loads first. */
+internal fun peopleTabMethod(
+    listener: String = "LX/JZ6;->A09:LX/KIH;",
+    call: String = "LX/KIH;->CbW(${IMMUTABLE_LIST}Ljava/util/Map;)V",
+    listenerRegister: String = "v2",
+    flags: Int = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value,
+) = fixtureMethod(PEOPLE_TAB_HOOK, """
+    iget-object v2, v3, $listener
+    iget-object v1, v3, LX/JZ6;->A00:$IMMUTABLE_LIST
+    iget-object v0, v3, LX/JZ6;->A0A:Ljava/util/concurrent/ConcurrentHashMap;
+    invoke-static {v0}, LX/01Q;->A0A(Ljava/util/Map;)Ljava/util/Map;
+    move-result-object v0
+    invoke-interface {$listenerRegister, v1, v0}, $call
+    return-void
+""".trimIndent(), registers = 4, flags = flags)
+
+internal const val PEOPLE_SEARCH_HOOK = "LX/CX5;->DLP(LX/EA8;Ljava/lang/Object;)LX/EBu;"
+
+/** The search screen's suggestions source, cut down to its log strings and the tail that wraps its section. */
+internal fun peopleSearchMethod(
+    status: String = "LX/0R2;->A0N:Ljava/lang/Integer;",
+    wrap: String = "LX/CW4;->A0m(${IMMUTABLE_LIST}Ljava/lang/Integer;)LX/EBu;",
+    statusRegister: String = "v0",
+    jumpToStatus: Boolean = false,
+    flags: Int = AccessFlags.PUBLIC.value,
+) = fixtureMethod(PEOPLE_SEARCH_HOOK, """
+    const-string v2, "$PEOPLE_SEARCH_SOURCE"
+    const-string v2, "Failed to load people you may know"
+    const/4 v1, 0x0
+    ${if (jumpToStatus) "if-eqz v4, :status" else "nop"}
+    invoke-static {v1}, $IMMUTABLE_LIST->of(Ljava/lang/Object;)$IMMUTABLE_LIST
+    move-result-object v1
+    ${if (jumpToStatus) ":status" else "nop"}
+    sget-object $statusRegister, $status
+    invoke-static {v1, v0}, $wrap
+    move-result-object v0
+    return-object v0
+""".trimIndent(), registers = 6, flags = flags)
+
+/** The handler's fetch, the one place its obfuscated class names the unobfuscated coroutine. */
+internal fun peopleTabFetchMethod() = fixtureMethod("LX/JZ6;->A03()V", "new-instance v0, $PEOPLE_TAB_FETCH\nreturn-void", registers = 2)
 
 /**
  * Instructions 0-20 match the supported APKs; one instruction stands in for the list reset. With [inlinedReset],

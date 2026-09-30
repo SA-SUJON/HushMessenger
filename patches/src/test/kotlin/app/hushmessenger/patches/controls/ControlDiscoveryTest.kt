@@ -28,6 +28,8 @@ class ControlDiscoveryTest {
         val methods = expectedHooks.filter { it.key != "unsent_indicator" && it.key != "delta_unsent" }.flatMap { (key, ids) ->
             ids.map { id ->
                 if (key == "people_jewel") return@map peopleJewelMethod()
+                if (key == "people_tab") return@map peopleTabMethod()
+                if (key == "people_search") return@map peopleSearchMethod()
                 val body = when (key) {
                     in pluginGates -> pluginBody(pluginGates.getValue(key).anchors.first())
                     "stories" -> """
@@ -92,10 +94,12 @@ class ControlDiscoveryTest {
             }
         }
         return methods.groupBy { it.definingClass }.map { (type, grouped) ->
-            val extra = if (type == "LX/Txc;") listOf(
-                fixtureMethod("LX/Txc;->CH7(Landroid/view/ViewGroup;I)LX/4jw;",
-                    "new-instance v0, LX/TxV;\nconst/4 v0, 0x0\nreturn-object v0")
-            ) else emptyList()
+            val extra = when (type) {
+                "LX/Txc;" -> listOf(fixtureMethod("LX/Txc;->CH7(Landroid/view/ViewGroup;I)LX/4jw;",
+                    "new-instance v0, LX/TxV;\nconst/4 v0, 0x0\nreturn-object v0"))
+                "LX/JZ6;" -> listOf(peopleTabFetchMethod())
+                else -> emptyList()
+            }
             fixtureClass(type, grouped + extra, originals[type],
                 if (type == "LX/8xp;") listOf(SCREEN_CAPTURE_CALLBACK) else emptyList())
         } + listOf(fixtureClass(AD_ITEM), fixtureClass(IMMUTABLE_LIST, listOf(
@@ -123,8 +127,17 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(83, found.values.sumOf { it.size })
+        assertEquals(85, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
+    }
+
+    @Test fun peopleTabHandlerIsFoundOnlyThroughItsFetchCoroutine() {
+        val fixture = completeFixture()
+        validateControls(findControls(fixture), setOf("people_tab"))
+        val withoutFetch = fixture.map { cls ->
+            if (cls.type != "LX/JZ6;") cls else fixtureClass(cls.type, cls.methods.filter { it.name != "A03" })
+        }
+        assertTrue(findControls(withoutFetch).getValue("people_tab").isEmpty())
     }
 
     @Test fun screenshotHooksNeedTheCaptureInterfaceAndTheSecureFlag() {

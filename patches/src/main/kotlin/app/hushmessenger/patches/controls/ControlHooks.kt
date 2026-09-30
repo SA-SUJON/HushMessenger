@@ -26,6 +26,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference as DexMethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
@@ -36,6 +37,11 @@ internal const val AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/I
 internal const val IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;"
 internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z"
 private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
+/** Only the People tab's suggestion handler starts this coroutine; the handler itself is obfuscated. */
+internal const val PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segments/friendrequests/usecase/" +
+    "PeopleTabPYMKHandler\$fetchPymkSuggestions\$\$inlined\$CoroutineExceptionHandler\$1;"
+/** The search screen's empty-state suggestions source logs under this name. */
+internal const val PEOPLE_SEARCH_SOURCE = "PeopleYouMayKnowSectionDataSource"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
 internal const val COMPOSER_FACTORY = "Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;"
@@ -85,6 +91,8 @@ internal val expectedHooks = mapOf(
     "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
     "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
     "people_jewel" to setOf("LX/HAR;->A01(LX/HAR;)Z"),
+    "people_tab" to setOf("LX/JZ6;->A01(LX/JZ6;)V"),
+    "people_search" to setOf("LX/CX5;->DLP(LX/EA8;Ljava/lang/Object;)LX/EBu;"),
     "allow_screenshot" to setOf(
         "LX/N2h;->run()V",
         "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
@@ -217,6 +225,13 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.returnType == "Z" && strings.containsAll(setOf("iab_skipped_reason", "user_prefers_external"))) add("browser")
             if (method.returnType == "Z" && AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type) &&
                 refs.any { it.toString() in peopleJewelKeys } && refs.any { it.toString() == activeProfile.preferenceGetter }) add("people_jewel")
+            if (AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == "V" && method.parameterTypes == listOf(cls.type) &&
+                refs.any { (it as? DexMethodReference)?.publishesSuggestions() == true } &&
+                cls.methods.any { other ->
+                    other.implementation?.instructions?.any { ((it as? ReferenceInstruction)?.reference as? TypeReference)?.type == PEOPLE_TAB_FETCH } == true
+                }) add("people_tab")
+            if (!AccessFlags.STATIC.isSet(method.accessFlags) &&
+                strings.containsAll(setOf(PEOPLE_SEARCH_SOURCE, "Failed to load people you may know"))) add("people_search")
             if (cls.type == "Lcom/facebook/screenshot/ScreenshotContentObserver;" && method.name == "onChange" &&
                 method.returnType == "V") add("allow_screenshot")
             // Android 14 and newer report a screenshot here, and Messenger turns it into the in-chat notice.
@@ -611,6 +626,90 @@ internal fun MutableMethod.injectPeopleSection() {
     val serverBranch = implementation!!.instructions.toList().peopleFlagIndex() + 3
     addInstructions(serverBranch, "invoke-static {v0}, $SETTINGS->keepPeopleSection(Z)Z\nmove-result v0")
     addInstructions(12, "invoke-static {v0}, $SETTINGS->hidePeopleSection(Z)Z\nmove-result v0")
+}
+
+private fun DexMethodReference.publishesSuggestions() =
+    returnType == "V" && parameterTypes.map { it.toString() } == listOf(IMMUTABLE_LIST, "Ljava/util/Map;")
+
+/**
+ * Every People tab suggestion update (fetch result, removal, refresh) ends here: the handler's list and
+ * per-filter map go to one listener, loaded first from the handler parameter. Returns that field and call.
+ */
+internal fun MutableMethod.validatePeopleTab(): Pair<String, String> {
+    val code = implementation!!.instructions.toList()
+    val handler = implementation!!.registerCount - 1
+    val load = code.firstOrNull()
+    val field = (load as? ReferenceInstruction)?.reference as? FieldReference
+    val publish = code.singleOrNull { it.opcode == Opcode.INVOKE_INTERFACE }
+    val call = (publish as? ReferenceInstruction)?.reference as? DexMethodReference
+    val matches = AccessFlags.STATIC.isSet(accessFlags) && returnType == "V" && parameterTypes == listOf(definingClass) &&
+        implementation!!.registerCount in 4..16 && code.lastOrNull()?.opcode == Opcode.RETURN_VOID &&
+        load?.opcode == Opcode.IGET_OBJECT && (load as TwoRegisterInstruction).registerB == handler &&
+        field != null && field.definingClass == definingClass &&
+        call != null && call.publishesSuggestions() && field.type == call.definingClass &&
+        (publish as FiveRegisterInstruction).registerCount == 3 && publish.registerC == load.registerA
+    if (!matches) {
+        throw PatchException("Messenger controls: the People tab suggestions no longer match the tested build")
+    }
+    return field.toString() to call.toString()
+}
+
+internal fun MutableMethod.injectPeopleTab() {
+    val (listener, publish) = validatePeopleTab()
+    val handler = implementation!!.registerCount - 1
+    // An empty list and map are what the tab gets when Meta has no suggestions, so the section is left out.
+    addInstructionsWithLabels(0, """
+        const-string v0, "people"
+        invoke-static {v0}, $SETTINGS->enabled(Ljava/lang/String;)Z
+        move-result v0
+        if-eqz v0, :stock_behavior
+        iget-object v2, v$handler, $listener
+        invoke-static {}, $IMMUTABLE_LIST->of()$IMMUTABLE_LIST
+        move-result-object v1
+        invoke-static {}, Ljava/util/Collections;->emptyMap()Ljava/util/Map;
+        move-result-object v0
+        invoke-interface {v2, v1, v0}, $publish
+        return-void
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
+}
+
+/**
+ * The search screen's suggestions source ends by wrapping its one titled section with a status into its
+ * result. Returns the index of the status load, the section list register and the status register.
+ */
+internal fun MutableMethod.validatePeopleSearch(): Triple<Int, Int, Int> {
+    val code = implementation!!.instructions.toList()
+    val end = code.indexOfLast { it.opcode == Opcode.RETURN_OBJECT }
+    val status = code.getOrNull(end - 3)
+    val wrap = code.getOrNull(end - 2)
+    val result = code.getOrNull(end - 1)
+    val field = (status as? ReferenceInstruction)?.reference as? FieldReference
+    val call = (wrap as? ReferenceInstruction)?.reference as? DexMethodReference
+    val targets = code.indices.map { code.branchTarget(it) }.toSet()
+    val matches = !AccessFlags.STATIC.isSet(accessFlags) && end >= 3 &&
+        status?.opcode == Opcode.SGET_OBJECT && field?.type == "Ljava/lang/Integer;" &&
+        wrap?.opcode == Opcode.INVOKE_STATIC && call != null && call.returnType == returnType &&
+        call.parameterTypes.map { it.toString() } == listOf(IMMUTABLE_LIST, "Ljava/lang/Integer;") &&
+        (wrap as FiveRegisterInstruction).registerCount == 2 && wrap.registerD == (status as OneRegisterInstruction).registerA &&
+        wrap.registerC != wrap.registerD && wrap.registerD < 16 &&
+        result?.opcode == Opcode.MOVE_RESULT_OBJECT &&
+        (code[end] as OneRegisterInstruction).registerA == (result as OneRegisterInstruction).registerA &&
+        (end - 3..end).none { it in targets }
+    if (!matches) throw PatchException("Messenger controls: the search suggestions no longer match the tested build")
+    return Triple(end - 3, (wrap as FiveRegisterInstruction).registerC, wrap.registerD)
+}
+
+internal fun MutableMethod.injectPeopleSearch() {
+    val (at, sections, scratch) = validatePeopleSearch()
+    // The status register is loaded right after this block, so it is free for the switch check.
+    addInstructionsWithLabels(at, """
+        const-string v$scratch, "people"
+        invoke-static {v$scratch}, $SETTINGS->enabled(Ljava/lang/String;)Z
+        move-result v$scratch
+        if-eqz v$scratch, :stock_behavior
+        invoke-static {}, $IMMUTABLE_LIST->of()$IMMUTABLE_LIST
+        move-result-object v$sections
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(at)))
 }
 
 internal fun MutableMethod.validateMenuSettingsAdd() {

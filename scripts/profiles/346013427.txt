@@ -75,6 +75,8 @@ hook people LX/2Xz;->A04()Z
 hook people_jewel LX/H9F;->A01(LX/H9F;)Z
 hook people_list_end LX/1qi;->A0B()Z
 hook people_list_end LX/2Xz;->A03()Z
+hook people_search LX/CXB;->DMm(LX/E7Q;Ljava/lang/Object;)LX/E8v;
+hook people_tab LX/E9L;->A01(LX/E9L;)V
 hook read_mailbox LX/9v6;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 hook reels_badge LX/7yl;->A09(LX/7yl;)Z
 hook stories LX/1ne;->A00()Z

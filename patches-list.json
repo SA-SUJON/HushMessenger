@@ -346,7 +346,7 @@
         },
         {
             "name": "Hide People You May Know",
-            "description": "Hides suggested people in chats and on the Notifications tab. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Hides suggested people in chats and search, and on the People and Notifications tabs. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [

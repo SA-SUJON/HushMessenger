@@ -62,7 +62,7 @@ public final class SettingsActivity extends Activity {
     private static Toast toast;
     static final String[][] CONTROLS = {
         {"ads", "Hide inbox ads", "Removes inbox ad cards if Meta brings back the inbox ads it stopped selling in November 2025.", "inbox"},
-        {"people", "Hide People You May Know", "Removes suggested people from chats and Notifications.", "inbox"},
+        {"people", "Hide People You May Know", "Removes suggested people from chats and search, and from the People and Notifications tabs.", "inbox"},
         {"friend_requests", "Hide friend request cards", "Hides cards without accepting or rejecting requests.", "inbox"},
         {"growth", "Hide growth prompts", "Removes add-more-people prompts.", "inbox"},
         {"inbox_promotions", "Hide inbox promotions", "Hides Messenger's quick-promotion banners in the chat list.", "inbox"},
