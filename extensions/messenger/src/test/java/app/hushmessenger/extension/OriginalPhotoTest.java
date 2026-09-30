@@ -381,13 +381,19 @@ public class OriginalPhotoTest {
 
     @Test public void theSizeCapIsTwentyMillionBytes() throws Exception {
         switchOn();
+        // Exactly the cap gets past the size check to the next one, which this file fails.
+        File atCap = folder.newFile();
+        try (RandomAccessFile file = new RandomAccessFile(atCap, "rw")) {
+            file.setLength(20_000_000);
+        }
+        assertNull(OriginalPhoto.sync(atCap.getPath(), 4096, 4096, null, hd()));
         File huge = folder.newFile();
         try (RandomAccessFile file = new RandomAccessFile(huge, "rw")) {
             file.write(new byte[] {(byte) 0xFF, (byte) 0xD8});
             file.setLength(20_000_001);
         }
         assertNull(OriginalPhoto.sync(huge.getPath(), 4096, 4096, null, hd()));
-        assertEquals(List.of("Original photo skipped: over 20 MB"), logs());
+        assertEquals(List.of("Original photo skipped: not a JPEG", "Original photo skipped: over 20 MB"), logs());
     }
 
     @Test public void aSidewaysPhotoReportsItsUprightSizeTheWayMessengersTranscoderDoes() throws Exception {
