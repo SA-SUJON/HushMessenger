@@ -7,6 +7,7 @@ None of this is in a release yet. It'll ship together in the next one.
 ### Changed and fixed
 
 - The build now uses the Kotlin Gradle plugin 2.4.20 instead of 2.4.10, which had an unsafe deserialization flaw in its build cache (CVE-2026-53914). Bouncy Castle, which the build uses for signing, is now 1.86 everywhere. The 1.77 and 1.79 copies it replaces predate fixes for several published advisories. This only changes how the bundle is built. All 27 patches still apply in Morphe Desktop.
+- The update check now compares release numbers as numbers. It used to compare them as text, so a future 0.10.0 would have looked older than 0.9.0 and you'd have been told you were up to date. It also only offers a button for this project's own release pages, and it always closes its connection. Tests now cover a newer release, the same release, GitHub's rate limit, a reply with no version in it and a server that never answers.
 - The README now covers chat heads, photo quality and update prompts. None of these needed a patch. Chat heads still work on Android 16, but on Android 12 and newer they need Messenger's battery use set to Unrestricted. The gallery's HD switch already sends photos at full resolution. Play's in-app update prompt doesn't run on a patched Messenger.
 
 ## 0.6.0 (2026-09-29)
