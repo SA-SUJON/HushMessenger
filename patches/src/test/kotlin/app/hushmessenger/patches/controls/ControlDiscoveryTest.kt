@@ -30,6 +30,7 @@ class ControlDiscoveryTest {
                 if (key == "people_jewel") return@map peopleJewelMethod()
                 if (key == "people_tab") return@map peopleTabMethod()
                 if (key == "people_search") return@map peopleSearchMethod()
+                if (key == "people_story") return@map peopleStoryMethod()
                 val body = when (key) {
                     in pluginGates -> pluginBody(pluginGates.getValue(key).anchors.first())
                     "stories" -> """
@@ -127,7 +128,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(85, found.values.sumOf { it.size })
+        assertEquals(86, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

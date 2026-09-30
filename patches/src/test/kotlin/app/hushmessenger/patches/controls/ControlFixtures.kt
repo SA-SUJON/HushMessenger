@@ -110,6 +110,29 @@ internal fun peopleSearchMethod(
 /** The handler's fetch, the one place its obfuscated class names the unobfuscated coroutine. */
 internal fun peopleTabFetchMethod() = fixtureMethod("LX/JZ6;->A03()V", "new-instance v0, $PEOPLE_TAB_FETCH\nreturn-void", registers = 2)
 
+internal const val STORY_VIEWER = "Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;"
+internal const val PEOPLE_STORY_HOOK = "$STORY_VIEWER->A0Y($STORY_VIEWER)V"
+
+/** The story viewer's suggestions request, cut down to its already-requested check, the flag set and the query. */
+internal fun peopleStoryMethod(
+    checkedFlag: String = "A0x",
+    skip: String = "if-nez",
+    jumpPastCheck: Boolean = false,
+    flags: Int = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value,
+) = fixtureMethod(PEOPLE_STORY_HOOK, """
+    iget-boolean v0, v3, $STORY_VIEWER->A1S:Z
+    if-nez v0, ${if (jumpPastCheck) ":request" else ":done"}
+    iget-boolean v0, v3, $STORY_VIEWER->$checkedFlag:Z
+    $skip v0, :done
+    :request
+    iget-object v1, v3, $STORY_VIEWER->A25:LX/17Z;
+    const/4 v2, 0x1
+    iput-boolean v2, v3, $STORY_VIEWER->A0x:Z
+    const-string v0, "$STORY_SUGGESTIONS_QUERY"
+    :done
+    return-void
+""".trimIndent(), registers = 4, flags = flags)
+
 /**
  * Instructions 0-20 match the supported APKs; one instruction stands in for the list reset. With [inlinedReset],
  * 346013423's single call replaces the two calls at 14-15, so the server flag moves from 17 to 16.

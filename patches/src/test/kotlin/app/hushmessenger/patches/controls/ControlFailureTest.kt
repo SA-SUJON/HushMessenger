@@ -49,7 +49,7 @@ class ControlFailureTest {
         for (broken in listOf(false, true)) withResourceContext(temporary.resolve("run-$broken")) { resources, config ->
             val anchor = pluginGates.getValue("people").anchors.single()
             val listEnd = pluginGates.getValue("people_list_end").anchors.single()
-            // A supported APK supplies all five suggestion placements the control selects.
+            // A supported APK supplies all six suggestion placements the control selects.
             val classes = listOf(
                 fixtureMethod("LX/1pm;->A0C()Z", pluginBody(anchor)),
                 fixtureMethod("LX/1pm;->A0B()Z", pluginBody(listEnd)),
@@ -59,6 +59,7 @@ class ControlFailureTest {
                 peopleTabMethod(),
                 peopleTabFetchMethod(),
                 peopleSearchMethod(),
+                peopleStoryMethod(),
             ).groupBy { it.definingClass }.map { (type, methods) -> fixtureClass(type, methods) }
                 .plus(peopleJewelKeyHolder()).plus(screenHostClasses()).toSet()
             val context = BytecodePatchContext::class.java.declaredConstructors.single()

@@ -42,6 +42,8 @@ internal const val PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segment
     "PeopleTabPYMKHandler\$fetchPymkSuggestions\$\$inlined\$CoroutineExceptionHandler\$1;"
 /** The search screen's empty-state suggestions source logs under this name. */
 internal const val PEOPLE_SEARCH_SOURCE = "PeopleYouMayKnowSectionDataSource"
+/** The story viewer requests its page of suggested people under this query name. */
+internal const val STORY_SUGGESTIONS_QUERY = "MsgrPeopleYouMayKnowQuery"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
 internal const val COMPOSER_FACTORY = "Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;"
@@ -93,6 +95,8 @@ internal val expectedHooks = mapOf(
     "people_jewel" to setOf("LX/HAR;->A01(LX/HAR;)Z"),
     "people_tab" to setOf("LX/JZ6;->A01(LX/JZ6;)V"),
     "people_search" to setOf("LX/CX5;->DLP(LX/EA8;Ljava/lang/Object;)LX/EBu;"),
+    "people_story" to setOf("Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->" +
+        "A0Y(Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;)V"),
     "allow_screenshot" to setOf(
         "LX/N2h;->run()V",
         "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
@@ -232,6 +236,8 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
                 }) add("people_tab")
             if (!AccessFlags.STATIC.isSet(method.accessFlags) &&
                 strings.containsAll(setOf(PEOPLE_SEARCH_SOURCE, "Failed to load people you may know"))) add("people_search")
+            if (AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == "V" && method.parameterTypes == listOf(cls.type) &&
+                STORY_SUGGESTIONS_QUERY in strings) add("people_story")
             if (cls.type == "Lcom/facebook/screenshot/ScreenshotContentObserver;" && method.name == "onChange" &&
                 method.returnType == "V") add("allow_screenshot")
             // Android 14 and newer report a screenshot here, and Messenger turns it into the in-chat notice.
@@ -710,6 +716,42 @@ internal fun MutableMethod.injectPeopleSearch() {
         invoke-static {}, $IMMUTABLE_LIST->of()$IMMUTABLE_LIST
         move-result-object v$sections
     """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(at)))
+}
+
+/**
+ * The story viewer requests its suggestions page once, after a flag it sets just before the query; a read of that
+ * flag from the fragment parameter skips the request. Returns the index of that read.
+ */
+internal fun MutableMethod.validatePeopleStory(): Int {
+    val code = implementation!!.instructions.toList()
+    val query = code.indexOfFirst { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == STORY_SUGGESTIONS_QUERY }
+    val set = (query downTo 0).firstOrNull { code[it].opcode == Opcode.IPUT_BOOLEAN }
+    val flag = set?.let { (code[it] as ReferenceInstruction).reference.toString() }
+    val guard = code.indices.singleOrNull {
+        code[it].opcode == Opcode.IGET_BOOLEAN && (code[it] as ReferenceInstruction).reference.toString() == flag
+    } ?: -1
+    val read = code.getOrNull(guard) as? TwoRegisterInstruction
+    val skip = code.getOrNull(guard + 1)
+    val matches = AccessFlags.STATIC.isSet(accessFlags) && returnType == "V" && parameterTypes == listOf(definingClass) &&
+        flag != null && flag.startsWith("$definingClass->") && flag.endsWith(":Z") &&
+        read != null && read.registerA < 16 && read.registerB == implementation!!.registerCount - 1 &&
+        skip?.opcode == Opcode.IF_NEZ && (skip as OneRegisterInstruction).registerA == read.registerA &&
+        code.branchTarget(guard + 1) > guard + 1 && guard + 2 < query && guard + 2 !in jumpTargets()
+    if (!matches) throw PatchException("Messenger controls: the story viewer suggestions no longer match the tested build")
+    return guard
+}
+
+internal fun MutableMethod.injectPeopleStory() {
+    val guard = validatePeopleStory()
+    val flag = (getInstruction(guard) as TwoRegisterInstruction).registerA
+    val skipped = getInstruction(implementation!!.instructions.toList().branchTarget(guard + 1))
+    // Reads as "already requested" while the switch is on; either way the flag register ends as the stock branch leaves it.
+    addInstructionsWithLabels(guard + 2, """
+        const-string v$flag, "people"
+        invoke-static {v$flag}, $SETTINGS->enabled(Ljava/lang/String;)Z
+        move-result v$flag
+        if-nez v$flag, :skip_suggestions
+    """.trimIndent(), ExternalLabel("skip_suggestions", skipped))
 }
 
 internal fun MutableMethod.validateMenuSettingsAdd() {

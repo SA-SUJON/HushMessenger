@@ -187,6 +187,37 @@ class ControlsTest {
         }
     }
 
+    @Test fun storyViewerSkipsItsSuggestionsRequestOnlyWhileTheSwitchIsOn() {
+        val viewer = peopleStoryMethod()
+        val original = viewer.implementation!!.instructions.toList()
+        viewer.injectPeopleStory()
+        val code = viewer.implementation!!.instructions.toList()
+        assertEquals(original.take(4), code.take(4))
+        assertEquals("people", (code[4] as ReferenceInstruction).reference.toString())
+        assertEquals("$SETTINGS->enabled(Ljava/lang/String;)Z", (code[5] as ReferenceInstruction).reference.toString())
+        // The check reuses the flag register, so both ways out leave it as the stock check would.
+        assertEquals(0, (code[6] as OneRegisterInstruction).registerA)
+        assertEquals(Opcode.IF_NEZ, code[7].opcode)
+        assertEquals(0, (code[7] as OneRegisterInstruction).registerA)
+        assertEquals(code.branchTarget(3), code.branchTarget(7))
+        assertEquals(Opcode.RETURN_VOID, code[code.branchTarget(7)].opcode)
+        assertEquals(original.drop(4), code.drop(8))
+    }
+
+    @Test fun changedStoryViewerRequestFailsBeforeEditing() {
+        for (changed in listOf(
+            peopleStoryMethod(flags = AccessFlags.PUBLIC.value),
+            peopleStoryMethod(checkedFlag = "A0w"),
+            peopleStoryMethod(skip = "if-eqz"),
+            // A path that joins right after the check would skip it.
+            peopleStoryMethod(jumpPastCheck = true),
+        )) {
+            val before = changed.implementation!!.instructions.toList()
+            assertFailsWith<PatchException> { changed.injectPeopleStory() }
+            assertEquals(before, changed.implementation!!.instructions.toList())
+        }
+    }
+
     @Test fun changedPeopleTabPublishFailsBeforeEditing() {
         for (changed in listOf(
             peopleTabMethod(flags = AccessFlags.PUBLIC.value),

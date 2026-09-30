@@ -132,7 +132,7 @@ public class CompatReport {
     static final Map<String, List<String>> PATCHES = new LinkedHashMap<>();
     static {
         PATCHES.put("Hide inbox ads", List.of("ads"));
-        PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search"));
+        PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story"));
         PATCHES.put("Hide friend request cards", List.of("friend_requests"));
         PATCHES.put("Hide growth prompts", List.of("growth"));
         PATCHES.put("Hide inbox promotions", List.of("inbox_promotions"));
@@ -943,6 +943,12 @@ public class CompatReport {
                 if (!isStatic && strings.contains("PeopleYouMayKnowSectionDataSource") &&
                     strings.contains("Failed to load people you may know")) {
                     found.get("people_search").add(method);
+                }
+
+                // people_story: the story viewer's once-per-viewer request for a page of suggested people
+                if ("V".equals(method.getReturnType()) && isStatic && paramTypes.equals(List.of(cls.getType())) &&
+                    strings.contains("MsgrPeopleYouMayKnowQuery")) {
+                    found.get("people_story").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder
