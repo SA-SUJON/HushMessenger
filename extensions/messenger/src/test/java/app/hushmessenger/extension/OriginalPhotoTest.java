@@ -359,6 +359,37 @@ public class OriginalPhotoTest {
         assertTrue(Settings.lastActive(OriginalPhoto.KEY) > 0);
     }
 
+    @Test public void withoutJfifTheRotationTagComesFirst() throws Exception {
+        byte[] plain = encode(1600, 1200, null);
+        int[] jfif = headerSegments(plain).get(0);
+        assertEquals(0xE0, jfif[0]);
+        File photo = write(join(Arrays.copyOf(plain, 2), Arrays.copyOfRange(plain, jfif[2], plain.length)));
+        ExifInterface exif = new ExifInterface(photo.getPath());
+        exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_ROTATE_270));
+        exif.setAttribute(ExifInterface.TAG_MAKE, "HushCam");
+        exif.saveAttributes();
+        switchOn();
+        byte[] sent = OriginalPhoto.sync(photo.getPath(), 4096, 4096, null, hd());
+        assertNotNull(sent);
+        List<int[]> segments = headerSegments(sent);
+        assertArrayEquals(OriginalPhoto.orientationExif(8), Arrays.copyOfRange(sent, segments.get(0)[1] + 4, segments.get(0)[2]));
+        List<Integer> source = new ArrayList<>(), rest = new ArrayList<>();
+        for (int[] s : headerSegments(Files.readAllBytes(photo.toPath()))) if (s[0] != 0xE1) source.add(s[0]);
+        for (int[] s : segments.subList(1, segments.size())) rest.add(s[0]);
+        assertEquals("the photo's own segments follow in order", source, rest);
+    }
+
+    @Test public void theSizeCapIsTwentyMillionBytes() throws Exception {
+        switchOn();
+        File huge = folder.newFile();
+        try (RandomAccessFile file = new RandomAccessFile(huge, "rw")) {
+            file.write(new byte[] {(byte) 0xFF, (byte) 0xD8});
+            file.setLength(20_000_001);
+        }
+        assertNull(OriginalPhoto.sync(huge.getPath(), 4096, 4096, null, hd()));
+        assertEquals(List.of("Original photo skipped: over 20 MB"), logs());
+    }
+
     @Test public void aSidewaysPhotoReportsItsUprightSizeTheWayMessengersTranscoderDoes() throws Exception {
         switchOn();
         // Tag, then the size it shows at and whether Messenger's own transcoder would have turned it.
@@ -366,8 +397,10 @@ public class OriginalPhotoTest {
             {ExifInterface.ORIENTATION_NORMAL, 1600.0, 1200.0, false},
             {ExifInterface.ORIENTATION_FLIP_HORIZONTAL, 1600.0, 1200.0, false},
             {ExifInterface.ORIENTATION_ROTATE_180, 1600.0, 1200.0, true},
+            {ExifInterface.ORIENTATION_FLIP_VERTICAL, 1600.0, 1200.0, true},
             {ExifInterface.ORIENTATION_TRANSPOSE, 1200.0, 1600.0, true},
             {ExifInterface.ORIENTATION_ROTATE_90, 1200.0, 1600.0, true},
+            {ExifInterface.ORIENTATION_TRANSVERSE, 1200.0, 1600.0, true},
             {ExifInterface.ORIENTATION_ROTATE_270, 1200.0, 1600.0, true},
         };
         for (Object[] c : cases) {

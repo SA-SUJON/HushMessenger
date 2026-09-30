@@ -32,7 +32,7 @@ public final class OriginalPhoto {
 
     static final String KEY = "original_photo";
     /** Larger originals keep Messenger's transcode, which fits them under its send limit. */
-    static final long MAX_BYTES = 20L * 1024 * 1024;
+    static final long MAX_BYTES = 20_000_000;
     /** Smaller targets are thumbnails and previews, never the photo that gets sent. */
     static final double MIN_TARGET = 1024;
     /** Completes async sends off the calling thread, the way Messenger's own transcoder does. */
@@ -148,7 +148,8 @@ public final class OriginalPhoto {
         File file = new File(path);
         long size = file.length();
         if (!file.isFile() || size <= 0) return skip("unreadable file");
-        if (size > MAX_BYTES) return skip("over " + MAX_BYTES / 1024 / 1024 + " MB");
+        // Decimal megabytes, the way Android shows file sizes.
+        if (size > MAX_BYTES) return skip("over " + MAX_BYTES / 1_000_000 + " MB");
         if (!startsLikeJpeg(file)) return skip("not a JPEG");
         // Phones often save a portrait photo sideways with a tag saying how to turn it. The copy keeps that one tag.
         int orientation = new ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
@@ -211,7 +212,7 @@ public final class OriginalPhoto {
      * ICC color profile and Adobe's color transform stay, since they change how the pixels look. EXIF (location, camera,
      * time and its thumbnail), XMP, IPTC, comments, JFXX thumbnails, multi-picture data and anything after the end of the
      * image, such as a motion photo's video, are left out. The scan data is copied byte for byte. A rotation tag other
-     * than 0 goes into a new EXIF segment of its own, right after JFIF.
+     * than 0 goes into a new EXIF segment of its own, after JFIF when there is one and first otherwise.
      */
     static void copyImageData(File source, File target, int orientation) throws IOException {
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(source), 65536));
