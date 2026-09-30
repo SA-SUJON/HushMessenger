@@ -219,7 +219,7 @@ val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Removes 
 @Suppress("unused")
 val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "Renders emoji with the phone's own font instead of Messenger's.", "Conversations", "emoji_typeface")
 @Suppress("unused")
-val originalPhotoPatch = controlPatch("original_photo", "Send photos at original quality", "With HD on, sends JPEG photos as the file itself instead of a re-encoded copy, minus location data. Videos and photos with a rotation tag are still compressed.", "Conversations")
+val originalPhotoPatch = controlPatch("original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata. Videos and photos with a rotation tag are still compressed.", "Conversations")
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected.", "Privacy")
 @Suppress("unused")

@@ -4,17 +4,19 @@ import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.util.Log;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -22,8 +24,8 @@ import java.util.concurrent.Executors;
 /**
  * "Send photos at original quality". In encrypted chats Messenger hands every photo to DefaultMediaTranscoder, which
  * re-encodes it even with HD on (a 6.4 MB 4032x3024 JPEG went out as about 1.8 MB). For an HD send of an upright JPEG
- * these prologues hand back a copy of the file itself, minus its location tags, and Messenger encrypts and uploads that.
- * Anything else, and any failure here, falls through to Messenger's own transcode.
+ * these prologues hand back a copy of the photo's own image data, without its metadata, and Messenger encrypts and
+ * uploads that. Anything else, and any failure here, falls through to Messenger's own transcode.
  */
 public final class OriginalPhoto {
     private OriginalPhoto() { }
@@ -50,7 +52,12 @@ public final class OriginalPhoto {
         }
     }
 
-    /** DefaultMediaTranscoder.transcodeImage: the photo's own bytes, or null for Messenger's transcode. */
+    /** A file that isn't a JPEG this can pass through; Messenger's transcode handles it instead. */
+    static final class NotPassable extends IOException {
+        NotPassable(String reason) { super(reason); }
+    }
+
+    /** DefaultMediaTranscoder.transcodeImage: the photo's own image data, or null for Messenger's transcode. */
     public static byte[] sync(String url, double maxWidth, double maxHeight, String options, Map<?, ?> extras) {
         try {
             Prepared prepared = prepare(url, maxWidth, maxHeight, extras);
@@ -62,35 +69,48 @@ public final class OriginalPhoto {
             } finally {
                 prepared.copy.delete();
             }
-        } catch (IOException | RuntimeException error) {
-            Settings.hookFailed(KEY, "Original photo failed, Messenger's copy is sent instead", error);
+        } catch (IOException | RuntimeException | OutOfMemoryError error) {
+            Settings.hookFailedPrivately(KEY, "Original photo failed, Messenger's copy is sent instead", error);
             return null;
         }
     }
 
     /** DefaultMediaTranscoder.transcodeImageAsync: true once this send is handled, false for Messenger's transcode. */
     public static boolean async(String url, double maxWidth, double maxHeight, String options, Map<?, ?> extras, Object callback) {
+        if (callback == null) return false;
+        Prepared prepared = null;
         try {
-            if (callback == null) return false;
             Method success = successMethod(callback.getClass());
-            Prepared prepared = prepare(url, maxWidth, maxHeight, extras);
+            Method failure = failureMethod(callback.getClass());
+            prepared = prepare(url, maxWidth, maxHeight, extras);
             if (prepared == null) return false;
-            String uri = Uri.fromFile(prepared.copy).toString();
-            double width = prepared.width, height = prepared.height;
-            Log.i("HushMessenger", "Original photo: " + prepared.copy.length() + " bytes, " + prepared.width + "x" + prepared.height);
-            // Same argument order as Messenger's own success call: output URI, source size, output size, quality,
-            // PSNR (not measured), rotated, then fields its wrapper zeroes anyway.
-            completion.execute(() -> {
-                try {
-                    success.invoke(callback, uri, width, height, width, height, 100.0, -1.0, false, 0, false, 0.0, 0.0, 0.0);
-                } catch (ReflectiveOperationException | RuntimeException error) {
-                    Settings.hookFailed(KEY, "Original photo couldn't report its copy", error);
-                }
-            });
+            Prepared sent = prepared;
+            Log.i("HushMessenger", "Original photo: " + sent.copy.length() + " bytes, " + sent.width + "x" + sent.height);
+            completion.execute(() -> report(callback, success, failure, sent));
             return true;
-        } catch (IOException | ReflectiveOperationException | RuntimeException error) {
-            Settings.hookFailed(KEY, "Original photo failed, Messenger's copy is sent instead", error);
+        } catch (IOException | ReflectiveOperationException | RuntimeException | OutOfMemoryError error) {
+            if (prepared != null) prepared.copy.delete();
+            Settings.hookFailedPrivately(KEY, "Original photo failed, Messenger's copy is sent instead", error);
             return false;
+        }
+    }
+
+    /** Hands the copy to Messenger with the same arguments its own transcoder uses, or reports a failure so the send ends. */
+    static void report(Object callback, Method success, Method failure, Prepared sent) {
+        double width = sent.width, height = sent.height;
+        try {
+            // Output URI, source size, output size, quality, PSNR (-1 is Messenger's "not measured"), rotated, then
+            // fields its wrapper zeroes anyway.
+            success.invoke(callback, Uri.fromFile(sent.copy).toString(), width, height, width, height, 100.0, -1.0,
+                false, 0, false, 0.0, 0.0, 0.0);
+        } catch (ReflectiveOperationException | RuntimeException error) {
+            sent.copy.delete();
+            Settings.hookFailedPrivately(KEY, "Original photo couldn't hand over its copy", error);
+            try {
+                failure.invoke(callback, width, height, new IOException("HushMessenger couldn't hand over the original photo"));
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // Messenger's own failure path threw too; the error above is already recorded.
+            }
         }
     }
 
@@ -99,9 +119,15 @@ public final class OriginalPhoto {
             double.class, double.class, boolean.class, int.class, boolean.class, double.class, double.class, double.class);
     }
 
-    /** A location-free copy of the photo when this send can use the original, else null. */
+    static Method failureMethod(Class<?> callback) throws NoSuchMethodException {
+        return callback.getMethod("failure", double.class, double.class, Throwable.class);
+    }
+
+    /** A metadata-free copy of the photo when this send can use the original, else null. */
     static Prepared prepare(String url, double maxWidth, double maxHeight, Map<?, ?> extras) throws IOException {
         if (extras == null || !Boolean.TRUE.equals(extras.get("IS_HD")) || Boolean.TRUE.equals(extras.get("IS_PREVIEW"))) return null;
+        // Nothing below touches the file while the switch is off, paused or in safe mode.
+        if (!Settings.wouldUse(KEY)) return null;
         double longTarget = Math.max(maxWidth, maxHeight), shortTarget = Math.min(maxWidth, maxHeight);
         // Zero means no limit.
         if (longTarget > 0 && longTarget < MIN_TARGET) return skip("preview size " + (int) maxWidth + "x" + (int) maxHeight);
@@ -115,31 +141,45 @@ public final class OriginalPhoto {
         // A rotation tag would leave the receiver to turn the photo, and Messenger's metadata assumes it's upright.
         int orientation = new ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
         if (orientation != ExifInterface.ORIENTATION_NORMAL && orientation != ExifInterface.ORIENTATION_UNDEFINED) return skip("rotation tag " + orientation);
-        BitmapFactory.Options bounds = new BitmapFactory.Options();
-        bounds.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(path, bounds);
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return skip("no image size");
-        int longSide = Math.max(bounds.outWidth, bounds.outHeight), shortSide = Math.min(bounds.outWidth, bounds.outHeight);
+        int[] bounds = bounds(path);
+        if (bounds == null) return skip("no image size");
+        int longSide = Math.max(bounds[0], bounds[1]), shortSide = Math.min(bounds[0], bounds[1]);
         if (longTarget > 0 && (longSide > longTarget || shortSide > shortTarget)) {
-            return skip(bounds.outWidth + "x" + bounds.outHeight + " is larger than " + (int) maxWidth + "x" + (int) maxHeight);
+            return skip(bounds[0] + "x" + bounds[1] + " is larger than " + (int) maxWidth + "x" + (int) maxHeight);
         }
-        // Checked last, so "Used" on the settings screen means a photo really went out as is.
-        if (!Settings.enabled(KEY)) return null;
         File copy = File.createTempFile("hush-photo", ".jpg", tempDir);
         try {
-            Files.copy(file.toPath(), copy.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            removeLocation(copy);
-            return new Prepared(copy, bounds.outWidth, bounds.outHeight);
-        } catch (IOException | RuntimeException error) {
+            copyImageData(file, copy);
+            int[] copied = bounds(copy.getPath());
+            if (copied == null || copied[0] != bounds[0] || copied[1] != bounds[1]) throw new NotPassable("copy decodes differently");
+        } catch (NotPassable error) {
+            copy.delete();
+            return skip(error.getMessage());
+        } catch (IOException | RuntimeException | OutOfMemoryError error) {
             copy.delete();
             throw error;
         }
+        // Recorded last, so "Used" on the settings screen means a photo really went out as is.
+        if (!Settings.enabled(KEY)) {
+            copy.delete();
+            return null;
+        }
+        return new Prepared(copy, bounds[0], bounds[1]);
+    }
+
+    static int[] bounds(String path) throws IOException {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        // Its own stream, closed here, so the copy can be deleted right after on any filesystem.
+        try (InputStream in = new BufferedInputStream(new FileInputStream(path))) {
+            BitmapFactory.decodeStream(in, null, options);
+        }
+        return options.outWidth > 0 && options.outHeight > 0 ? new int[] {options.outWidth, options.outHeight} : null;
     }
 
     /** Says why an HD photo keeps Messenger's transcode; the reason never includes the file's name or contents. */
     static Prepared skip(String reason) {
-        android.content.SharedPreferences prefs = Settings.preferences;
-        if (prefs != null && prefs.getBoolean(KEY, false)) Log.i("HushMessenger", "Original photo skipped: " + reason);
+        Log.i("HushMessenger", "Original photo skipped: " + reason);
         return null;
     }
 
@@ -149,29 +189,84 @@ public final class OriginalPhoto {
         }
     }
 
-    /** Every GPS tag ExifInterface knows, so a new Android version's additions are covered too. */
-    static List<String> gpsTags() {
-        List<String> tags = new ArrayList<>();
-        for (Field field : ExifInterface.class.getFields()) {
-            if (!Modifier.isStatic(field.getModifiers()) || field.getType() != String.class || !field.getName().startsWith("TAG_GPS_")) continue;
-            try {
-                tags.add((String) field.get(null));
-            } catch (IllegalAccessException ignored) {
-                // Public fields are readable; nothing to add for one that isn't.
+    /**
+     * Copies a JPEG's image data and nothing else, the way Messenger's own re-encode leaves out the metadata. JFIF, the
+     * ICC color profile and Adobe's color transform stay, since they change how the pixels look. EXIF (location, camera,
+     * time and its thumbnail), XMP, IPTC, comments, JFXX thumbnails, multi-picture data and anything after the end of the
+     * image, such as a motion photo's video, are left out. The scan data is copied byte for byte.
+     */
+    static void copyImageData(File source, File target) throws IOException {
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(source), 65536));
+             OutputStream out = new BufferedOutputStream(new FileOutputStream(target), 65536)) {
+            if (in.readUnsignedByte() != 0xFF || in.readUnsignedByte() != 0xD8) throw new NotPassable("not a JPEG");
+            out.write(0xFF);
+            out.write(0xD8);
+            int marker = nextMarker(in);
+            while (true) {
+                if (marker == 0xD9) {
+                    out.write(0xFF);
+                    out.write(0xD9);
+                    return;
+                }
+                if (marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) throw new NotPassable("stray marker");
+                int length = in.readUnsignedShort();
+                if (length < 2) throw new NotPassable("bad segment length");
+                byte[] payload = new byte[length - 2];
+                in.readFully(payload);
+                if (keep(marker, payload)) {
+                    out.write(0xFF);
+                    out.write(marker);
+                    out.write(length >> 8);
+                    out.write(length & 0xFF);
+                    out.write(payload);
+                }
+                marker = marker == 0xDA ? copyScan(in, out) : nextMarker(in);
             }
+        } catch (EOFException truncated) {
+            throw new NotPassable("ends early");
         }
-        return tags;
     }
 
-    /** Messenger's own transcode drops the photo's location, so the original goes out without it too. */
-    static void removeLocation(File copy) throws IOException {
-        ExifInterface exif = new ExifInterface(copy.getPath());
-        boolean found = false;
-        for (String tag : gpsTags()) {
-            if (exif.getAttribute(tag) == null) continue;
-            exif.setAttribute(tag, null);
-            found = true;
+    /** Reads the next marker code, skipping the fill bytes JPEG allows before it. */
+    static int nextMarker(DataInputStream in) throws IOException {
+        if (in.readUnsignedByte() != 0xFF) throw new NotPassable("expected a marker");
+        int marker;
+        do marker = in.readUnsignedByte(); while (marker == 0xFF);
+        if (marker == 0x00) throw new NotPassable("expected a marker");
+        return marker;
+    }
+
+    /** Copies entropy-coded data, with its stuffed bytes and restart markers, and returns the marker that ends it. */
+    static int copyScan(DataInputStream in, OutputStream out) throws IOException {
+        while (true) {
+            int value = in.readUnsignedByte();
+            if (value != 0xFF) {
+                out.write(value);
+                continue;
+            }
+            int next;
+            do next = in.readUnsignedByte(); while (next == 0xFF);
+            if (next == 0x00 || (next >= 0xD0 && next <= 0xD7)) {
+                out.write(0xFF);
+                out.write(next);
+                continue;
+            }
+            return next;
         }
-        if (found) exif.saveAttributes();
+    }
+
+    static boolean keep(int marker, byte[] payload) {
+        if (marker == 0xE0) return startsWith(payload, "JFIF\0");
+        if (marker == 0xE2) return startsWith(payload, "ICC_PROFILE\0");
+        if (marker == 0xEE) return startsWith(payload, "Adobe");
+        // Every other APPn segment and comments are metadata; tables, frame and scan headers are the image.
+        return !(marker >= 0xE0 && marker <= 0xEF) && marker != 0xFE;
+    }
+
+    static boolean startsWith(byte[] payload, String prefix) {
+        byte[] expected = prefix.getBytes(StandardCharsets.US_ASCII);
+        if (payload.length < expected.length) return false;
+        for (int i = 0; i < expected.length; i++) if (payload[i] != expected[i]) return false;
+        return true;
     }
 }

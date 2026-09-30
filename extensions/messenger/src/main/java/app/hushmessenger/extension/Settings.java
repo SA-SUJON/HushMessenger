@@ -40,11 +40,16 @@ public final class Settings {
     }
 
     public static boolean enabled(String key) {
-        SharedPreferences prefs = preferences;
-        boolean on = installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
-                && !CrashGuard.isSafeMode() && prefs.getBoolean(key, false);
+        boolean on = wouldUse(key);
         if (on) activeAt.put(key, System.currentTimeMillis());
         return on;
+    }
+
+    /** Whether a control is in effect right now, without counting it as a use. */
+    static boolean wouldUse(String key) {
+        SharedPreferences prefs = preferences;
+        return installed.contains(key) && prefs != null && !prefs.getBoolean("paused", false)
+                && !CrashGuard.isSafeMode() && prefs.getBoolean(key, false);
     }
 
     public static long lastActive(String key) {
@@ -61,6 +66,15 @@ public final class Settings {
 
     static void hookFailed(String key, String what, Throwable error) {
         android.util.Log.e("HushMessenger", what, error);
+        recordHookError(key, error);
+    }
+
+    /** For hooks that handle file paths or chat content: logs only the error's type and where it happened. */
+    static void hookFailedPrivately(String key, String what, Throwable error) {
+        android.util.Log.e("HushMessenger", what + ": " + recordHookError(key, error));
+    }
+
+    private static String recordHookError(String key, Throwable error) {
         StackTraceElement[] stack = error.getStackTrace();
         StackTraceElement frame = stack.length == 0 ? null : stack[0];
         for (StackTraceElement element : stack) {
@@ -75,6 +89,7 @@ public final class Settings {
         // A hook can fail on every screen draw, so the saved copy changes only for a new failure or once a minute.
         if (prefs != null && (previous == null || !previous.startsWith(failure + "|") || now - hookErrorTime(previous) >= 60_000))
             prefs.edit().putString(HOOK_ERROR + key, failure + "|" + now).apply();
+        return failure;
     }
 
     static long hookErrorTime(String record) {

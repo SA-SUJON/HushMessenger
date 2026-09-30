@@ -1460,7 +1460,7 @@
         },
         {
             "name": "Send photos at original quality",
-            "description": "With HD on, sends JPEG photos as the file itself instead of a re-encoded copy, minus location data. Videos and photos with a rotation tag are still compressed. Long-press Messenger > Patch controls. Starts off.",
+            "description": "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata. Videos and photos with a rotation tag are still compressed. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
