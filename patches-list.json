@@ -1631,7 +1631,7 @@
         },
         {
             "name": "View stories anonymously",
-            "description": "Opens other people's stories without adding you to their viewer list. For now the story still shows as new on your side. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Opens other people's stories without adding you to their viewer list. Stories you open this way are marked as seen on your side. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [

@@ -66,7 +66,7 @@ object CatalogTool {
         val declarations = (Regex("""controlPatch\("([a-z_]+)",\s*"([^"]+)"""").findAll(patchSource)
             .map { it.groupValues[1] to it.groupValues[2] } +
             // Standalone patches that use recordControl directly instead of controlPatch:
-            sequenceOf("material_you" to "Material You theme")).toList()
+            sequenceOf("material_you" to "Material You theme", "anonymous_stories" to "View stories anonymously")).toList()
         val uiKeys = Regex("""^\s*\{"([a-z_]+)",""", RegexOption.MULTILINE).findAll(uiSource)
             .map { it.groupValues[1] }.toList()
         val factory = DocumentBuilderFactory.newInstance().apply {

@@ -168,6 +168,42 @@ public final class Settings {
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
     public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }
+
+    private static final String ANON_SEEN_KEY = "anonymous_seen_cards";
+    private static final long ANON_SEEN_TTL = 48 * 60 * 60 * 1000L;
+
+    public static void markStorySeen(String cardId) {
+        if (cardId == null || cardId.isEmpty()) return;
+        SharedPreferences prefs = preferences;
+        if (prefs == null) return;
+        long now = System.currentTimeMillis();
+        Set<String> entries = new HashSet<>(prefs.getStringSet(ANON_SEEN_KEY, Collections.emptySet()));
+        entries.add(cardId + ":" + now);
+        entries.removeIf(e -> {
+            int sep = e.lastIndexOf(':');
+            if (sep < 0) return true;
+            try { return now - Long.parseLong(e.substring(sep + 1)) > ANON_SEEN_TTL; }
+            catch (NumberFormatException x) { return true; }
+        });
+        prefs.edit().putStringSet(ANON_SEEN_KEY, entries).apply();
+    }
+
+    public static boolean isStorySeen(String cardId) {
+        if (cardId == null || cardId.isEmpty()) return false;
+        SharedPreferences prefs = preferences;
+        if (prefs == null) return false;
+        long now = System.currentTimeMillis();
+        for (String entry : prefs.getStringSet(ANON_SEEN_KEY, Collections.emptySet())) {
+            int sep = entry.lastIndexOf(':');
+            if (sep < 0) continue;
+            if (entry.substring(0, sep).equals(cardId)) {
+                try { if (now - Long.parseLong(entry.substring(sep + 1)) <= ANON_SEEN_TTL) return true; }
+                catch (NumberFormatException x) { /* pruned on next write */ }
+            }
+        }
+        return false;
+    }
+
     /** The icon stays hidden only while the Menu row that replaces it exists. */
     static boolean drawerIconHidden() {
         SharedPreferences prefs = preferences;

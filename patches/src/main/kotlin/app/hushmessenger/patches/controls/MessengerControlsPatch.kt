@@ -2,11 +2,14 @@ package app.hushmessenger.patches.controls
 
 import app.hushmessenger.patches.MessengerTarget
 import app.hushmessenger.patches.coexist.validateVersionCode
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.BytecodePatch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
+import app.morphe.patcher.util.smali.ExternalLabel
 import com.android.tools.smali.dexlib2.iface.Method
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -233,8 +236,55 @@ val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots",
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt. In end-to-end encrypted chats, chats you open stay unread until you reply.", "Privacy", "hide_read_receipts", "read_mailbox")
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited while active.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
+private var anonymousStoriesApplied = false
+
+private val anonymousStoriesResources = resourcePatch(description = "Record HushMessenger capability: anonymous_stories") {
+    dependsOn(settingsResources)
+    execute {
+        anonymousStoriesApplied = false
+        document("AndroidManifest.xml").use { it.requireFeatureAbsent("anonymous_stories") }
+    }
+    finalize {
+        if (anonymousStoriesApplied) document("AndroidManifest.xml").use { it.addFeature("anonymous_stories") }
+    }
+}
+
 @Suppress("unused")
-val anonymousStoriesPatch = controlPatch("anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. For now the story still shows as new on your side.", "Privacy")
+val anonymousStoriesPatch = bytecodePatch(
+    name = "View stories anonymously",
+    description = "Opens other people's stories without adding you to their viewer list. Stories you open this way are marked as seen on your side. Long-press Messenger > Patch controls. Starts off.",
+    default = true,
+) {
+    category("Privacy")
+    compatibleWith(MessengerTarget.COMPATIBILITY)
+    dependsOn(settingsExtension, anonymousStoriesResources)
+    execute {
+        validateControls(discoveredControls, setOf("anonymous_stories"))
+        val methods = mapOf("anonymous_stories" to discoveredControls.getValue("anonymous_stories").map { original ->
+            mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
+        })
+        injectControl("anonymous_stories", methods)
+
+        val montageCard = mutableClassDefBy(MONTAGE_CARD)
+        for (ctor in montageCard.methods) {
+            if (ctor.name != "<init>" || ctor.implementation == null) continue
+            val code = ctor.implementation!!.instructions.toList()
+            val returnIndex = code.indexOfLast { it.opcode == com.android.tools.smali.dexlib2.Opcode.RETURN_VOID }
+            if (returnIndex < 0) continue
+            ctor.addInstructionsWithLabels(returnIndex, """
+                iget-object v0, p0, $MONTAGE_CARD->A0K:Ljava/lang/String;
+                invoke-static {v0}, $SETTINGS->isStorySeen(Ljava/lang/String;)Z
+                move-result v0
+                if-eqz v0, :not_anon_seen
+                const/4 v0, 0x1
+                iput-boolean v0, p0, $MONTAGE_CARD->A0U:Z
+            """.trimIndent(), ExternalLabel("not_anon_seen", ctor.getInstruction(returnIndex)))
+        }
+
+        recordControl("anonymous_stories")
+        anonymousStoriesApplied = true
+    }
+}
 
 private var menuRowApplied = false
 

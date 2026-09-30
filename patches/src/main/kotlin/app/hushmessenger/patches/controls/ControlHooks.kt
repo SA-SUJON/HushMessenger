@@ -857,10 +857,13 @@ internal fun MutableMethod.validateStorySeen(): Int {
 
 internal fun MutableMethod.injectStorySeen() {
     val cache = validateStorySeen()
+    val card = implementation!!.registerCount - 2
     addInstructionsWithLabels(1, """
         invoke-static {}, $SETTINGS->viewStoriesAnonymously()Z
         move-result v0
         if-eqz v0, :stock_behavior
+        iget-object v0, v$card, $MONTAGE_CARD->A0K:Ljava/lang/String;
+        invoke-static {v0}, $SETTINGS->markStorySeen(Ljava/lang/String;)V
         const/4 v0, 0x0
         goto/16 :local_seen
     """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(1)), ExternalLabel("local_seen", getInstruction(cache)))
