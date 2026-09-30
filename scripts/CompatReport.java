@@ -157,6 +157,7 @@ public class CompatReport {
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
         PATCHES.put("View stories anonymously", List.of("anonymous_stories"));
+        PATCHES.put("Save any story", List.of("save_stories"));
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
 
@@ -929,6 +930,12 @@ public class CompatReport {
                 if ("V".equals(method.getReturnType()) && paramTypes.equals(List.of(MONTAGE_CARD, "Z")) &&
                     !isStatic && strings.contains("MontageMsysMarkReadHandler")) {
                     found.get("anonymous_stories").add(method);
+                }
+
+                // save_stories: the story viewer's More options menu, which adds Save to your own story's menu
+                if ("onClick".equals(method.getName()) && "V".equals(method.getReturnType()) &&
+                    paramTypes.equals(List.of("Landroid/view/View;")) && strings.contains("toolbar_click_menu_button")) {
+                    found.get("save_stories").add(method);
                 }
 
                 // people_tab: the People tab suggestion handler handing its list and filter map to the tab

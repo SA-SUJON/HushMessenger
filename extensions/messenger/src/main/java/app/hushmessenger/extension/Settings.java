@@ -168,6 +168,7 @@ public final class Settings {
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return enabled("keep_unsent"); }
     public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }
+    public static boolean saveAnyStory() { return enabled("save_stories"); }
 
     /** Story cards read on this phone, as "account:card:time kept". A story is up for a day; each entry lasts two. */
     static final String SEEN_STORIES = "anonymous_seen_stories";

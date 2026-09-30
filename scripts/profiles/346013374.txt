@@ -80,6 +80,7 @@ hook people_story Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;-
 hook people_tab LX/E7d;->A01(LX/E7d;)V
 hook read_mailbox LX/9tV;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 hook reels_badge LX/7xl;->A09(LX/7xl;)Z
+hook save_stories LX/PLV;->onClick(Landroid/view/View;)V
 hook stories LX/1mh;->A00()Z
 hook subtabs LX/2UK;->run()V
 hook suggested_replies LX/7T9;->A06(LX/7T9;)Z

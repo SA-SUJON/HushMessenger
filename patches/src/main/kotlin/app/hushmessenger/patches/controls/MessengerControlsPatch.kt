@@ -277,6 +277,46 @@ val anonymousStoriesPatch = bytecodePatch(
     }
 }
 
+private var saveStoriesApplied = false
+
+private val saveStoriesResources = resourcePatch(description = "Record HushMessenger capability: save_stories") {
+    dependsOn(settingsResources)
+    execute {
+        saveStoriesApplied = false
+        document("AndroidManifest.xml").use { it.requireFeatureAbsent("save_stories") }
+    }
+    finalize {
+        if (saveStoriesApplied) document("AndroidManifest.xml").use { it.addFeature("save_stories") }
+    }
+}
+
+@Suppress("unused")
+val saveStoriesPatch = bytecodePatch(
+    name = "Save any story",
+    description = "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own. Long-press Messenger > Patch controls. Starts off.",
+    default = true,
+) {
+    category("Privacy")
+    compatibleWith(MessengerTarget.COMPATIBILITY)
+    dependsOn(settingsExtension, saveStoriesResources)
+    execute {
+        validateControls(discoveredControls, setOf("save_stories"))
+        val original = discoveredControls.getValue("save_stories").single()
+        val builderClass = mutableClassDefBy(original.definingClass)
+        val builder = builderClass.methods.single { it.hookId() == original.hookId() }
+        // The menu, its Save item and the handler are all checked before the first edit.
+        val save = builder.validateStorySave()
+        classDefBy(save.handler).validateStoryMenuHandler(save)
+        if (builderClass.methods.any { it.name == STORY_SAVE_HELPER }) {
+            throw PatchException("Messenger controls: the story menu already has $STORY_SAVE_HELPER")
+        }
+        builderClass.methods.add(storySaveHelper(original.definingClass, save))
+        builder.injectStorySave(save)
+        recordControl("save_stories")
+        saveStoriesApplied = true
+    }
+}
+
 private var menuRowApplied = false
 
 // Lets the settings screen mention the Menu tab row only on builds that have it.

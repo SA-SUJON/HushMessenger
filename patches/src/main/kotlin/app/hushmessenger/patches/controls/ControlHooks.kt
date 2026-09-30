@@ -31,6 +31,9 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference as DexMet
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
 
 internal const val SETTINGS = "Lapp/hushmessenger/extension/Settings;"
 internal const val AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/InboxAdsItem;"
@@ -50,6 +53,11 @@ internal const val COMPOSER_FACTORY = "Lcom/facebook/messaging/msys/thread/compo
 internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
 internal const val MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;"
 internal const val STORY_MARK_READ_TAG = "MontageMsysMarkReadHandler"
+/** The story viewer's More options button logs this as it builds its menu. */
+internal const val STORY_MENU_TAG = "toolbar_click_menu_button"
+/** The menu's click handler logs this before it saves the story on screen. */
+internal const val STORY_SAVE_TAG = "menu_item_download"
+internal const val STORY_SAVE_HELPER = "hushmessengerAddStorySave"
 private const val IMMUTABLE_LIST_OF = "$IMMUTABLE_LIST->of(Ljava/lang/Object;)$IMMUTABLE_LIST"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
@@ -107,6 +115,7 @@ internal val expectedHooks = mapOf(
     "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "anonymous_stories" to setOf("LX/HNV;->C1V(${MONTAGE_CARD}Z)V"),
+    "save_stories" to setOf("LX/JgG;->onClick(Landroid/view/View;)V"),
     "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
     "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
@@ -298,6 +307,9 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             // Opening a story card sends its seen state through the handler Messenger tags with this name.
             if (method.returnType == "V" && method.parameterTypes == listOf(MONTAGE_CARD, "Z") &&
                 !AccessFlags.STATIC.isSet(method.accessFlags) && STORY_MARK_READ_TAG in strings) add("anonymous_stories")
+            // The story viewer's More options button builds its menu here, your own story's Save item included.
+            if (method.name == "onClick" && method.returnType == "V" && method.parameterTypes == listOf("Landroid/view/View;") &&
+                STORY_MENU_TAG in strings) add("save_stories")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -1092,4 +1104,196 @@ internal fun MutableMethod.injectStoryReadSetSeed(readSet: StoryReadSet) {
         iget-object v1, p0, ${readSet.session}
         invoke-static {v0, v1}, $SETTINGS->seedSeenStories(Ljava/util/Set;Ljava/lang/Object;)V
     """.trimIndent())
+}
+
+private val RESOURCE_CONSTS = setOf(Opcode.CONST_4, Opcode.CONST_16, Opcode.CONST, Opcode.CONST_HIGH16)
+
+/**
+ * Your own story's Save item, and where the story menu starts on anyone else's. The menu asks once whether the story
+ * is yours. That path adds Save, Delete and Story settings, so only the Save item is copied, into a helper the other
+ * path calls.
+ */
+internal class StorySave(
+    /** First instruction of the path for other people's stories; nothing jumps there. */
+    val others: Int,
+    val fragment: Int,
+    val menu: Int,
+    val fragmentType: String,
+    val menuType: String,
+    val controller: String,
+    /** Card controllers the item is offered for, in builds that list them; empty where [canSave] answers instead. */
+    val saveable: List<String>,
+    val canSave: String?,
+    val id: Long,
+    val label: Long,
+    val labelOf: String,
+    val icon: String,
+    val addItem: String,
+    val handler: String,
+)
+
+internal fun MutableMethod.validateStorySave(): StorySave {
+    fun fail(what: String): Nothing = throw PatchException("Messenger controls: the story menu $what")
+    if (name != "onClick" || returnType != "V" || parameterTypes.map { it.toString() } != listOf("Landroid/view/View;")) {
+        fail("builder ${hookId()} is no longer onClick(View)")
+    }
+    val code = implementation!!.instructions.toList()
+    val addresses = IntArray(code.size + 1)
+    for (i in code.indices) addresses[i + 1] = addresses[i] + code[i].codeUnits
+    val indexAt = code.indices.associateBy { addresses[it] }
+    fun op(i: Int) = code.getOrNull(i)?.opcode
+    fun reg(i: Int) = (code.getOrNull(i) as? OneRegisterInstruction)?.registerA ?: -1
+    fun call(i: Int) = (code.getOrNull(i) as? ReferenceInstruction)?.reference as? DexMethodReference
+    fun params(i: Int) = call(i)?.parameterTypes?.map { it.toString() }
+    fun args(i: Int) = (code.getOrNull(i) as? FiveRegisterInstruction)?.let {
+        listOf(it.registerC, it.registerD, it.registerE, it.registerF, it.registerG).take(it.registerCount)
+    }.orEmpty()
+    fun branch(i: Int) = (code.getOrNull(i) as? OffsetInstruction)?.let { indexAt[addresses[i] + it.codeOffset] } ?: -1
+    fun literal(i: Int) = if (op(i) in RESOURCE_CONSTS) (code[i] as WideLiteralInstruction).wideLiteral else null
+    // The builder loads a few constants between the answer and its branches.
+    fun answer(check: Int) = (check - 1 downTo 0).firstOrNull { op(it) !in RESOURCE_CONSTS && op(it) != Opcode.CONST_STRING } ?: -1
+
+    // "Is this your story?" and a second flag both branch to your own story's items; what follows them is for anyone else's.
+    val own = code.indices.filter { i ->
+        if (op(i) != Opcode.IF_NEZ || op(i + 1) != Opcode.IGET_BOOLEAN || op(i + 2) != Opcode.IF_NEZ || reg(i + 2) != reg(i + 1) ||
+            branch(i) < 0 || branch(i) != branch(i + 2)) return@filter false
+        val result = answer(i)
+        op(result) == Opcode.MOVE_RESULT && reg(result) == reg(i) && op(result - 1) == Opcode.INVOKE_VIRTUAL &&
+            call(result - 1)?.returnType == "Z" && params(result - 1)?.isEmpty() == true &&
+            args(result - 1) == listOf((code[i + 1] as TwoRegisterInstruction).registerB)
+    }.singleOrNull() ?: fail("no longer asks once whether the story is yours")
+    val result = answer(own)
+    val flag = reg(own)
+    val fragment = args(result - 1).single()
+    val fragmentType = call(result - 1)!!.definingClass
+    val menu = reg(result - 2)
+    val menuType = call(result - 3)?.returnType
+    if (op(result - 2) != Opcode.MOVE_RESULT_OBJECT || op(result - 3) != Opcode.INVOKE_STATIC || menuType == null) {
+        fail("no longer builds its menu right before asking whether the story is yours")
+    }
+    // The helper reads the fragment and the menu where the other path starts, so nothing on the way may change or skip to it.
+    val others = own + 3
+    val targets = jumpTargets()
+    val written = (result + 1 until own).map(::reg) + reg(own + 1)
+    if (fragment in written || menu in written || fragment > 15 || menu > 15 || others >= code.size ||
+        (result - 2..others).any { it in targets }) {
+        fail("path for other people's stories no longer matches the tested build")
+    }
+
+    // Your own story's items open with one call, a second look at the answer, and the Save item's own test.
+    val entry = branch(own)
+    val skip = branch(entry + 1)
+    val controller = call(entry + 2)
+    if (op(entry) != Opcode.INVOKE_STATIC || op(entry + 1) != Opcode.IF_EQZ || reg(entry + 1) != flag ||
+        op(entry + 2) != Opcode.INVOKE_STATIC || controller == null || params(entry + 2) != listOf(fragmentType) ||
+        args(entry + 2) != listOf(fragment) || op(entry + 3) != Opcode.MOVE_RESULT_OBJECT) {
+        fail("items for your own story no longer start with Save")
+    }
+    val card = reg(entry + 3)
+    val saveable = mutableListOf<String>()
+    var canSave: String? = null
+    var add = entry + 4
+    if (op(add) == Opcode.INSTANCE_OF) {
+        // Older builds list the card types: a match jumps to the item, the last miss skips it.
+        while (op(add) == Opcode.INSTANCE_OF) {
+            val test = code[add] as TwoRegisterInstruction
+            if (test.registerB != card || reg(add + 1) != test.registerA) fail("Save item's card test no longer matches the tested build")
+            saveable += ((code[add] as ReferenceInstruction).reference as TypeReference).type
+            add += 2
+            if (op(add - 1) == Opcode.IF_EQZ && branch(add - 1) == skip) break
+            if (op(add - 1) != Opcode.IF_NEZ) fail("Save item's card test no longer matches the tested build")
+        }
+        if (op(add - 1) != Opcode.IF_EQZ || (entry + 5 until add - 1 step 2).any { branch(it) != add }) {
+            fail("Save item's card test no longer matches the tested build")
+        }
+    } else {
+        // Newer builds ask the card's controller.
+        val test = call(add)
+        if (op(add) != Opcode.INVOKE_VIRTUAL || test == null || test.returnType != "Z" || test.parameterTypes.isNotEmpty() ||
+            args(add) != listOf(card) || op(add + 1) != Opcode.MOVE_RESULT || op(add + 2) != Opcode.IF_EQZ ||
+            reg(add + 2) != reg(add + 1) || branch(add + 2) != skip) {
+            fail("Save item's card test no longer matches the tested build")
+        }
+        canSave = test.toString()
+        add += 3
+    }
+    val id = literal(add)
+    val label = literal(add + 1)
+    val labelOf = call(add + 2)
+    val icon = (code.getOrNull(add + 4) as? ReferenceInstruction)?.reference as? FieldReference
+    val addItem = call(add + 5)
+    if (id == null || label == null || labelOf == null || icon == null || addItem == null ||
+        op(add + 2) != Opcode.INVOKE_STATIC || labelOf.returnType != "Ljava/lang/String;" || args(add + 2) != listOf(fragment, reg(add + 1)) ||
+        op(add + 3) != Opcode.MOVE_RESULT_OBJECT || op(add + 4) != Opcode.SGET_OBJECT || op(add + 5) != Opcode.INVOKE_STATIC ||
+        params(add + 5) != listOf(icon.type, fragmentType, menuType, "Ljava/lang/String;", "I") ||
+        args(add + 5) != listOf(reg(add + 4), fragment, menu, reg(add + 3), reg(add)) || skip != add + 6) {
+        fail("Save item no longer matches the tested build")
+    }
+
+    // The menu sends every click to one handler built from the fragment; its Save branch does the saving.
+    val handlers = code.indices.filter { i ->
+        val type = ((code[i] as? ReferenceInstruction)?.reference as? TypeReference)?.type
+        op(i) == Opcode.NEW_INSTANCE && op(i + 1) == Opcode.INVOKE_DIRECT && call(i + 1)?.name == "<init>" &&
+            call(i + 1)?.definingClass == type && params(i + 1) == listOf(fragmentType) && args(i + 1) == listOf(reg(i), fragment) &&
+            op(i + 2) == Opcode.INVOKE_VIRTUAL && args(i + 2) == listOf(menu, reg(i))
+    }
+    val handler = handlers.singleOrNull() ?: fail("no longer sends its clicks to one handler")
+    return StorySave(
+        others, fragment, menu, fragmentType, menuType, controller.toString(), saveable, canSave, id, label,
+        labelOf.toString(), icon.toString(), addItem.toString(), ((code[handler] as ReferenceInstruction).reference as TypeReference).type,
+    )
+}
+
+/** The handler must save when it gets the ID the copied item carries, or the new item would do something else. */
+internal fun ClassDef.validateStoryMenuHandler(save: StorySave) {
+    fun fail(what: String): Nothing = throw PatchException("Messenger controls: the story menu handler $type $what")
+    fun Instruction.logsSave() = ((this as? ReferenceInstruction)?.reference as? StringReference)?.string == STORY_SAVE_TAG
+    val method = methods.singleOrNull { m -> m.implementation?.instructions?.any { it.logsSave() } == true }
+        ?: fail("no longer logs $STORY_SAVE_TAG")
+    val code = method.implementation!!.instructions.toList()
+    val branch = (code.indexOfFirst { it.logsSave() } downTo 0).firstOrNull { code[it].opcode == Opcode.IF_NE }
+        ?: fail("no longer picks the Save item by its ID")
+    // One side of the comparison is the ID, loaded by the last write to that register before the branch.
+    val compared = (code[branch] as TwoRegisterInstruction).let { listOf(it.registerA, it.registerB) }.mapNotNull { register ->
+        code.subList(0, branch).lastOrNull { (it as? OneRegisterInstruction)?.registerA == register }
+            ?.takeIf { it.opcode in RESOURCE_CONSTS } as? WideLiteralInstruction
+    }
+    if (compared.none { it.wideLiteral == save.id }) fail("no longer saves the item the story menu adds")
+}
+
+/** Offers Save on someone else's story the way the menu offers it on yours, while the switch is on. */
+internal fun storySaveHelper(definingClass: String, save: StorySave): MutableMethod {
+    val test = save.canSave?.let { "invoke-virtual {v0}, $it\nmove-result v1\nif-eqz v1, :done" }
+        ?: save.saveable.mapIndexed { i, type ->
+            "instance-of v1, v0, $type\n" + if (i == save.saveable.lastIndex) "if-eqz v1, :done" else "if-nez v1, :add"
+        }.joinToString("\n")
+    val parameters = listOf(save.fragmentType, save.menuType).map { ImmutableMethodParameter(it, null, null) }
+    return MutableMethod(ImmutableMethod(definingClass, STORY_SAVE_HELPER, parameters, "V",
+        AccessFlags.PUBLIC.value or AccessFlags.STATIC.value, null, null, ImmutableMethodImplementation(6, emptyList(), null, null)))
+        .apply {
+            addInstructionsWithLabels(0, """
+                invoke-static {}, $SETTINGS->saveAnyStory()Z
+                move-result v0
+                if-eqz v0, :done
+                invoke-static {p0}, ${save.controller}
+                move-result-object v0
+                if-eqz v0, :done
+            """.trimIndent() + "\n" + test + "\n" + """
+                :add
+                const v3, 0x${save.id.toString(16)}
+                const v1, 0x${save.label.toString(16)}
+                invoke-static {p0, v1}, ${save.labelOf}
+                move-result-object v2
+                sget-object v1, ${save.icon}
+                invoke-static {v1, p0, p1, v2, v3}, ${save.addItem}
+                :done
+                return-void
+            """.trimIndent())
+        }
+}
+
+/** Nothing jumps to where the other path starts, and the call only reads the fragment and the menu. */
+internal fun MutableMethod.injectStorySave(save: StorySave) {
+    addInstructions(save.others, "invoke-static {v${save.fragment}, v${save.menu}}, " +
+        "$definingClass->$STORY_SAVE_HELPER(${save.fragmentType}${save.menuType})V")
 }
