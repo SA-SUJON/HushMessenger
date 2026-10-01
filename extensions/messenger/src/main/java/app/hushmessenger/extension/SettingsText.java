@@ -168,6 +168,7 @@ final class SettingsText {
         ENGLISH.put("minutes_short", "%dm");
         ENGLISH.put("hours_short", "%dh");
         ENGLISH.put("not_active", "Nothing to change yet since restart");
+        ENGLISH.put("unsent_not_active", "No unsend activity observed since restart");
         ENGLISH.put("error_now", "Stopped with an error just now");
         ENGLISH.put("error_ago", "Stopped with an error %s ago");
         ENGLISH.put("changes_paused", "Changes paused");

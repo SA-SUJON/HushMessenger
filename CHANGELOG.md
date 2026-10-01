@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Keep unsent describes its verified legacy routes, unsupported encrypted chats and unverified group coverage beside the switch. **No unsend activity observed since restart** describes hook activity without implying chat support. Tests cover retained-message labels, stock behavior while off or paused, and choices retained after settings reinitializes. Refs #23.
+
 - Control activity labels refresh when settings resumes, keeping the same switches, scroll position and focus. Paused choices say **Changes paused**. Labels have full contrast in both themes, and the switch reads the current status once without exposing exception details.
 
 - Repeated taps cannot open overlapping choices pickers. Cancel lets the next request proceed. Tests also check malformed UTF-8 and require all five menu mapping groups explicitly.

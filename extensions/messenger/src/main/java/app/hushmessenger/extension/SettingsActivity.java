@@ -91,7 +91,7 @@ public final class SettingsActivity extends Activity {
         {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected.", "privacy"},
         {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. In end-to-end encrypted chats, chats you open stay unread until you reply.", "privacy"},
-        {"keep_unsent", "Keep unsent messages", "Keeps messages other people remove for everyone, except in end-to-end encrypted chats. Your own unsend ability may be limited.", "privacy"},
+        {"keep_unsent", "Keep unsent messages", "Keeps messages on verified legacy unsend routes. End-to-end encrypted chats aren't supported, and group coverage isn't verified. Activity records hook calls, not whether a chat is supported. Your own unsend may be limited.", "privacy"},
         {"anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. Stories you open this way are still marked as seen on your side.", "privacy"},
         {"save_stories", "Save any story", "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own.", "privacy"},
         {"material_you", "Material You theme", "Tints Messenger's dark mode with the colors Android takes from your wallpaper on Android 12 and newer. Android 11 gets a fixed blue palette. Turn on dark mode in Messenger first.", "theme"},
@@ -541,7 +541,7 @@ public final class SettingsActivity extends Activity {
         boolean paused = Settings.preferences.getBoolean("paused", false) || CrashGuard.isSafeMode();
         boolean failed = failedAt > 0 && failedAt >= used;
         String status = paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
-            : used == 0 ? text.get("not_active") : formatSince(used, "active_now", "active_ago");
+            : used == 0 ? text.get("keep_unsent".equals(key) ? "unsent_not_active" : "not_active") : formatSince(used, "active_now", "active_ago");
         if (!status.contentEquals(label.getText())) label.setText(status);
         label.setTextColor(!paused && failed ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
         label.setVisibility(control.isChecked() ? View.VISIBLE : View.GONE);

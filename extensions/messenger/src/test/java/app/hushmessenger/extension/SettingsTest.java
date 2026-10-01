@@ -64,6 +64,57 @@ public class SettingsTest {
         assertTrue(Settings.hideStories());
     }
 
+    @Test @Config(sdk = {28, 36}) public void legacyUnsendHelpersRetainAndLabelOnlyRecordedMessages() {
+        Settings.preferences.edit().putBoolean("keep_unsent", true).commit();
+        assertTrue(Settings.keepUnsent());
+        Settings.recordUnsent("retained-message");
+        Settings.recordUnsent(null);
+        Settings.recordUnsent("");
+        assertEquals(java.util.Set.of("retained-message"), Settings.preferences.getStringSet("kept_unsent_ids", java.util.Set.of()));
+        assertTrue(Settings.isKeptUnsent("retained-message"));
+        assertFalse(Settings.isKeptUnsent(null));
+        assertEquals("[unsent] original text", Settings.labelKeptUnsent("original text", "retained-message"));
+        assertEquals("ordinary text", Settings.labelKeptUnsent("ordinary text", "other-message"));
+        assertNull(Settings.labelKeptUnsent(null, "retained-message"));
+        assertFalse(Settings.suppressUnsent(true, "retained-message"));
+        assertFalse(Settings.suppressUnsent(false, "retained-message"));
+        assertTrue(Settings.suppressUnsent(true, "other-message"));
+        for (String disabled : new String[] {"paused", "keep_unsent"}) {
+            Settings.preferences.edit().putBoolean(disabled, "paused".equals(disabled)).commit();
+            assertFalse(Settings.keepUnsent());
+            assertEquals("original text", Settings.labelKeptUnsent("original text", "retained-message"));
+            assertTrue(Settings.suppressUnsent(true, "retained-message"));
+            assertFalse(Settings.suppressUnsent(false, "retained-message"));
+            assertTrue(Settings.isKeptUnsent("retained-message"));
+            Settings.preferences.edit().putBoolean("paused", false).commit();
+        }
+    }
+
+    @Test @Config(sdk = {28, 36}) public void retainedUnsendChoiceSurvivesRestartWithoutClaimingChatCoverage() {
+        Settings.preferences.edit().putBoolean("keep_unsent", true).commit();
+        Settings.recordUnsent("retained-message");
+        Settings.preferences = null;
+        Settings.activeAt.clear();
+        Settings.initialize(RuntimeEnvironment.getApplication());
+        assertTrue(Settings.preferences.getBoolean("keep_unsent", false));
+        assertTrue(Settings.isKeptUnsent("retained-message"));
+        assertEquals(0, Settings.lastActive("keep_unsent"));
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            var root = screen.get().getWindow().getDecorView();
+            Switch choice = root.findViewWithTag("keep_unsent");
+            assertTrue(choice.isChecked());
+            String spoken = choice.getContentDescription().toString();
+            assertTrue(spoken.contains("legacy unsend routes"));
+            assertTrue(spoken.contains("End-to-end encrypted chats aren't supported"));
+            assertTrue(spoken.contains("group coverage isn't verified"));
+            assertTrue(spoken.contains("not whether a chat is supported"));
+            assertEquals("No unsend activity observed since restart",
+                ((android.widget.TextView) root.findViewWithTag("active_keep_unsent")).getText().toString());
+        }
+        assertEquals("[unsent] original text", Settings.labelKeptUnsent("original text", "retained-message"));
+        assertFalse(Settings.suppressUnsent(true, "retained-message"));
+    }
+
     @Test public void encryptedTypingFlagDropsOnlyWhileTheSwitchIsOn() {
         assertTrue(Settings.outgoingTyping(true));
         assertFalse(Settings.outgoingTyping(false));
