@@ -22,6 +22,7 @@ import app.morphe.patcher.patch.resourcePatch
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -32,10 +33,25 @@ private const val THEME = "Lapp/hushmessenger/extension/MaterialYouTheme;"
 private const val DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;"
 private const val FDS_COLORS = "Lcom/facebook/fds/core/theme/component/FDSColors;"
 
-/** The Mig colour token interface — every token enum implements this. */
-private const val TOKEN_IFACE = "LX/4r6;"
-
 private var materialYouApplied = false
+
+/**
+ * DarkColorScheme's colour token resolver: one class-typed parameter (the Mig colour token
+ * interface every token enum implements), an int result, and an interface call ()I on that
+ * parameter's own type. 346013440 names them DCz(LX/4r6;)I and ApL()I, 346013372 DCt(LX/4rB;)I
+ * and ApN()I; every naming group renames both, so match the shape instead of the names.
+ */
+internal fun isTokenColorMethod(method: Method): Boolean {
+    val token = method.parameterTypes.singleOrNull()?.toString() ?: return false
+    if (method.returnType != "I" || !token.startsWith("L")) return false
+    val code = method.implementation?.instructions ?: return false
+    return code.any { insn ->
+        insn.opcode == Opcode.INVOKE_INTERFACE &&
+            ((insn as? ReferenceInstruction)?.reference as? MethodReference)?.let {
+                it.definingClass == token && it.returnType == "I" && it.parameterTypes.isEmpty()
+            } == true
+    }
+}
 
 private val materialYouResources = resourcePatch(description = "Record HushMessenger capability: material_you") {
     dependsOn(settingsResources)
@@ -58,25 +74,15 @@ val materialYouPatch = bytecodePatch(
     compatibleWith(MessengerTarget.COMPATIBILITY)
     dependsOn(settingsExtension, materialYouResources)
     execute {
-        // --- Find the DarkColorScheme.DCz method ---
-        // DCz(LX/4r6;)I invokes the token's ApL()I and returns the colour.
-        // We hook before each RETURN to recolour through MaterialYouTheme.mig(int).
+        // --- Find DarkColorScheme's token resolver (DCz in 346013440) ---
+        // It reads the colour from the token and returns it.
+        // We hook before the RETURN to recolour through MaterialYouTheme.mig(int).
         val darkScheme = mutableClassDefBy(DARK_SCHEME)
-        val dcz = darkScheme.methods.singleOrNull { m ->
-            m.returnType == "I" && m.parameterTypes.size == 1 &&
-                m.parameterTypes[0] == TOKEN_IFACE &&
-                m.implementation != null
-        } ?: throw app.morphe.patcher.patch.PatchException(
-            "DarkColorScheme.DCz(LX/4r6;)I not found"
-        )
-
-        // Validate: DCz should invoke ApL()I on the token and return an int
+        val dcz = darkScheme.methods.filter(::isTokenColorMethod).singleOrNull()
+            ?: throw app.morphe.patcher.patch.PatchException(
+                "DarkColorScheme's colour token method not found"
+            )
         val dczCode = dcz.implementation!!.instructions.toList()
-        val hasApL = dczCode.any { i ->
-            i.opcode == Opcode.INVOKE_INTERFACE &&
-                ((i as? ReferenceInstruction)?.reference as? MethodReference)?.name == "ApL"
-        }
-        check(hasApL) { "DCz does not call ApL on the token" }
 
         // Find the RETURN instruction and hook before it
         val returnIndex = dczCode.indexOfLast { it.opcode == Opcode.RETURN }
