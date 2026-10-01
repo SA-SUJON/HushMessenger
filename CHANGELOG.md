@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+### New
+
+- **Save choices to a file** and **Restore choices from a file** use Android's file picker. They share the clipboard backup format and need no storage permission. Cancelled, unreadable or corrupt documents leave choices alone, and a result from before settings reopened is ignored.
+
 ### Changed and fixed
+
+- Choice backups now use an exact versioned header and a 16 KiB limit. Legacy exports still restore. The entire backup is checked before one preference update; malformed lines, duplicate keys and invalid booleans change nothing. Unknown and unavailable controls are reported separately, and omitted choices retain their saved values.
 
 - The settings menu patch validates its builder, binder, drawer setter and click route before editing any of them. Tests corrupt each target and its register contract across all five naming groups, checking that failures leave the host code and capability flags untouched. Branches to normal exits still run the settings hook.
 

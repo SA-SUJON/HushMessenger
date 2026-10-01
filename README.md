@@ -118,6 +118,10 @@ The **App** tab starts with quick access and a restart button. Appearance and se
 
 The new inbox ad filter checks a current list-processing path instead of the absent old loader. It removes only `InboxAdsItem` objects and preserves other rows, including ordinary business conversations. Meta stopped selling ads in the Messenger inbox on November 11, 2025 and in Messenger Stories on August 27, 2026, which is likely why no test account has ever shown one. So there's nothing live to check it against, and the filter stays in case they return. It doesn't remove story ads. Messages from businesses you've subscribed to are ordinary chats and stay.
 
+### Back up your choices
+
+On the **App** tab, copy choices through the clipboard or use **Save choices to a file** and **Restore choices from a file**. Files use Android's picker and need no storage-wide permission. Both paths use UTF-8 with the exact `hushmessenger:choices:v1` header and a 16 KiB limit. The original `hushmessenger:choices` header is still accepted. Invalid headers, duplicate keys, invalid booleans and oversized input leave everything unchanged. Omitted choices and choices absent from the installed bundle keep their saved values; unknown keys are reported separately. The backup contains installed control choices and Pause, with no chats, accounts, crash records or signing material. If settings reopen while the picker is active, choose the file again.
+
 ### Alerts from only some chats
 
 Messenger and Android already handle this, so there's no HushMessenger switch for it. Do it in this order:

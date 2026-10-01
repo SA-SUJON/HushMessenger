@@ -59,6 +59,9 @@ public final class SettingsActivity extends Activity {
     private TextView searchStatus, enabledCount, setupNote;
     private Button safeModeAction;
     private LinearLayout emptyState;
+    static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102;
+    private String documentExport;
+    private boolean documentImport;
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
     static final String[][] CONTROLS = {
@@ -577,6 +580,35 @@ public final class SettingsActivity extends Activity {
         importBtn.setOnClickListener(view -> importChoices());
         ui.add(about, importBtn, 8);
         ui.add(about, ui.text(text.get("import_help"), 13, ui.muted, false), 8);
+        ui.rule(about, 12);
+        Button saveFile = ui.button(text.get("save_choices_file"));
+        saveFile.setTag("save_choices_file");
+        saveFile.setOnClickListener(view -> {
+            documentImport = false;
+            documentExport = ChoiceCodec.encode(Settings.preferences, Settings.installed);
+            Intent picker = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("text/plain").putExtra(Intent.EXTRA_TITLE, "HushMessenger-choices.txt");
+            try { startActivityForResult(picker, SAVE_CHOICES); }
+            catch (android.content.ActivityNotFoundException | SecurityException error) {
+                documentExport = null;
+                feedback(text.get("export_failed"), Toast.LENGTH_LONG);
+            }
+        });
+        ui.add(about, saveFile, 8);
+        Button readFile = ui.button(text.get("read_choices_file"));
+        readFile.setTag("read_choices_file");
+        readFile.setOnClickListener(view -> {
+            documentExport = null;
+            documentImport = true;
+            Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/*");
+            try { startActivityForResult(picker, READ_CHOICES); }
+            catch (android.content.ActivityNotFoundException | SecurityException error) {
+                documentImport = false;
+                feedback(text.get("import_invalid"), Toast.LENGTH_LONG);
+            }
+        });
+        ui.add(about, readFile, 8);
+        ui.add(about, ui.text(text.get("choices_file_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
         LinearLayout updates = ui.panel();
         ui.add(updates, controlRow("check_updates", text.format("check_updates"), text.format("check_updates_help"), false), 0);
@@ -759,19 +791,9 @@ public final class SettingsActivity extends Activity {
         return text.get(ago, text.format("hours_short", hours));
     }
 
-    private static final String EXPORT_HEADER = "hushmessenger:choices";
-
     private void exportChoices() {
         try {
-            StringBuilder export = new StringBuilder(EXPORT_HEADER).append('\n');
-            export.append("paused=").append(Settings.preferences.getBoolean("paused", false)).append('\n');
-            for (String[] spec : CONTROLS) {
-                String key = spec[0];
-                if (Settings.installed.contains(key)) {
-                    export.append(key).append('=').append(Settings.preferences.getBoolean(key, false)).append('\n');
-                }
-            }
-            ClipData clip = ClipData.newPlainText(text.get("clipboard"), export.toString());
+            ClipData clip = ClipData.newPlainText(text.get("clipboard"), ChoiceCodec.encode(Settings.preferences, Settings.installed));
             PersistableBundle extras = new PersistableBundle();
             extras.putBoolean(Build.VERSION.SDK_INT >= 33 ? ClipDescription.EXTRA_IS_SENSITIVE : "android.content.extra.IS_SENSITIVE", true);
             clip.getDescription().setExtras(extras);
@@ -798,32 +820,68 @@ public final class SettingsActivity extends Activity {
                 return;
             }
             CharSequence raw = clip.getItemAt(0).getText();
-            if (raw == null || !raw.toString().startsWith(EXPORT_HEADER)) {
-                feedback(text.get("import_invalid"), Toast.LENGTH_LONG);
-                return;
-            }
-            java.util.Set<String> knownKeys = new java.util.HashSet<>();
-            for (String[] spec : CONTROLS) knownKeys.add(spec[0]);
-            knownKeys.add("paused");
-            SharedPreferences.Editor editor = Settings.preferences.edit();
-            int restored = 0;
-            for (String line : raw.toString().split("\n")) {
-                int eq = line.indexOf('=');
-                if (eq < 1) continue;
-                String key = line.substring(0, eq);
-                String value = line.substring(eq + 1);
-                if (!knownKeys.contains(key)) continue;
-                if (!"true".equals(value) && !"false".equals(value)) continue;
-                editor.putBoolean(key, "true".equals(value));
-                restored++;
-            }
-            editor.apply();
-            feedback(text.count("imported", restored), Toast.LENGTH_SHORT);
-            recreate();
+            restoreChoices(ChoiceCodec.parse(raw == null ? null : raw.toString()));
         } catch (Exception error) {
             android.util.Log.e("HushMessenger", "Can't import choices", error);
             feedback(text.get("import_invalid"), Toast.LENGTH_LONG);
         }
+    }
+
+    private void restoreChoices(Map<String, Boolean> choices) {
+        java.util.Set<String> known = new java.util.HashSet<>();
+        for (String[] spec : CONTROLS) known.add(spec[0]);
+        Map<String, Boolean> supported = new java.util.LinkedHashMap<>();
+        int unknown = 0, unavailable = 0;
+        for (Map.Entry<String, Boolean> choice : choices.entrySet()) {
+            String key = choice.getKey();
+            if ("paused".equals(key) || (known.contains(key) && Settings.installed.contains(key))) supported.put(key, choice.getValue());
+            else if (known.contains(key)) unavailable++;
+            else unknown++;
+        }
+        String skipped = (unknown == 0 ? "" : " " + text.count("import_unknown", unknown)) +
+            (unavailable == 0 ? "" : " " + text.count("import_unavailable", unavailable));
+        if (supported.isEmpty()) {
+            feedback(text.get("import_no_choices") + skipped, Toast.LENGTH_LONG);
+            return;
+        }
+        SharedPreferences.Editor editor = Settings.preferences.edit();
+        for (Map.Entry<String, Boolean> choice : supported.entrySet()) editor.putBoolean(choice.getKey(), choice.getValue());
+        editor.apply();
+        refreshChoices();
+        feedback(text.count("imported", supported.size()) + skipped, Toast.LENGTH_LONG);
+    }
+
+    @Override protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request != SAVE_CHOICES && request != READ_CHOICES) return;
+        String export = documentExport;
+        boolean importing = documentImport;
+        documentExport = null;
+        documentImport = false;
+        // Pending document operations deliberately don't survive recreation. A returned URI alone isn't authorization.
+        if (result != RESULT_OK || data == null || data.getData() == null ||
+            (request == SAVE_CHOICES ? export == null : !importing)) return;
+        android.net.Uri uri = data.getData();
+        new Thread(() -> {
+            try {
+                if (request == SAVE_CHOICES) {
+                    try (java.io.OutputStream stream = getContentResolver().openOutputStream(uri, "wt")) {
+                        if (stream == null) throw new java.io.IOException("No writable document");
+                        stream.write(export.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    runOnUiThread(() -> { if (!isDestroyed()) feedback(text.get("choices_file_saved"), Toast.LENGTH_SHORT); });
+                } else {
+                    Map<String, Boolean> choices;
+                    try (java.io.InputStream stream = getContentResolver().openInputStream(uri)) {
+                        choices = ChoiceCodec.parse(ChoiceCodec.read(stream));
+                    }
+                    runOnUiThread(() -> { if (!isDestroyed()) restoreChoices(choices); });
+                }
+            } catch (java.io.IOException | IllegalArgumentException | SecurityException error) {
+                android.util.Log.e("HushMessenger", "Can't use choices document", error);
+                runOnUiThread(() -> { if (!isDestroyed()) feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG); });
+            }
+        }, "HushChoicesDocument").start();
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {

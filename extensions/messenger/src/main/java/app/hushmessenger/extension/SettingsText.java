@@ -146,7 +146,16 @@ final class SettingsText {
         ENGLISH.put("imported_one", "Restored %d choice");
         ENGLISH.put("imported_many", "Restored %d choices");
         ENGLISH.put("import_empty", "Nothing to import. Export choices first, then paste them here.");
-        ENGLISH.put("import_invalid", "Not a valid HushMessenger export. Copy your export to the clipboard and try again.");
+        ENGLISH.put("import_invalid", "Not a valid HushMessenger backup. Use an unchanged choices export of 16 KiB or less.");
+        ENGLISH.put("import_unknown_one", "Skipped %d unknown choice.");
+        ENGLISH.put("import_unknown_many", "Skipped %d unknown choices.");
+        ENGLISH.put("import_unavailable_one", "Skipped %d choice absent from this bundle.");
+        ENGLISH.put("import_unavailable_many", "Skipped %d choices absent from this bundle.");
+        ENGLISH.put("import_no_choices", "No installed control choices to restore.");
+        ENGLISH.put("save_choices_file", "Save choices to a file");
+        ENGLISH.put("read_choices_file", "Restore choices from a file");
+        ENGLISH.put("choices_file_help", "Settings only, up to 16 KiB. Chats, accounts and recovery material stay out. Omitted or unavailable choices keep their saved values. Choose the file again if settings reopen.");
+        ENGLISH.put("choices_file_saved", "Choices file saved");
         ENGLISH.put("check_updates", "Check for updates");
         ENGLISH.put("check_updates_help", "Compares your version with the latest release when you open settings. Off by default. No data is sent.");
         ENGLISH.put("update_available", "Version %s is available");
