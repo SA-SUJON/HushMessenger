@@ -1365,6 +1365,7 @@ public class CompatReport {
         var problems = new ArrayList<String>();
         ClassDef scheme = null, fds = null;
         int surfaces = 0, colorCalls = 0;
+        var editableClasses = new TreeSet<String>();
         for (ClassDef cls : classes) {
             if (cls.getType().equals(DARK_SCHEME)) scheme = cls;
             if (cls.getType().equals(FDS_COLORS)) fds = cls;
@@ -1372,8 +1373,15 @@ public class CompatReport {
                 for (Instruction i : instructions(m)) {
                     Opcode op = i.getOpcode();
                     if ((op == Opcode.CONST || op == Opcode.CONST_HIGH16) && i instanceof NarrowLiteralInstruction literal &&
-                        DARK_SURFACES.contains(literal.getNarrowLiteral())) surfaces++;
-                    if ((op == Opcode.INVOKE_STATIC || op == Opcode.INVOKE_VIRTUAL) && COLOR_CALLS.contains(ref(i))) colorCalls++;
+                        DARK_SURFACES.contains(literal.getNarrowLiteral())) {
+                        surfaces++;
+                        editableClasses.add(cls.getType());
+                    }
+                    if ((op == Opcode.INVOKE_STATIC || op == Opcode.INVOKE_VIRTUAL ||
+                         op == Opcode.INVOKE_STATIC_RANGE || op == Opcode.INVOKE_VIRTUAL_RANGE) && COLOR_CALLS.contains(ref(i))) {
+                        colorCalls++;
+                        editableClasses.add(cls.getType());
+                    }
                 }
             }
         }
@@ -1383,7 +1391,10 @@ public class CompatReport {
             var resolvers = new ArrayList<Method>();
             for (Method m : scheme.getMethods()) if (isTokenColorMethod(m)) resolvers.add(m);
             Method resolver = onlyOne(resolvers, "DarkColorScheme token resolver", problems);
-            if (resolver != null) hookBeforeReturn(resolver, problems, targets);
+            if (resolver != null) {
+                hookBeforeReturn(resolver, problems, targets);
+                editableClasses.add(scheme.getType());
+            }
         }
         if (fds == null) {
             problems.add("no " + FDS_COLORS);
@@ -1425,15 +1436,22 @@ public class CompatReport {
                     }
                 });
                 Method check = onlyOne(checks, "dark mode check " + call, problems);
-                if (check != null) hookBeforeReturn(check, problems, targets);
+                if (check != null) {
+                    hookBeforeReturn(check, problems, targets);
+                    editableClasses.add(check.getDefiningClass());
+                }
             }
             if (intReturns == 0) problems.add("FDSColors has no int return to hook");
-            else targets.add(intReturns + " FDSColors int returns");
+            else {
+                targets.add(intReturns + " FDSColors int returns");
+                editableClasses.add(fds.getType());
+            }
         }
         if (surfaces == 0) problems.add("no dark surface constants for route 3");
         else targets.add(surfaces + " dark surface constants");
         if (colorCalls == 0) problems.add("no Color.parseColor or Context.getColor calls for route 4");
         else targets.add(colorCalls + " Color.parseColor and Context.getColor calls");
+        targets.add(editableClasses.size() + " Material You editable classes");
         return problems;
     }
 

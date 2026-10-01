@@ -121,6 +121,31 @@ class MaterialYouPatchTest {
         }
     }
 
+    @Test fun rangeColorCallsAreValidatedAndRewritten(@TempDir temporary: Path) {
+        for (count in listOf(1, 2)) {
+            val classes = themeClasses().filter { it.type != "LX/ThemeColors;" } + ImmutableClassDef.of(
+                fixtureClass("LX/ThemeColors;", listOf(fixtureMethod("LX/ThemeColors;->color()I", """
+                    const-string v16, "#333334"
+                    invoke-static/range {v16 .. v${15 + count}}, Landroid/graphics/Color;->parseColor(Ljava/lang/String;)I
+                    move-result v0
+                    return v0
+                """.trimIndent(), registers = 20, flags = 9))))
+            withThemeContext(temporary.resolve("range-$count"), classes) { context, resources ->
+                if (count == 1) {
+                    materialYouPatch.execute(context)
+                    val code = context.classDefBy("LX/ThemeColors;").methods.single().implementation!!.instructions
+                    assertTrue(code.any { (it as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)
+                        ?.reference.toString() == materialYouColorCalls.getValue("Landroid/graphics/Color;->parseColor(Ljava/lang/String;)I") })
+                    assertTrue(resources.hasTheme())
+                } else {
+                    assertFails { materialYouPatch.execute(context) }
+                    classes.forEach { assertSame(it, context.classDefBy(it.type)) }
+                    assertFalse(resources.hasTheme())
+                }
+            }
+        }
+    }
+
     private fun themeClasses() = listOf(
         fixtureClass(DARK_SCHEME, listOf(tokenMethod("DCz", "LX/Token;", "color"))),
         fixtureClass(FDS_COLORS, listOf(fixtureMethod("$FDS_COLORS->A00(Landroid/content/Context;II)I", """

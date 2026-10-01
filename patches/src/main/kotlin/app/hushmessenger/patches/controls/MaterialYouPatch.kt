@@ -25,6 +25,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 private const val THEME = "Lapp/hushmessenger/extension/MaterialYouTheme;"
@@ -149,18 +150,26 @@ val materialYouPatch = bytecodePatch(
                                 Edit(index, "sget v$register, $THEME->$field:I"))
                             surfaceCount++
                         }
-                    } else if (instruction.opcode == Opcode.INVOKE_STATIC || instruction.opcode == Opcode.INVOKE_VIRTUAL) {
+                    } else if (instruction.opcode == Opcode.INVOKE_STATIC || instruction.opcode == Opcode.INVOKE_VIRTUAL ||
+                        instruction.opcode == Opcode.INVOKE_STATIC_RANGE || instruction.opcode == Opcode.INVOKE_VIRTUAL_RANGE) {
                         val reference = (instruction as ReferenceInstruction).reference.toString()
                         val replacement = materialYouColorCalls[reference] ?: continue
-                        val invoke = instruction as FiveRegisterInstruction
                         val contextCall = reference.startsWith("Landroid/content/Context;")
-                        val expectedOpcode = if (contextCall) Opcode.INVOKE_VIRTUAL else Opcode.INVOKE_STATIC
+                        val range = instruction as? RegisterRangeInstruction
+                        val invoke = instruction as? FiveRegisterInstruction
+                        val expectedOpcode = if (contextCall) {
+                            if (range != null) Opcode.INVOKE_VIRTUAL_RANGE else Opcode.INVOKE_VIRTUAL
+                        } else if (range != null) Opcode.INVOKE_STATIC_RANGE else Opcode.INVOKE_STATIC
                         val expectedRegisters = if (contextCall) 2 else 1
-                        if (instruction.opcode != expectedOpcode || invoke.registerCount != expectedRegisters) {
+                        if (instruction.opcode != expectedOpcode || (range?.registerCount ?: invoke?.registerCount) != expectedRegisters ||
+                            (range != null && range.startRegister + range.registerCount > implementation.registerCount)) {
                             throw app.morphe.patcher.patch.PatchException("Invalid colour call in ${method.hookId()}")
                         }
+                        val call = if (range != null) {
+                            "invoke-static/range {v${range.startRegister} .. v${range.startRegister + range.registerCount - 1}}"
+                        } else "invoke-static {${registerList(invoke!!)}}"
                         edits.getOrPut(method) { mutableListOf() }.add(
-                            Edit(index, "invoke-static {${registerList(invoke)}}, $replacement"))
+                            Edit(index, "$call, $replacement"))
                         colorCount++
                     }
                 }

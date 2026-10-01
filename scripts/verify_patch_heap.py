@@ -10,6 +10,7 @@ import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from zipfile import BadZipFile, ZipFile
 
 if __package__:
     from .verify_changed_apk_failure import recorded_builds
@@ -32,7 +33,8 @@ def check_build(args, code, expected_hash, names):
     found = discovery.stdout + discovery.stderr
     surfaces = re.search(r"(\d+) dark surface constants", found)
     colors = re.search(r"(\d+) Color\.parseColor and Context\.getColor calls", found)
-    if discovery.returncode or surfaces is None or colors is None:
+    classes = re.search(r"(\d+) Material You editable classes", found)
+    if discovery.returncode or surfaces is None or colors is None or classes is None:
         raise RuntimeError(f"{code}: stock compatibility discovery failed\n{found[-4000:]}")
     with tempfile.TemporaryDirectory(prefix=f"hush-heap-{code}-") as scratch:
         root = Path(scratch)
@@ -60,8 +62,28 @@ def check_build(args, code, expected_hash, names):
         stats = re.search(r"Material You: (\d+) classes, (\d+) surfaces, (\d+) colour calls", log)
         if stats is None or any(int(value) <= 0 for value in stats.groups()):
             raise RuntimeError(f"{code}: missing theme edit counts\n{log[-4000:]}")
-        if (stats.group(2), stats.group(3)) != (surfaces.group(1), colors.group(1)):
+        if stats.groups() != (classes.group(1), surfaces.group(1), colors.group(1)):
             raise RuntimeError(f"{code}: patch theme counts disagree with stock discovery")
+        with stock.open("rb") as source:
+            if hashlib.file_digest(source, "sha256").hexdigest() != expected_hash:
+                raise RuntimeError(f"{code}: patcher changed the stock input")
+        with output.open("rb") as source:
+            if hashlib.file_digest(source, "sha256").hexdigest() == expected_hash:
+                raise RuntimeError(f"{code}: output is the unchanged stock APK")
+        with ZipFile(output) as apk:
+            if apk.testzip() is not None:
+                raise RuntimeError(f"{code}: output ZIP is corrupt")
+            if not {"AndroidManifest.xml", "resources.arsc", "classes.dex"} <= set(apk.namelist()):
+                raise RuntimeError(f"{code}: output is not a complete APK")
+            dex_files = [name for name in apk.namelist() if re.fullmatch(r"classes(?:\d+)?\.dex", name)]
+            extension = False
+            for name in dex_files:
+                data = apk.read(name)
+                if len(data) < 112 or not data.startswith(b"dex\n"):
+                    raise RuntimeError(f"{code}: invalid output DEX: {name}")
+                extension |= b"Lapp/hushmessenger/extension/Settings;" in data
+            if not extension:
+                raise RuntimeError(f"{code}: output has no settings extension")
         return f"PASS {code}: {len(applied)} patches, 1024 MB, theme {stats.group(0)}"
 
 
@@ -77,13 +99,15 @@ def main():
     args = parser.parse_args()
     try:
         builds = recorded_builds()
+        if len(builds) != 21:
+            raise ValueError("the complete gate requires 21 recorded builds")
         codes = args.codes or sorted(builds)
         if len(codes) != len(set(codes)) or not set(codes) <= builds.keys():
             raise ValueError("codes must be distinct recorded version codes")
         catalog = json.loads((ROOT / "patches-list.json").read_text(encoding="utf-8"))
         names = {patch["name"] for patch in catalog["patches"]}
-        if not names or "Material You theme" not in names:
-            raise ValueError("catalog does not contain the theme")
+        if len(catalog["patches"]) != 31 or len(names) != 31 or "Material You theme" not in names:
+            raise ValueError("the complete gate requires 31 distinct patches including the theme")
         # Each process owns its output and temporary root. Inputs remain read-only.
         failures = []
         with ThreadPoolExecutor(max_workers=len(codes)) as pool:
@@ -91,13 +115,14 @@ def main():
             for future in as_completed(futures):
                 try:
                     print(future.result(), flush=True)
-                except (OSError, ValueError, TypeError, KeyError, RuntimeError,
+                except (OSError, ValueError, TypeError, KeyError, RuntimeError, BadZipFile,
                         subprocess.TimeoutExpired) as error:
                     failures.append(futures[future])
                     print(f"CHECK FAILED: {error}", file=sys.stderr, flush=True)
         if failures:
             return 2
-        print(f"PASS: all {len(codes)} builds applied {len(names)} patches at 1024 MB")
+        scope = "selected" if args.codes else "all"
+        print(f"PASS: {scope} {len(codes)} builds applied {len(names)} patches at 1024 MB")
         return 0
     except (OSError, ValueError, TypeError, KeyError) as error:
         print(f"CHECK FAILED: {error}", file=sys.stderr)

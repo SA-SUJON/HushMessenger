@@ -4,6 +4,8 @@
 
 ### Changed and fixed
 
+- The memory check now rejects incomplete APKs, missing extension code, changed input files and reduced catalogs. It compares edited class counts as well as color counts. Material You validates and wraps range-form color calls too.
+
 - **Open** skips the settings launcher alias, extension screens and disabled launcher entries, so it opens Messenger instead of reopening settings. Missing or rejected launchers show the existing recovery message. Restart applies the same disabled-entry guard.
 
 - Safe mode now offers **Resume** directly. If **Pause all changes** was already on, the action reads **Clear safe mode** and leaves Pause on. Both actions clear the crash streak and keep every saved choice.
