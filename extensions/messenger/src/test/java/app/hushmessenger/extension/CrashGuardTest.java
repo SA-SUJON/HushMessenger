@@ -147,4 +147,37 @@ public class CrashGuardTest {
             assertTrue(count.getText().toString().contains("Safe mode"));
         }
     }
+
+    @Test public void safeModeActionPreservesChoicesAndIntentionalPause() {
+        for (boolean paused : new boolean[] {false, true}) {
+            prefs.edit().putBoolean("stories", true).putBoolean("paused", paused).commit();
+            for (int i = 0; i < CrashGuard.THRESHOLD; i++) {
+                CrashGuard.write(new File(dir, CrashGuard.START_RECORD),
+                    "999 " + System.currentTimeMillis() + " crashed");
+                CrashGuard.write(new File(dir, CrashGuard.CRASH_STREAK), Integer.toString(i));
+                CrashGuard.resetForTests();
+                CrashGuard.onProcessStart(RuntimeEnvironment.getApplication());
+            }
+            assertTrue(CrashGuard.isSafeMode());
+            try (var screen = org.robolectric.Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                android.view.View root = screen.get().getWindow().getDecorView();
+                android.widget.Button action = root.findViewWithTag("resume_safe_mode");
+                assertNotNull("Safe mode must provide its advertised recovery action", action);
+                assertEquals(android.view.View.VISIBLE, action.getVisibility());
+                assertEquals(paused ? "Clear safe mode" : "Resume", action.getText().toString());
+                action.performClick();
+                assertFalse(CrashGuard.isSafeMode());
+                assertFalse(prefs.getBoolean("safe_mode", true));
+                assertEquals(paused, prefs.getBoolean("paused", false));
+                assertTrue(prefs.getBoolean("stories", false));
+                assertEquals("0", CrashGuard.read(new File(dir, CrashGuard.CRASH_STREAK)));
+                assertEquals(android.view.View.GONE, action.getVisibility());
+                assertEquals(!paused, Settings.wouldUse("stories"));
+            }
+            CrashGuard.resetForTests();
+            CrashGuard.onProcessStart(RuntimeEnvironment.getApplication());
+            assertFalse(CrashGuard.isSafeMode());
+            assertEquals(paused, prefs.getBoolean("paused", false));
+        }
+    }
 }

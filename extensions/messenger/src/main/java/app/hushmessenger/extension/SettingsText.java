@@ -165,6 +165,10 @@ final class SettingsText {
         ENGLISH.put("changes_resumed", "Changes resumed");
         ENGLISH.put("safe_mode", "Safe mode");
         ENGLISH.put("safe_mode_help", "Messenger crashed several times in a row, so all controls were turned off. Your choices are still saved. Tap Resume to turn them back on.");
+        ENGLISH.put("safe_mode_help_paused", "Messenger crashed several times in a row. Your choices are still saved. Clear safe mode first. Pause all changes will stay on until you turn it off.");
+        ENGLISH.put("resume", "Resume");
+        ENGLISH.put("clear_safe_mode", "Clear safe mode");
+        ENGLISH.put("safe_mode_cleared", "Safe mode cleared. Changes remain paused.");
         ENGLISH.put("enabled_one", "%d control enabled");
         ENGLISH.put("enabled_many", "%d controls enabled");
         ENGLISH.put("saved_one", "%d saved choice. Turn pause off to resume.");

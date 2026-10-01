@@ -57,6 +57,7 @@ public final class SettingsActivity extends Activity {
     private final List<Button> tabs = new ArrayList<>();
     private final List<View> tabLines = new ArrayList<>();
     private TextView searchStatus, enabledCount, setupNote;
+    private Button safeModeAction;
     private LinearLayout emptyState;
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
@@ -364,6 +365,15 @@ public final class SettingsActivity extends Activity {
         ui.add(setup, enabledCount, 8);
         setupNote = ui.text("", 13, ui.muted, false);
         ui.add(setup, setupNote, 6);
+        safeModeAction = ui.button("");
+        safeModeAction.setTag("resume_safe_mode");
+        safeModeAction.setOnClickListener(view -> {
+            boolean paused = Settings.preferences.getBoolean("paused", false);
+            CrashGuard.clearSafeMode();
+            refreshChoices();
+            feedback(text.get(paused ? "safe_mode_cleared" : "changes_resumed"), Toast.LENGTH_SHORT);
+        });
+        ui.add(setup, safeModeAction, 8);
         ui.rule(setup, 12);
         ui.add(setup, controlRow("paused", text.format("paused"), "", false), 0);
         ui.add(content, setup, 0);
@@ -854,9 +864,11 @@ public final class SettingsActivity extends Activity {
         }
         boolean safeMode = CrashGuard.isSafeMode();
         boolean paused = Settings.preferences.getBoolean("paused", false);
+        safeModeAction.setVisibility(safeMode ? View.VISIBLE : View.GONE);
+        safeModeAction.setText(text.get(paused ? "clear_safe_mode" : "resume"));
         if (safeMode) {
             enabledCount.setText(text.get("safe_mode"));
-            setupNote.setText(text.get("safe_mode_help"));
+            setupNote.setText(text.get(paused ? "safe_mode_help_paused" : "safe_mode_help"));
         } else if (paused) {
             enabledCount.setText(text.get("changes_paused"));
             setupNote.setText(text.count("saved", saved));

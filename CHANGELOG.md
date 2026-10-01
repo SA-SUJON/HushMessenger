@@ -4,6 +4,8 @@
 
 ### Changed and fixed
 
+- Safe mode now offers **Resume** directly. If **Pause all changes** was already on, the action reads **Clear safe mode** and leaves Pause on. Both actions clear the crash streak and keep every saved choice.
+
 - Material You now finds and validates its edits before making any host class mutable. This avoids rebuilding unrelated classes and leaves the theme untouched if a required route is missing. All 31 patches apply to each of the 21 supported APKs with a 1024 MB Java heap. New tests check unchanged classes and late failures, and `scripts/verify_patch_heap.py` repeats the whole-APK check against the recorded input hashes and independently discovered color counts. Refs #18.
 
 - `scripts/CompatReport.java` checks **Material You theme** now, so its report covers all 31 patches. That switch finds its methods when it patches instead of from a build record, and the release checks for v0.7.0 caught it failing on 13 of the 21 builds before it shipped. The report lists what it found on each build and fails one where the theme's color methods are missing or ambiguous, so a new build can't be recorded until the theme fits it. A test fails if the report and the patch disagree on the colors and calls they look for.
