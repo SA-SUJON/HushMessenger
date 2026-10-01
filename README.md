@@ -87,7 +87,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Hide typing indicator | Stops others from seeing that you're typing, including in end-to-end encrypted chats. |
 | Hide read receipts | Stops sending your read receipts. In end-to-end encrypted chats, a chat you open stays unread until you reply or turn the switch off. |
 | View stories anonymously | Opens other people's stories without adding you to their viewer list. Stories you open this way still show as seen on the People tab and in the story viewer, so new ones stay easy to spot. The ring in your chat list still shows them as new. |
-| Save any story | Adds **Save** to the **More options** menu on other people's stories, the same item Messenger only shows on your own. The photo or video downloads to your phone the way your own stories do. |
+| Save any story | Adds **Save** to the **More options** menu on other people's stories, the same item Messenger only shows on your own. The photo or video downloads to your phone the way your own stories do. A saved video lands in Movies/Messenger. |
 | Keep unsent messages | Keeps messages other people unsend and marks them "[unsent]". It doesn't work in end-to-end encrypted chats, and your own unsend may be limited while it's on. |
 | Allow screenshots | Lets you screenshot photos, media and video that Messenger protects in a chat, and stops it telling the other person you took a screenshot. View-once media stays protected. |
 | Use system emoji | Draws emoji with your phone's font instead of Messenger's. Messenger's set stays if the phone has no emoji font. |
