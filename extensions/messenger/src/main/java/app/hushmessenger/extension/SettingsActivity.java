@@ -48,6 +48,8 @@ public final class SettingsActivity extends Activity {
     private boolean compact, scrollHeader, binding, lightTheme, recreatingTheme;
     private int restoreControlsScroll = -1, restoreAppScroll = -1;
     private final List<Switch> switches = new ArrayList<>();
+    private final Map<String, TextView> activityLabels = new java.util.HashMap<>();
+    private final Map<Switch, CharSequence> switchDescriptions = new java.util.HashMap<>();
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> refreshChoices();
     private String category = "all", page = "controls";
     private final List<View> controlRows = new ArrayList<>();
@@ -248,7 +250,10 @@ public final class SettingsActivity extends Activity {
         }
         binding = true;
         try {
-            for (Switch control : switches) control.setChecked(Settings.preferences.getBoolean((String) control.getTag(), false));
+            for (Switch control : switches) {
+                control.setChecked(Settings.preferences.getBoolean((String) control.getTag(), false));
+                refreshStatus(control);
+            }
         } finally { binding = false; }
         updateSetup();
     }
@@ -485,33 +490,30 @@ public final class SettingsActivity extends Activity {
         // A failure newer than the last use means the switch isn't doing its job, so that shows instead.
         TextView activeLabel = null;
         if (divided) {
-            long lastActive = Settings.lastActive(key);
-            long failedAt = Settings.hookErrorAt(key);
-            boolean failed = failedAt > 0 && failedAt >= lastActive;
-            String status = failed ? formatSince(failedAt, "error_now", "error_ago")
-                : lastActive == 0 ? text.get("not_active") : formatSince(lastActive, "active_now", "active_ago");
-            activeLabel = ui.text(status, 12, failed ? ui.warning : lastActive > 0 ? ui.accent : ui.muted, false);
-            activeLabel.setAlpha(0.7f);
+            activeLabel = ui.text("", 12, ui.muted, false);
             activeLabel.setTag("active_" + key);
-            activeLabel.setVisibility(Settings.preferences.getBoolean(key, false) ? View.VISIBLE : View.GONE);
+            activityLabels.put(key, activeLabel);
             ui.add(labels, activeLabel, 4);
         }
-        TextView usage = activeLabel;
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         Switch control = ui.toggle(key, text.display(title), text.display(("ads".equals(key) ? text.format("experimental") + ". " : "") + description), Settings.preferences.getBoolean(key, false));
         LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ui.dp(48), -2);
         switchParams.setMarginStart(ui.dp(12));
         row.addView(control, switchParams);
         switches.add(control);
+        if (divided) {
+            switchDescriptions.put(control, control.getContentDescription());
+            refreshStatus(control);
+        }
         control.setEnabled(available);
         // The custom track has no disabled state, so dim it; the description says why.
         if (!available) control.setAlpha(0.4f);
         control.setOnCheckedChangeListener((button, checked) -> {
-            if (usage != null) usage.setVisibility(checked ? View.VISIBLE : View.GONE);
+            refreshStatus(control);
             if (binding) return;
             Settings.preferences.edit().putBoolean(key, checked).apply();
             if ("paused".equals(key) && !checked && CrashGuard.isSafeMode()) CrashGuard.clearSafeMode();
-            updateSetup();
+            refreshChoices();
             feedback("paused".equals(key) ? text.get(checked ? "changes_paused" : "changes_resumed")
                 : text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT);
             if ("light".equals(key)) refreshChoices();
@@ -529,6 +531,23 @@ public final class SettingsActivity extends Activity {
         } else row.setBackground(ui.interactive(ui.surface, 0, 0));
         row.setPadding(0, ui.dp(divided ? 16 : 0), 0, ui.dp(divided ? 16 : 0));
         return row;
+    }
+
+    private void refreshStatus(Switch control) {
+        String key = (String) control.getTag();
+        TextView label = activityLabels.get(key);
+        if (label == null) return;
+        long used = Settings.lastActive(key), failedAt = Settings.hookErrorAt(key);
+        boolean paused = Settings.preferences.getBoolean("paused", false) || CrashGuard.isSafeMode();
+        boolean failed = failedAt > 0 && failedAt >= used;
+        String status = paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
+            : used == 0 ? text.get("not_active") : formatSince(used, "active_now", "active_ago");
+        if (!status.contentEquals(label.getText())) label.setText(status);
+        label.setTextColor(!paused && failed ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
+        label.setVisibility(control.isChecked() ? View.VISIBLE : View.GONE);
+        // The labels' parent hides its descendants from accessibility. The existing switch speaks the status once.
+        String description = switchDescriptions.get(control).toString() + (control.isChecked() ? " " + status : "");
+        if (!description.contentEquals(control.getContentDescription())) control.setContentDescription(description);
     }
 
     private void buildApp(LinearLayout content) {

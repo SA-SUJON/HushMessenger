@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Control activity labels refresh when settings resumes, keeping the same switches, scroll position and focus. Paused choices say **Changes paused**. Labels have full contrast in both themes, and the switch reads the current status once without exposing exception details.
+
 - Repeated taps cannot open overlapping choices pickers. Cancel lets the next request proceed. Tests also check malformed UTF-8 and require all five menu mapping groups explicitly.
 
 - Choice backups now use an exact versioned header and a 16 KiB limit. Legacy exports still restore. The entire backup is checked before one preference update; malformed lines, duplicate keys and invalid booleans change nothing. Unknown and unavailable controls are reported separately, and omitted choices retain their saved values.
