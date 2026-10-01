@@ -78,6 +78,13 @@ public class CompatReport {
     static final String STORY_CARD_DATE_KEY = "last_date_creation_card_shown";
     static final long PEOPLE_SERVER_FLAG = 72344235860374863L;
 
+    // Material You theme finds its targets by shape when it patches (MaterialYouPatch.kt), so no profile records them
+    static final String DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;";
+    static final String FDS_COLORS = "Lcom/facebook/fds/core/theme/component/FDSColors;";
+    static final Set<Integer> DARK_SURFACES = Set.of(0xFF080809, 0xFF1C1C1D, 0xFF252728, 0xFF333334, 0xFF323339);
+    static final Set<String> COLOR_CALLS = Set.of(
+        "Landroid/graphics/Color;->parseColor(Ljava/lang/String;)I", "Landroid/content/Context;->getColor(I)I");
+
     static final Set<String> FACEBOOK_PLUGINS = Set.of(
         "Lcom/facebook/messaging/inbox/tab/plugins/core/tabtoolbarbutton/facebookbutton/facebooktoolbarbutton/FacebookButtonTabButtonImplementation;",
         "Lcom/facebook/messaging/marketplace/plugins/folder/navbarmenuitem/NavBarMenuItemImplementation;",
@@ -1321,6 +1328,115 @@ public class CompatReport {
         return problems;
     }
 
+    /** MaterialYouPatch.kt's isTokenColorMethod: one class-typed parameter, an int result, and ()I called on that parameter's type. */
+    static boolean isTokenColorMethod(Method m) {
+        if (m.getParameterTypes().size() != 1 || !"I".equals(m.getReturnType())) return false;
+        String token = m.getParameterTypes().get(0).toString();
+        return token.startsWith("L") && instructions(m).stream().anyMatch(i -> i.getOpcode() == Opcode.INVOKE_INTERFACE &&
+            i instanceof ReferenceInstruction ri && ri.getReference() instanceof MethodReference mr &&
+            mr.getDefiningClass().equals(token) && "I".equals(mr.getReturnType()) && mr.getParameterTypes().isEmpty());
+    }
+
+    /** The one candidate, or null after noting that there were none or several. */
+    static Method onlyOne(List<Method> candidates, String what, List<String> problems) {
+        if (candidates.size() == 1) return candidates.get(0);
+        problems.add("expected one " + what + ", found " + candidates.size() + (candidates.isEmpty() ? "" :
+            ": " + candidates.stream().map(CompatReport::hookId).collect(Collectors.joining(", "))));
+        return null;
+    }
+
+    /** A method the patch hooks just before it returns. */
+    static void hookBeforeReturn(Method m, List<String> problems, List<String> targets) {
+        if (instructions(m).stream().anyMatch(i -> i.getOpcode() == Opcode.RETURN)) targets.add(hookId(m));
+        else problems.add(hookId(m) + " has no return to hook");
+    }
+
+    static boolean takesOnlyContext(List<? extends CharSequence> parameters) {
+        return parameters.size() == 1 && "Landroid/content/Context;".equals(parameters.get(0).toString());
+    }
+
+    /**
+     * What MaterialYouPatch.kt finds by shape when it patches: one DarkColorScheme token resolver, one dark mode
+     * check called by FDSColors' (Context, ?, ?)I resolvers, FDSColors' int returns, and the constants and calls
+     * routes 3 and 4 rewrite. The patch quietly skips its FDS half when it can't find it, so this is where a build
+     * that resolves only part of it fails. Found targets go in targets.
+     */
+    static List<String> materialYouProblems(List<ClassDef> classes, List<String> targets) {
+        var problems = new ArrayList<String>();
+        ClassDef scheme = null, fds = null;
+        int surfaces = 0, colorCalls = 0;
+        for (ClassDef cls : classes) {
+            if (cls.getType().equals(DARK_SCHEME)) scheme = cls;
+            if (cls.getType().equals(FDS_COLORS)) fds = cls;
+            for (Method m : cls.getMethods()) {
+                for (Instruction i : instructions(m)) {
+                    Opcode op = i.getOpcode();
+                    if ((op == Opcode.CONST || op == Opcode.CONST_HIGH16) && i instanceof NarrowLiteralInstruction literal &&
+                        DARK_SURFACES.contains(literal.getNarrowLiteral())) surfaces++;
+                    if ((op == Opcode.INVOKE_STATIC || op == Opcode.INVOKE_VIRTUAL) && COLOR_CALLS.contains(ref(i))) colorCalls++;
+                }
+            }
+        }
+        if (scheme == null) {
+            problems.add("no " + DARK_SCHEME);
+        } else {
+            var resolvers = new ArrayList<Method>();
+            for (Method m : scheme.getMethods()) if (isTokenColorMethod(m)) resolvers.add(m);
+            Method resolver = onlyOne(resolvers, "DarkColorScheme token resolver", problems);
+            if (resolver != null) hookBeforeReturn(resolver, problems, targets);
+        }
+        if (fds == null) {
+            problems.add("no " + FDS_COLORS);
+        } else {
+            var resolvers = new ArrayList<Method>();
+            int intReturns = 0;
+            for (Method m : fds.getMethods()) {
+                if (!"I".equals(m.getReturnType()) || m.getImplementation() == null) continue;
+                intReturns += (int) instructions(m).stream().filter(i -> i.getOpcode() == Opcode.RETURN).count();
+                if (m.getParameterTypes().size() == 3 && "Landroid/content/Context;".equals(m.getParameterTypes().get(0).toString()))
+                    resolvers.add(m);
+            }
+            // The 21 builds have two, A00 and A01, calling the same check; the patch reads the check from the first
+            var calls = new TreeMap<String, MethodReference>();
+            boolean firstCalls = false;
+            for (Method resolver : resolvers) {
+                for (Instruction i : instructions(resolver)) {
+                    if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof MethodReference mr &&
+                        "Z".equals(mr.getReturnType()) && takesOnlyContext(mr.getParameterTypes())) {
+                        calls.putIfAbsent(mr.toString(), mr);
+                        if (resolver == resolvers.get(0)) firstCalls = true;
+                    }
+                }
+            }
+            if (resolvers.isEmpty()) {
+                problems.add("no FDSColors (Context, ?, ?)I resolver");
+            } else if (calls.size() != 1) {
+                problems.add("expected one (Context)Z dark mode check in FDSColors' resolvers, found " + calls.size() +
+                    (calls.isEmpty() ? "" : ": " + String.join(", ", calls.keySet())));
+            } else if (!firstCalls) {
+                problems.add(hookId(resolvers.get(0)) + ", where the patch looks, doesn't call " + calls.firstKey());
+            } else {
+                MethodReference call = calls.firstEntry().getValue();
+                var checks = new ArrayList<Method>();
+                classes.stream().filter(c -> c.getType().equals(call.getDefiningClass())).findFirst().ifPresent(owner -> {
+                    for (Method m : owner.getMethods()) {
+                        if (m.getName().equals(call.getName()) && "Z".equals(m.getReturnType()) &&
+                            takesOnlyContext(m.getParameterTypes()) && m.getImplementation() != null) checks.add(m);
+                    }
+                });
+                Method check = onlyOne(checks, "dark mode check " + call, problems);
+                if (check != null) hookBeforeReturn(check, problems, targets);
+            }
+            if (intReturns == 0) problems.add("FDSColors has no int return to hook");
+            else targets.add(intReturns + " FDSColors int returns");
+        }
+        if (surfaces == 0) problems.add("no dark surface constants for route 3");
+        else targets.add(surfaces + " dark surface constants");
+        if (colorCalls == 0) problems.add("no Color.parseColor or Context.getColor calls for route 4");
+        else targets.add(colorCalls + " Color.parseColor and Context.getColor calls");
+        return problems;
+    }
+
     static int countManifestMentions(File apk, String permName) {
         String aapt2 = findTool("aapt2");
         if (aapt2 == null) return -1;
@@ -1475,6 +1591,21 @@ public class CompatReport {
             }
         }
 
+        // Check Material You theme, which finds its targets when it patches instead of reading the profile
+        {
+            var targets = new ArrayList<String>();
+            var failures = materialYouProblems(classes, targets);
+            if (failures.isEmpty()) {
+                System.out.println("[PASS] Material You theme");
+                for (var t : targets) System.out.println("       " + t);
+            } else {
+                System.out.println("[FAIL] Material You theme");
+                for (var f : failures) System.out.println("       " + f);
+                blockers.add("Material You theme");
+                anyFail = true;
+            }
+        }
+
         // Check each control patch: against the recorded build, or for a new build, that it resolves
         for (var entry : PATCHES.entrySet()) {
             String patchName = entry.getKey();
@@ -1538,7 +1669,7 @@ public class CompatReport {
             if (!builds.isEmpty()) System.out.println("Use an unmodified arm64 Messenger " + supported(builds) + ".");
             System.exit(1);
         } else {
-            System.out.println("RESULT: PASS — all " + (PATCHES.size() + 2) + " patches are compatible.");
+            System.out.println("RESULT: PASS — all " + (PATCHES.size() + 3) + " patches are compatible.");
             System.exit(0);
         }
     }

@@ -30,8 +30,23 @@ import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 private const val THEME = "Lapp/hushmessenger/extension/MaterialYouTheme;"
-private const val DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;"
-private const val FDS_COLORS = "Lcom/facebook/fds/core/theme/component/FDSColors;"
+internal const val DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;"
+internal const val FDS_COLORS = "Lcom/facebook/fds/core/theme/component/FDSColors;"
+
+/** Route 3: dark surface constants and the MaterialYouTheme fields that replace them. scripts/CompatReport.java counts the same constants. */
+internal val materialYouSurfaces = mapOf(
+    0xFF080809.toInt() to "DARK_080809",
+    0xFF1C1C1D.toInt() to "DARK_1C1C1D",
+    0xFF252728.toInt() to "DARK_252728",
+    0xFF333334.toInt() to "DARK_333334",
+    0xFF323339.toInt() to "DARK_323339",
+)
+
+/** Route 4: colour calls and their MaterialYouTheme replacements. scripts/CompatReport.java counts the same calls. */
+internal val materialYouColorCalls = mapOf(
+    "Landroid/graphics/Color;->parseColor(Ljava/lang/String;)I" to "$THEME->parseColor(Ljava/lang/String;)I",
+    "Landroid/content/Context;->getColor(I)I" to "$THEME->getColor(Landroid/content/Context;I)I",
+)
 
 private var materialYouApplied = false
 
@@ -167,13 +182,7 @@ val materialYouPatch = bytecodePatch(
         // --- Route 3: replace dark surface constants with reads from volatile fields ---
         // Scan every class for const instructions loading known dark surfaces and replace
         // each with an sget from MaterialYouTheme's route 3 fields.
-        val surfaces = mapOf(
-            0xFF080809.toInt() to "DARK_080809",
-            0xFF1C1C1D.toInt() to "DARK_1C1C1D",
-            0xFF252728.toInt() to "DARK_252728",
-            0xFF333334.toInt() to "DARK_333334",
-            0xFF323339.toInt() to "DARK_323339",
-        )
+        val surfaces = materialYouSurfaces
         val extensionPackage = "Lapp/hushmessenger/extension/"
         var route3Count = 0
         classDefForEach { cls ->
@@ -196,10 +205,7 @@ val materialYouPatch = bytecodePatch(
         // --- Route 4: redirect Color.parseColor and getColor calls ---
         // Replace invoke-static Color.parseColor(String) with MaterialYouTheme.parseColor(String).
         // Replace invoke-virtual Context.getColor(int) with MaterialYouTheme.getColor(Context, int).
-        val colorReroutes = mapOf(
-            "Landroid/graphics/Color;->parseColor(Ljava/lang/String;)I" to "$THEME->parseColor(Ljava/lang/String;)I",
-            "Landroid/content/Context;->getColor(I)I" to "$THEME->getColor(Landroid/content/Context;I)I",
-        )
+        val colorReroutes = materialYouColorCalls
         var route4Count = 0
         classDefForEach { cls ->
             if (cls.type.startsWith(extensionPackage)) return@classDefForEach

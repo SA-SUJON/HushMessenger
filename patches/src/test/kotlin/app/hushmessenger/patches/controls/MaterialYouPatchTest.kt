@@ -1,5 +1,7 @@
 package app.hushmessenger.patches.controls
 
+import java.nio.file.Path
+import kotlin.io.path.readText
 import kotlin.test.*
 
 class MaterialYouPatchTest {
@@ -45,5 +47,15 @@ class MaterialYouPatchTest {
             return v0
         """.trimIndent(), 3)
         assertFalse(isTokenColorMethod(withArgument))
+    }
+
+    @Test fun compatReportChecksWhatThePatchRewrites() {
+        // scripts/CompatReport.java checks every build for these; a value changed on one side only fails here.
+        val report = Path.of("../scripts/CompatReport.java").readText()
+        assertContains(report, "DARK_SCHEME = \"$DARK_SCHEME\";")
+        assertContains(report, "FDS_COLORS = \"$FDS_COLORS\";")
+        fun javaSet(name: String) = assertNotNull(Regex("""$name = Set\.of\((.*?)\);""", RegexOption.DOT_MATCHES_ALL).find(report), name).groupValues[1]
+        assertEquals(materialYouSurfaces.keys, javaSet("DARK_SURFACES").split(",").map { it.trim().removePrefix("0x").toLong(16).toInt() }.toSet())
+        assertEquals(materialYouColorCalls.keys, Regex("\"([^\"]+)\"").findAll(javaSet("COLOR_CALLS")).map { it.groupValues[1] }.toSet())
     }
 }

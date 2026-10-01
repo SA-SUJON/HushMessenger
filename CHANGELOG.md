@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed and fixed
+
+- `scripts/CompatReport.java` checks **Material You theme** now, so its report covers all 31 patches. That switch finds its methods when it patches instead of from a build record, and the release checks for v0.7.0 caught it failing on 13 of the 21 builds before it shipped. The report lists what it found on each build and fails one where the theme's color methods are missing or ambiguous, so a new build can't be recorded until the theme fits it. A test fails if the report and the patch disagree on the colors and calls they look for.
+
 ## 0.7.0 (2026-09-30)
 
 This release supports all 21 arm64 builds of Messenger 580.0.0.49.91 and has 31 patches, 28 of them switches you can turn on in settings.
