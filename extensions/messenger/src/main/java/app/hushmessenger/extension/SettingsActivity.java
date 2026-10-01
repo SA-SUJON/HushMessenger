@@ -928,13 +928,17 @@ public final class SettingsActivity extends Activity {
     private void openMessenger() {
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(getPackageName());
         for (android.content.pm.ResolveInfo match : getPackageManager().queryIntentActivities(query, 0)) {
-            if (match.activityInfo.name.equals(getClass().getName())) continue;
+            var activity = match.activityInfo;
+            if (activity == null || !getPackageName().equals(activity.packageName) ||
+                activity.name == null || !activity.enabled ||
+                activity.name.startsWith("app.hushmessenger.extension.") ||
+                (activity.targetActivity != null && activity.targetActivity.startsWith("app.hushmessenger.extension."))) continue;
             try {
                 startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                    .setComponent(new ComponentName(getPackageName(), match.activityInfo.name)));
+                    .setComponent(new ComponentName(getPackageName(), activity.name)));
                 return;
-            } catch (android.content.ActivityNotFoundException error) {
+            } catch (android.content.ActivityNotFoundException | SecurityException error) {
                 android.util.Log.e("HushMessenger", "Messenger launcher is unavailable", error);
             }
         }

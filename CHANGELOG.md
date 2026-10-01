@@ -4,6 +4,8 @@
 
 ### Changed and fixed
 
+- **Open** skips the settings launcher alias, extension screens and disabled launcher entries, so it opens Messenger instead of reopening settings. Missing or rejected launchers show the existing recovery message. Restart applies the same disabled-entry guard.
+
 - Safe mode now offers **Resume** directly. If **Pause all changes** was already on, the action reads **Clear safe mode** and leaves Pause on. Both actions clear the crash streak and keep every saved choice.
 
 - Material You now finds and validates its edits before making any host class mutable. This avoids rebuilding unrelated classes and leaves the theme untouched if a required route is missing. All 31 patches apply to each of the 21 supported APKs with a 1024 MB Java heap. New tests check unchanged classes and late failures, and `scripts/verify_patch_heap.py` repeats the whole-APK check against the recorded input hashes and independently discovered color counts. Refs #18.

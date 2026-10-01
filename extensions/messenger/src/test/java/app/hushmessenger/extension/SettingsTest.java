@@ -316,4 +316,39 @@ public class SettingsTest {
             assertTrue((launched.getFlags() & Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED) != 0);
         }
     }
+
+    @Test public void openSkipsExtensionAliasesDisabledAndMalformedLauncherEntries() {
+        var app = RuntimeEnvironment.getApplication();
+        Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            .setPackage(app.getPackageName());
+        var entries = new java.util.ArrayList<ResolveInfo>();
+        entries.add(new ResolveInfo());
+        for (String name : new String[] {RestartActivity.class.getName(), SettingsActivity.DRAWER_ALIAS,
+                "settings.Alias", "com.facebook.orca.Disabled", "com.facebook.orca.auth.StartScreenActivity"}) {
+            ResolveInfo entry = new ResolveInfo();
+            entry.activityInfo = new ActivityInfo();
+            entry.activityInfo.packageName = app.getPackageName();
+            entry.activityInfo.name = name;
+            entry.activityInfo.enabled = !name.endsWith("Disabled");
+            if (name.equals("settings.Alias")) entry.activityInfo.targetActivity = SettingsActivity.class.getName();
+            entries.add(entry);
+        }
+        Shadows.shadowOf(app.getPackageManager()).addResolveInfoForIntent(query, entries);
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            screen.get().getWindow().getDecorView().findViewWithTag("open_messenger").performClick();
+            Intent launched = Shadows.shadowOf(screen.get()).getNextStartedActivity();
+            assertNotNull(launched);
+            assertEquals("com.facebook.orca.auth.StartScreenActivity", launched.getComponent().getClassName());
+            assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED, launched.getFlags());
+        }
+    }
+
+    @Test public void missingHostLauncherExplainsHowToRecover() {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            screen.get().getWindow().getDecorView().findViewWithTag("open_messenger").performClick();
+            assertNull(Shadows.shadowOf(screen.get()).getNextStartedActivity());
+            assertEquals(new SettingsText(screen.get()).get("open_help"),
+                org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
+        }
+    }
 }
