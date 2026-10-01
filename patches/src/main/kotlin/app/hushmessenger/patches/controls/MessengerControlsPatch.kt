@@ -352,17 +352,18 @@ val menuSettingsPatch = bytecodePatch(
         val drawerMethod = methods.single { it.returnType == "V" && it.parameterTypes == listOf("Ljava/util/List;") }
         val clickMethod = methods.single { it.name == "onClick" }
         val addTarget = mutableClassDefBy(addMethod.definingClass).methods.single { it.hookId() == addMethod.hookId() }
+        val bindTarget = mutableClassDefBy(bindMethod.definingClass).methods.single { it.hookId() == bindMethod.hookId() }
+        val drawerTarget = mutableClassDefBy(drawerMethod.definingClass).methods.single { it.hookId() == drawerMethod.hookId() }
         val clickTarget = mutableClassDefBy(clickMethod.definingClass).methods.single { it.hookId() == clickMethod.hookId() }
-        // Check the Litho drawer's click site before editing anything.
+        // Every target, including encoding limits, must pass before the first instruction changes.
+        addTarget.validateMenuSettingsAdd()
+        bindTarget.validateMenuSettingsBind()
+        drawerTarget.validateMenuDrawerAdd()
         val folderItemType = addTarget.menuFolderItemType()
         clickTarget.menuFolderCastIndex(folderItemType)
         addTarget.injectMenuSettingsAdd()
-        mutableClassDefBy(bindMethod.definingClass).methods
-            .single { it.hookId() == bindMethod.hookId() }
-            .injectMenuSettingsBind()
-        mutableClassDefBy(drawerMethod.definingClass).methods
-            .single { it.hookId() == drawerMethod.hookId() }
-            .injectMenuDrawerAdd()
+        bindTarget.injectMenuSettingsBind()
+        drawerTarget.injectMenuDrawerAdd()
         clickTarget.injectMenuFolderClick(folderItemType)
         recordControl("menu_row")
         menuRowApplied = true

@@ -4,6 +4,8 @@
 
 ### Changed and fixed
 
+- The settings menu patch validates its builder, binder, drawer setter and click route before editing any of them. Tests corrupt each target and its register contract across all five naming groups, checking that failures leave the host code and capability flags untouched. Branches to normal exits still run the settings hook.
+
 - The memory check now rejects incomplete APKs, missing extension code, changed input files and reduced catalogs. It compares edited class counts as well as color counts. Material You validates and wraps range-form color calls too.
 
 - **Open** skips the settings launcher alias, extension screens and disabled launcher entries, so it opens Messenger instead of reopening settings. Missing or rejected launchers show the existing recovery message. Restart applies the same disabled-entry guard.
