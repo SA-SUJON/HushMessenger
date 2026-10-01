@@ -64,7 +64,7 @@ public final class SettingsActivity extends Activity {
         {"ads", "Hide inbox ads", "Removes inbox ad cards if Meta brings back the inbox ads it stopped selling in November 2025.", "inbox"},
         {"people", "Hide People You May Know", "Removes suggested people from chats, search and stories, and from the People and Notifications tabs.", "inbox"},
         {"friend_requests", "Hide friend request cards", "Hides cards without accepting or rejecting requests.", "inbox"},
-        {"growth", "Hide growth prompts", "Removes add-more-people prompts.", "inbox"},
+        {"growth", "Hide growth prompts", "Removes add-more-people prompts, the tip sheets in notes like Make my notes public, and the Share your own story card after someone else's stories.", "inbox"},
         {"inbox_promotions", "Hide inbox promotions", "Hides Messenger's quick-promotion banners in the chat list.", "inbox"},
         {"stories", "Hide stories and notes", "Removes the horizontal tray above your chats.", "inbox"},
         {"subtabs", "Hide inbox tabs", "Hides the Home and Channels tabs inside the inbox.", "inbox"},

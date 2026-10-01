@@ -802,7 +802,7 @@
         },
         {
             "name": "Hide growth prompts",
-            "description": "Hides the inbox's add-more-people promotion unit. Long-press Messenger > Patch controls. Starts off.",
+            "description": "Hides the inbox's add-more-people promotion unit. Also hides the tip sheets in notes, like Make my notes public, and the Share your own story card after someone else's stories. Long-press Messenger > Patch controls. Starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [

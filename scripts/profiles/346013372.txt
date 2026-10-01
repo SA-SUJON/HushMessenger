@@ -58,6 +58,8 @@ hook friend_requests LX/1pl;->A09()Z
 hook friend_requests LX/2Wk;->A02()Z
 hook growth LX/1pl;->A0A()Z
 hook growth LX/2GD;->A0A(LX/2GD;)Z
+hook growth_notes Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->A01(Landroidx/fragment/app/Fragment;LX/Icw;Ljava/util/List;LX/5MW;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+hook growth_story_card Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->A0z(Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;)Z
 hook hide_read_receipts LX/AVX;->run()V
 hook inbox_promotions LX/2Ee;->A0J()Z
 hook inbox_promotions LX/2Ee;->A0K()Z

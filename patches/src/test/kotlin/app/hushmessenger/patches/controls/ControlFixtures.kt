@@ -182,6 +182,17 @@ internal fun peopleJewelKeyHolder() = fixtureClass("LX/JTx;", listOf(fixtureMeth
     return-void
 """.trimIndent(), flags = AccessFlags.STATIC.value or AccessFlags.CONSTRUCTOR.value)))
 
+/** Build 346013440's story preference keys: the card's date key sits between two others. */
+internal fun storyCardKeyHolder() = fixtureClass("LX/JVI;", listOf(fixtureMethod("LX/JVI;-><clinit>()V", """
+    const-string v0, "story_timestamp"
+    sput-object v0, LX/JVI;->A0T:LX/1BL;
+    const-string v0, "$STORY_CARD_DATE_KEY"
+    sput-object v0, LX/JVI;->A0E:LX/1BL;
+    const-string v0, "creation_card_impression_count"
+    sput-object v0, LX/JVI;->A08:LX/1BL;
+    return-void
+""".trimIndent(), flags = AccessFlags.STATIC.value or AccessFlags.CONSTRUCTOR.value)))
+
 internal fun debugDumperFixture(
     textGetter: String = "BWn",
     idGetter: String = "B9c",

@@ -121,6 +121,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
             "anonymous_stories" -> method.validateStorySeen()
+            "growth_notes" -> method.validateNotesTips()
             else -> method.validateSwitch()
         }
     }
@@ -149,6 +150,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
             "anonymous_stories" -> method.injectStorySeen()
+            "growth_notes" -> method.injectNotesTips()
             else -> method.injectFeatureSwitch(key)
         }
     }
@@ -196,7 +198,9 @@ val hidePeoplePatch = controlPatch("people", "Hide People You May Know", "Hides 
 @Suppress("unused")
 val hideFriendRequestsPatch = controlPatch("friend_requests", "Hide friend request cards", "Hides friend request cards inside the inbox.", "Inbox")
 @Suppress("unused")
-val hideGrowthPatch = controlPatch("growth", "Hide growth prompts", "Hides the inbox's add-more-people promotion unit.", "Inbox")
+val hideGrowthPatch = controlPatch("growth", "Hide growth prompts", "Hides the inbox's add-more-people promotion unit. " +
+    "Also hides the tip sheets in notes, like Make my notes public, and the Share your own story card after someone else's stories.",
+    "Inbox", "growth", "growth_notes", "growth_story_card")
 @Suppress("unused")
 val hideInboxPromotionsPatch = controlPatch("inbox_promotions", "Hide inbox promotions", "Hides Messenger quick-promotion banners in the chat list.", "Inbox")
 @Suppress("unused")

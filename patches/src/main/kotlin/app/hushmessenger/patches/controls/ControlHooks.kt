@@ -58,6 +58,11 @@ internal const val STORY_MENU_TAG = "toolbar_click_menu_button"
 /** The menu's click handler logs this before it saves the story on screen. */
 internal const val STORY_SAVE_TAG = "menu_item_download"
 internal const val STORY_SAVE_HELPER = "hushmessengerAddStorySave"
+/** Every notes tip sheet, Make my notes public and Add lyrics included, opens under this fragment tag. */
+internal const val NOTES_TIP_SHEET = "NotesMigNuxBottomSheet"
+internal const val NOTES_TIP_TYPE_ARG = "arg_nux_type"
+/** The story viewer caps its Share your own story card per day under this preference key. */
+internal const val STORY_CARD_DATE_KEY = "last_date_creation_card_shown"
 private const val IMMUTABLE_LIST_OF = "$IMMUTABLE_LIST->of(Ljava/lang/Object;)$IMMUTABLE_LIST"
 internal const val TYPING_MAILBOX_CALL = "setTypingIndicatorForThreadWithThreadIdentifier"
 internal const val READ_MAILBOX_CALL = "markAsReadThreadWithThreadIdentifier"
@@ -116,6 +121,10 @@ internal val expectedHooks = mapOf(
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "anonymous_stories" to setOf("LX/HNV;->C1V(${MONTAGE_CARD}Z)V"),
     "save_stories" to setOf("LX/JgG;->onClick(Landroid/view/View;)V"),
+    "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->" +
+        "A01(Landroidx/fragment/app/Fragment;LX/Ocr;Ljava/util/List;LX/5MS;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
+    "growth_story_card" to setOf("Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->" +
+        "A0x(Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;)Z"),
     "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
     "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
@@ -147,6 +156,13 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
         val code = cls.methods.singleOrNull { it.name == "<clinit>" }?.implementation?.instructions?.toList().orEmpty()
         if (code.none { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == PEOPLE_JEWEL_KEY }) emptyList()
         else code.filter { it.opcode == Opcode.SPUT_OBJECT }.map { (it as ReferenceInstruction).reference.toString() }
+    }.toSet()
+    // The static field each class initializer stores the story card's last-shown date key in.
+    val storyCardKeys = classes.flatMap { cls ->
+        val code = cls.methods.singleOrNull { it.name == "<clinit>" }?.implementation?.instructions?.toList().orEmpty()
+        code.indices.filter { ((code[it] as? ReferenceInstruction)?.reference as? StringReference)?.string == STORY_CARD_DATE_KEY }
+            .mapNotNull { at -> code.drop(at + 1).firstOrNull { it.opcode == Opcode.SPUT_OBJECT } }
+            .map { (it as ReferenceInstruction).reference.toString() }
     }.toSet()
     messageTextGetterName = ""
     messageIdGetterName = ""
@@ -310,6 +326,12 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             // The story viewer's More options button builds its menu here, your own story's Save item included.
             if (method.name == "onClick" && method.returnType == "V" && method.parameterTypes == listOf("Landroid/view/View;") &&
                 STORY_MENU_TAG in strings) add("save_stories")
+            // Notes open every tip sheet through this one suspend call, which returns whether it showed one.
+            if (!AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == "Ljava/lang/Object;" &&
+                strings.containsAll(setOf(NOTES_TIP_SHEET, NOTES_TIP_TYPE_ARG))) add("growth_notes")
+            // The story viewer adds its Share your own story card only while this daily cap check passes.
+            if (AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == "Z" && method.parameterTypes == listOf(cls.type) &&
+                refs.any { it.toString() in storyCardKeys }) add("growth_story_card")
         }
     }
     val gridBinderType = found["menu_settings"].orEmpty()
@@ -370,6 +392,29 @@ internal fun MutableMethod.injectFeatureSwitch(key: String) {
         if-eqz v0, :stock_behavior
         const/4 v0, 0x0
         return v0
+    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
+}
+
+/** The notes tip launcher: an instance suspend call whose result is whether it showed a sheet. */
+internal fun MutableMethod.validateNotesTips() {
+    validateScratch()
+    val strings = implementation!!.instructions.mapNotNull { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string }
+    if (AccessFlags.STATIC.isSet(accessFlags) || returnType != "Ljava/lang/Object;" ||
+        NOTES_TIP_SHEET !in strings || NOTES_TIP_TYPE_ARG !in strings) {
+        throw PatchException("Messenger controls: the notes tip launcher no longer matches the tested build")
+    }
+}
+
+/** While the switch is on the launcher answers "showed nothing", the same result callers get once every tip is seen. */
+internal fun MutableMethod.injectNotesTips() {
+    validateNotesTips()
+    addInstructionsWithLabels(0, """
+        const-string v0, "growth"
+        invoke-static {v0}, $SETTINGS->enabled(Ljava/lang/String;)Z
+        move-result v0
+        if-eqz v0, :stock_behavior
+        sget-object v0, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;
+        return-object v0
     """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
 }
 

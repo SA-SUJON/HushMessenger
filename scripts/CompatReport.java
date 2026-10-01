@@ -75,6 +75,7 @@ public class CompatReport {
     static final String PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segments/friendrequests/usecase/"
         + "PeopleTabPYMKHandler$fetchPymkSuggestions$$inlined$CoroutineExceptionHandler$1;";
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
+    static final String STORY_CARD_DATE_KEY = "last_date_creation_card_shown";
     static final long PEOPLE_SERVER_FLAG = 72344235860374863L;
 
     static final Set<String> FACEBOOK_PLUGINS = Set.of(
@@ -134,7 +135,7 @@ public class CompatReport {
         PATCHES.put("Hide inbox ads", List.of("ads"));
         PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story"));
         PATCHES.put("Hide friend request cards", List.of("friend_requests"));
-        PATCHES.put("Hide growth prompts", List.of("growth"));
+        PATCHES.put("Hide growth prompts", List.of("growth", "growth_notes", "growth_story_card"));
         PATCHES.put("Hide inbox promotions", List.of("inbox_promotions"));
         PATCHES.put("Hide stories and notes", List.of("stories"));
         PATCHES.put("Hide inbox tabs", List.of("subtabs"));
@@ -635,6 +636,23 @@ public class CompatReport {
             }
         }
 
+        // The static field a class initializer stores the story card's last-shown date key in
+        var storyCardKeys = new HashSet<String>();
+        for (var cls : classes) {
+            for (var m : cls.getMethods()) {
+                if (!"<clinit>".equals(m.getName()) || m.getImplementation() == null) continue;
+                boolean pending = false;
+                for (var i : m.getImplementation().getInstructions()) {
+                    if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                        STORY_CARD_DATE_KEY.equals(sr.getString())) pending = true;
+                    else if (pending && i.getOpcode() == Opcode.SPUT_OBJECT) {
+                        storyCardKeys.add(((ReferenceInstruction) i).getReference().toString());
+                        pending = false;
+                    }
+                }
+            }
+        }
+
         String msgTextGetterName = "", msgIdGetterName = "", msgIsUnsentGetterName = "";
         String rawText = "", rawId = "", rawUnsent = "";
         outer:
@@ -936,6 +954,18 @@ public class CompatReport {
                 if ("onClick".equals(method.getName()) && "V".equals(method.getReturnType()) &&
                     paramTypes.equals(List.of("Landroid/view/View;")) && strings.contains("toolbar_click_menu_button")) {
                     found.get("save_stories").add(method);
+                }
+
+                // growth_notes: the launcher every notes tip sheet (Make my notes public, Add lyrics) goes through
+                if (!isStatic && "Ljava/lang/Object;".equals(method.getReturnType()) &&
+                    strings.contains("NotesMigNuxBottomSheet") && strings.contains("arg_nux_type")) {
+                    found.get("growth_notes").add(method);
+                }
+
+                // growth_story_card: the daily cap check the story viewer's Share your own story card waits on
+                if (isStatic && "Z".equals(method.getReturnType()) && paramTypes.equals(List.of(cls.getType())) &&
+                    refs.stream().anyMatch(r -> storyCardKeys.contains(r.toString()))) {
+                    found.get("growth_story_card").add(method);
                 }
 
                 // people_tab: the People tab suggestion handler handing its list and filter map to the tab
