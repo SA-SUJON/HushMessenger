@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Repeated taps cannot open overlapping choices pickers. Cancel lets the next request proceed. Tests also check malformed UTF-8 and require all five menu mapping groups explicitly.
+
 - Choice backups now use an exact versioned header and a 16 KiB limit. Legacy exports still restore. The entire backup is checked before one preference update; malformed lines, duplicate keys and invalid booleans change nothing. Unknown and unavailable controls are reported separately, and omitted choices retain their saved values.
 
 - The settings menu patch validates its builder, binder, drawer setter and click route before editing any of them. Tests corrupt each target and its register contract across all five naming groups, checking that failures leave the host code and capability flags untouched. Branches to normal exits still run the settings hook.

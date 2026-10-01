@@ -89,6 +89,31 @@ public class ChoiceBackupTest {
         assertThrows(java.io.IOException.class, () -> ChoiceCodec.read(null));
     }
 
+    @Test public void malformedUtf8CannotTurnIntoAnAcceptedUnknownKey() throws Exception {
+        ByteArrayOutputStream raw = new ByteArrayOutputStream();
+        raw.write((ChoiceCodec.HEADER + "\nstories=true\nnew_").getBytes(StandardCharsets.UTF_8));
+        raw.write(0xc3);
+        raw.write("=true\n".getBytes(StandardCharsets.UTF_8));
+        String decoded = ChoiceCodec.read(new ByteArrayInputStream(raw.toByteArray()));
+        assertThrows(IllegalArgumentException.class, () -> ChoiceCodec.parse(decoded));
+    }
+
+    @Test public void onlyOnePickerCanBePendingAndCancelAllowsRetry() {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            SettingsActivity activity = screen.get();
+            View root = activity.getWindow().getDecorView();
+            root.findViewWithTag("read_choices_file").performClick();
+            root.findViewWithTag("read_choices_file").performClick();
+            root.findViewWithTag("save_choices_file").performClick();
+            var first = Shadows.shadowOf(activity).getNextStartedActivityForResult();
+            assertEquals(Intent.ACTION_OPEN_DOCUMENT, first.intent.getAction());
+            assertNull(Shadows.shadowOf(activity).getNextStartedActivityForResult());
+            activity.onActivityResult(first.requestCode, Activity.RESULT_CANCELED, null);
+            root.findViewWithTag("save_choices_file").performClick();
+            assertEquals(Intent.ACTION_CREATE_DOCUMENT, Shadows.shadowOf(activity).getNextStartedActivityForResult().intent.getAction());
+        }
+    }
+
     @Test public void filePickerExportUsesTheSameSettingsOnlyFormat() throws Exception {
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
             Settings.preferences.edit().putBoolean("stories", true).commit();

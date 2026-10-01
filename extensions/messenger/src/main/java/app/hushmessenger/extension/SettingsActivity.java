@@ -584,6 +584,7 @@ public final class SettingsActivity extends Activity {
         Button saveFile = ui.button(text.get("save_choices_file"));
         saveFile.setTag("save_choices_file");
         saveFile.setOnClickListener(view -> {
+            if (documentImport || documentExport != null) return;
             documentImport = false;
             documentExport = ChoiceCodec.encode(Settings.preferences, Settings.installed);
             Intent picker = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
@@ -598,6 +599,7 @@ public final class SettingsActivity extends Activity {
         Button readFile = ui.button(text.get("read_choices_file"));
         readFile.setTag("read_choices_file");
         readFile.setOnClickListener(view -> {
+            if (documentImport || documentExport != null) return;
             documentExport = null;
             documentImport = true;
             Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/*");
