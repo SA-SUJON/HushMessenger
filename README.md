@@ -235,6 +235,14 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
+To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the dexlib2 3.0.9 and Guava 33.2.1-jre JARs from the Gradle cache:
+
+```powershell
+python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.7.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>" --java "$env:JAVA_HOME\bin\java.exe"
+```
+
+Each build runs in its own temporary folder with all patches selected and a 1024 MB heap. The check verifies the stock checksum, every patch result and the theme's surface and color-call counts against `CompatReport.java`. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
+
 The output is `patches/build/libs/patches-0.7.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 28 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
