@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Crash recovery is verified against API 30, 36 and 37 exit records, including low memory, user stops, package updates and MemoryLimiter:AnonSwap. Duplicate or stale records don't advance the same failure twice. A controlled test on an owned phone activated safe mode after three preview-process crashes and kept the selected choice when Resume cleared it.
+
 - Delayed update failures now have the same opt-out, destruction and supersession regression checks as delayed successes.
 
 - Update checks show progress when enabled and offer **Check now** to retry. Responses are capped at 256 KiB and checked as strict UTF-8 JSON with a valid release tag and a link to this repository. Opt-out, a newer request or closing settings cancels the connection and prevents stale results. The help explains GitHub's connection metadata.
