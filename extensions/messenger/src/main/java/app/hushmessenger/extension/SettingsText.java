@@ -163,7 +163,9 @@ final class SettingsText {
         ENGLISH.put("choices_file_help", "Settings only, up to 16 KiB. Chats, accounts and recovery material stay out. Omitted or unavailable choices keep their saved values. Choose the file again if settings reopen.");
         ENGLISH.put("choices_file_saved", "Choices file saved");
         ENGLISH.put("check_updates", "Check for updates");
-        ENGLISH.put("check_updates_help", "Compares your version with the latest release when you open settings. Off by default. No data is sent.");
+        ENGLISH.put("check_updates_help", "Checks GitHub when enabled or when settings opens. Off by default. GitHub receives your IP address and connection metadata. No account or chat content is uploaded.");
+        ENGLISH.put("check_now", "Check now");
+        ENGLISH.put("update_loading", "Checking for updates...");
         ENGLISH.put("update_available", "Version %s is available");
         ENGLISH.put("update_action", "View release");
         ENGLISH.put("up_to_date", "You have the latest version.");

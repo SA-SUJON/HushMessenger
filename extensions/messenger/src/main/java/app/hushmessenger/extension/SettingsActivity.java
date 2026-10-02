@@ -50,7 +50,10 @@ public final class SettingsActivity extends Activity {
     private final List<Switch> switches = new ArrayList<>();
     private final Map<String, TextView> activityLabels = new java.util.HashMap<>();
     private final Map<Switch, CharSequence> switchDescriptions = new java.util.HashMap<>();
-    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> refreshChoices();
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> {
+        refreshChoices();
+        if (key == null || "check_updates".equals(key)) syncUpdateChoice(true);
+    };
     private String category = "all", page = "controls";
     private final List<View> controlRows = new ArrayList<>();
     private final List<String[]> installedControls = new ArrayList<>();
@@ -61,6 +64,10 @@ public final class SettingsActivity extends Activity {
     private TextView searchStatus, enabledCount, setupNote;
     private Button safeModeAction;
     private Button drawerSearchLink;
+    private TextView updateStatus;
+    private Button updateCheckNow, updateRelease;
+    private volatile long updateGeneration;
+    private java.net.HttpURLConnection updateConnection;
     private LinearLayout emptyState;
     static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102;
     private String documentExport;
@@ -234,11 +241,17 @@ public final class SettingsActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         refreshChoices();
+        syncUpdateChoice(false);
     }
 
     @Override protected void onStop() {
         Settings.preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener);
         super.onStop();
+    }
+
+    @Override protected void onDestroy() {
+        cancelUpdateCheck();
+        super.onDestroy();
     }
 
     private void refreshChoices() {
@@ -649,12 +662,17 @@ public final class SettingsActivity extends Activity {
         ui.add(content, about, 12);
         LinearLayout updates = ui.panel();
         ui.add(updates, controlRow("check_updates", text.format("check_updates"), text.format("check_updates_help"), false), 0);
-        TextView updateStatus = ui.text("", 13, ui.muted, false);
+        updateStatus = ui.text("", 13, ui.muted, false);
         updateStatus.setTag("update_status");
+        updateStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         updateStatus.setVisibility(View.GONE);
         ui.add(updates, updateStatus, 8);
+        updateCheckNow = ui.button(text.get("check_now"));
+        updateCheckNow.setTag("check_now");
+        updateCheckNow.setOnClickListener(view -> checkForUpdates());
+        ui.add(updates, updateCheckNow, 8);
         ui.add(content, updates, 12);
-        if (Settings.preferences.getBoolean("check_updates", false)) checkForUpdates(updateStatus);
+        syncUpdateChoice(true);
         ui.add(content, ui.heading(text.get("usage")), 22);
         ui.add(content, ui.text(text.get("save_help"), 14, ui.muted, false), 16);
         ui.add(content, ui.text(text.get("pause_help"), 14, ui.muted, false), 14);
@@ -731,24 +749,31 @@ public final class SettingsActivity extends Activity {
 
     /**
      * Compares release numbers part by part as integers, so 0.10.0 is newer than 0.9.0. A leading "v"
-     * is ignored and a missing or non-numeric part counts as 0. A pre-release suffix after "-" (0.7.0-dev.1)
-     * sorts before the same number without one, and two suffixes compare as text.
+     * is ignored and a missing or non-numeric part counts as 0. Build metadata is ignored. Numeric
+     * pre-release identifiers sort numerically and before text; a release sorts after its pre-releases.
      */
     static int compareVersions(String a, String b) {
-        String[] left = a.trim().replaceFirst("^v", "").split("-", 2);
-        String[] right = b.trim().replaceFirst("^v", "").split("-", 2);
+        String[] left = a.trim().replaceFirst("^v", "").split("\\+", 2)[0].split("-", 2);
+        String[] right = b.trim().replaceFirst("^v", "").split("\\+", 2)[0].split("-", 2);
         String[] x = left[0].split("\\."), y = right[0].split("\\.");
         for (int i = 0; i < Math.max(x.length, y.length); i++) {
-            int diff = Integer.compare(versionPart(x, i), versionPart(y, i));
+            int diff = versionPart(x, i).compareTo(versionPart(y, i));
             if (diff != 0) return diff;
         }
         if (left.length != right.length) return left.length > right.length ? -1 : 1;
-        return left.length == 1 ? 0 : left[1].compareTo(right[1]);
+        if (left.length == 1) return 0;
+        x = left[1].split("\\."); y = right[1].split("\\.");
+        for (int i = 0; i < Math.min(x.length, y.length); i++) {
+            boolean numericX = x[i].matches("[0-9]+"), numericY = y[i].matches("[0-9]+");
+            int diff = numericX && numericY ? versionPart(x, i).compareTo(versionPart(y, i))
+                : numericX != numericY ? (numericX ? -1 : 1) : x[i].compareTo(y[i]);
+            if (diff != 0) return diff;
+        }
+        return Integer.compare(x.length, y.length);
     }
 
-    private static int versionPart(String[] parts, int index) {
-        if (index >= parts.length) return 0;
-        try { return Integer.parseInt(parts[index]); } catch (NumberFormatException e) { return 0; }
+    private static java.math.BigInteger versionPart(String[] parts, int index) {
+        return index < parts.length && parts[index].matches("[0-9]+") ? new java.math.BigInteger(parts[index]) : java.math.BigInteger.ZERO;
     }
 
     /** The release page to offer, or "" when the response points anywhere but this project's releases. */
@@ -758,11 +783,44 @@ public final class SettingsActivity extends Activity {
             && !htmlUrl.contains("..") ? htmlUrl : "";
     }
 
-    private void checkForUpdates(TextView status) {
+    private void syncUpdateChoice(boolean check) {
+        if (updateStatus == null) return;
+        boolean enabled = Settings.preferences.getBoolean("check_updates", false);
+        updateCheckNow.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        if (!enabled) {
+            cancelUpdateCheck();
+            updateStatus.setVisibility(View.GONE);
+        } else if (check) checkForUpdates();
+    }
+
+    private synchronized void cancelUpdateCheck() {
+        updateGeneration++;
+        if (updateConnection != null) {
+            updateConnection.disconnect();
+            updateConnection = null;
+        }
+        if (updateRelease != null) {
+            ((ViewGroup) updateRelease.getParent()).removeView(updateRelease);
+            updateRelease = null;
+        }
+    }
+
+    private void checkForUpdates() {
+        cancelUpdateCheck();
+        if (!Settings.preferences.getBoolean("check_updates", false) || isDestroyed()) return;
+        long generation = updateGeneration;
+        updateStatus.setText(text.get("update_loading"));
+        updateStatus.setTextColor(ui.muted);
+        updateStatus.setVisibility(View.VISIBLE);
         new Thread(() -> {
             java.net.HttpURLConnection conn = null;
             try {
                 conn = (java.net.HttpURLConnection) new java.net.URL(releasesUrl).openConnection();
+                synchronized (this) {
+                    if (generation != updateGeneration || !Settings.preferences.getBoolean("check_updates", false)) return;
+                    updateConnection = conn;
+                }
+                conn.setInstanceFollowRedirects(false);
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
                 conn.setConnectTimeout(updateTimeoutMillis);
                 conn.setReadTimeout(updateTimeoutMillis);
@@ -771,51 +829,77 @@ public final class SettingsActivity extends Activity {
                 try (java.io.InputStream stream = conn.getInputStream()) {
                     byte[] bytes = new byte[4096];
                     int read;
-                    while ((read = stream.read(bytes)) != -1) response.write(bytes, 0, read);
+                    while ((read = stream.read(bytes)) != -1) {
+                        if (response.size() + read > 256 * 1024) throw new java.io.IOException("Release response exceeds 256 KiB");
+                        response.write(bytes, 0, read);
+                    }
                 }
-                String body = response.toString("UTF-8");
-                int tagStart = body.indexOf("\"tag_name\"");
-                if (tagStart < 0) throw new java.io.IOException("No tag_name");
-                int valueStart = body.indexOf('"', tagStart + 10) + 1;
-                int valueEnd = body.indexOf('"', valueStart);
-                String tag = body.substring(valueStart, valueEnd);
+                String body = java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(response.toByteArray())).toString();
+                String tag = null, htmlUrl = null;
+                try (android.util.JsonReader reader = new android.util.JsonReader(new java.io.StringReader(body))) {
+                    reader.setLenient(false);
+                    reader.beginObject();
+                    while (reader.hasNext()) {
+                        String name = reader.nextName();
+                        if ("tag_name".equals(name) || "html_url".equals(name)) {
+                            if (reader.peek() != android.util.JsonToken.STRING) throw new java.io.IOException("Invalid release field type");
+                            if ("tag_name".equals(name)) {
+                                if (tag != null) throw new java.io.IOException("Duplicate release tag");
+                                tag = reader.nextString();
+                            } else {
+                                if (htmlUrl != null) throw new java.io.IOException("Duplicate release URL");
+                                htmlUrl = reader.nextString();
+                            }
+                        } else reader.skipValue();
+                    }
+                    reader.endObject();
+                    if (reader.peek() != android.util.JsonToken.END_DOCUMENT) throw new java.io.IOException("Trailing release data");
+                }
+                if (tag == null || !tag.matches("v?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?"))
+                    throw new java.io.IOException("Invalid release tag");
+                String[] version = tag.split("\\+", 2)[0].split("-", 2);
+                if (version.length == 2) for (String identifier : version[1].split("\\."))
+                    if (identifier.matches("0[0-9]+")) throw new java.io.IOException("Invalid numeric pre-release identifier");
                 String latest = tag.startsWith("v") ? tag.substring(1) : tag;
                 boolean newer = compareVersions(latest, BuildConfig.VERSION_NAME) > 0;
-                String htmlUrl = "";
-                int urlStart = body.indexOf("\"html_url\"");
-                if (urlStart >= 0) {
-                    int us = body.indexOf('"', urlStart + 10) + 1;
-                    int ue = body.indexOf('"', us);
-                    htmlUrl = body.substring(us, ue);
-                }
-                String releaseUrl = releasePage(htmlUrl);
+                String releaseUrl = htmlUrl == null ? "" : releasePage(htmlUrl);
+                if (releaseUrl.isEmpty()) throw new java.io.IOException("Invalid release URL");
                 runOnUiThread(() -> {
+                    if (generation != updateGeneration || isDestroyed() || !Settings.preferences.getBoolean("check_updates", false)) return;
                     if (newer) {
-                        status.setText(text.get("update_available", latest));
-                        status.setTextColor(ui.accent);
+                        updateStatus.setText(text.get("update_available", latest));
+                        updateStatus.setTextColor(ui.accent);
                         if (!releaseUrl.isEmpty()) {
                             Button view = ui.button(text.get("update_action"));
                             view.setTag("update_release");
+                            updateRelease = view;
                             view.setOnClickListener(v -> {
                                 try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(releaseUrl))); }
                                 catch (android.content.ActivityNotFoundException e) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
                             });
-                            ViewGroup parent = (ViewGroup) status.getParent();
-                            int idx = parent.indexOfChild(status);
+                            ViewGroup parent = (ViewGroup) updateStatus.getParent();
+                            int idx = parent.indexOfChild(updateStatus);
                             parent.addView(view, idx + 1);
                         }
                     } else {
-                        status.setText(text.get("up_to_date"));
+                        updateStatus.setText(text.get("up_to_date"));
                     }
-                    status.setVisibility(View.VISIBLE);
+                    updateStatus.setVisibility(View.VISIBLE);
                 });
-            } catch (Exception error) {
-                android.util.Log.e("HushMessenger", "Update check failed", error);
-                runOnUiThread(() -> { status.setText(text.get("update_error")); status.setVisibility(View.VISIBLE); });
+            } catch (java.io.IOException | IllegalArgumentException | IllegalStateException | SecurityException error) {
+                if (generation == updateGeneration) android.util.Log.e("HushMessenger", "Update check failed", error);
+                runOnUiThread(() -> {
+                    if (generation != updateGeneration || isDestroyed() || !Settings.preferences.getBoolean("check_updates", false)) return;
+                    updateStatus.setText(text.get("update_error"));
+                    updateStatus.setVisibility(View.VISIBLE);
+                });
             } finally {
                 if (conn != null) conn.disconnect();
+                synchronized (this) { if (updateConnection == conn) updateConnection = null; }
             }
-        }).start();
+        }, "HushUpdateCheck").start();
     }
 
     private String formatSince(long timestamp, String now, String ago) {

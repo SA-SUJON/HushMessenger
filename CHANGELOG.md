@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Update checks show progress when enabled and offer **Check now** to retry. Responses are capped at 256 KiB and checked as strict UTF-8 JSON with a valid release tag and a link to this repository. Opt-out, a newer request or closing settings cancels the connection and prevents stale results. The help explains GitHub's connection metadata.
+
 - App explains why the drawer-icon switch is absent on Root Mount, bundles without a launcher alias, or installations without the Menu row. Search links to the relevant App setting. A disabled but installed alias remains configurable, and shortcuts alone cannot hide the only reliable icon. Refs #6.
 
 - The heap verifier and its regression tests now pass the pinned formatter. Their syntax trees and assertions are unchanged.
