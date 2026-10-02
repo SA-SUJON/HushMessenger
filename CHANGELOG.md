@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Retained-unsend identifiers are added under one lock, so concurrent events no longer overwrite each other. Duplicate events avoid another write. Calls while the control is off, paused, unavailable or in safe mode add nothing. Tests preserve 100 concurrent identifiers and existing entries through a fresh read from disk.
+
 - Keep unsent describes its verified legacy routes, unsupported encrypted chats and unverified group coverage beside the switch. **No unsend activity observed since restart** describes hook activity without implying chat support. Tests cover retained-message labels, stock behavior while off or paused, and choices retained after settings reinitializes. Refs #23.
 
 - Control activity labels refresh when settings resumes, keeping the same switches, scroll position and focus. Paused choices say **Changes paused**. Labels have full contrast in both themes, and the switch reads the current status once without exposing exception details.

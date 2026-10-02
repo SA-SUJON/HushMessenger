@@ -240,13 +240,12 @@ public final class Settings {
 
     private static final String KEPT_UNSENT_KEY = "kept_unsent_ids";
 
-    public static void recordUnsent(String messageId) {
-        if (messageId == null || messageId.isEmpty()) return;
+    public static synchronized void recordUnsent(String messageId) {
+        if (messageId == null || messageId.isEmpty() || !wouldUse("keep_unsent")) return;
         SharedPreferences prefs = preferences;
         if (prefs == null) return;
         Set<String> ids = new HashSet<>(prefs.getStringSet(KEPT_UNSENT_KEY, Collections.emptySet()));
-        ids.add(messageId);
-        prefs.edit().putStringSet(KEPT_UNSENT_KEY, ids).apply();
+        if (ids.add(messageId)) prefs.edit().putStringSet(KEPT_UNSENT_KEY, ids).apply();
     }
 
     public static boolean isKeptUnsent(String messageId) {

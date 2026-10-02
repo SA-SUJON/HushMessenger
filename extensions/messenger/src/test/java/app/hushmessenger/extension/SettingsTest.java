@@ -115,6 +115,66 @@ public class SettingsTest {
         assertFalse(Settings.suppressUnsent(true, "retained-message"));
     }
 
+    @Test @Config(sdk = {28, 36}) public void concurrentUnsendIdentifiersSurviveADiskReload() throws Exception {
+        Settings.preferences.edit().putBoolean("keep_unsent", true)
+            .putStringSet("kept_unsent_ids", java.util.Set.of("from-old-version")).commit();
+        assertTrue(Settings.keepUnsent());
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        Thread[] workers = new Thread[100];
+        java.util.Set<String> expected = new java.util.HashSet<>(java.util.Set.of("from-old-version", "shared-message"));
+        for (int i = 0; i < workers.length; i++) {
+            String id = "message-" + i;
+            expected.add(id);
+            workers[i] = new Thread(() -> {
+                try {
+                    start.await();
+                    Settings.recordUnsent(id);
+                    Settings.recordUnsent("shared-message");
+                    Settings.recordUnsent(id);
+                } catch (Throwable error) { failure.compareAndSet(null, error); }
+            });
+            workers[i].start();
+        }
+        start.countDown();
+        for (Thread worker : workers) {
+            worker.join(10_000);
+            assertFalse("Writer finished", worker.isAlive());
+        }
+        assertNull(failure.get());
+        assertEquals(expected, Settings.preferences.getStringSet("kept_unsent_ids", java.util.Set.of()));
+        assertTrue(Settings.preferences.edit().commit());
+        java.io.File file = new java.io.File(RuntimeEnvironment.getApplication().getApplicationInfo().dataDir,
+            "shared_prefs/hushmessenger.xml");
+        assertTrue(file.isFile());
+        // A new framework instance reads the actual file instead of Context's cached in-memory preferences.
+        var constructor = Class.forName("android.app.SharedPreferencesImpl").getDeclaredConstructor(java.io.File.class, int.class);
+        constructor.setAccessible(true);
+        var reloaded = (android.content.SharedPreferences) constructor.newInstance(file, Context.MODE_PRIVATE);
+        assertNotSame(Settings.preferences, reloaded);
+        Settings.preferences = reloaded;
+        assertEquals(expected, reloaded.getStringSet("kept_unsent_ids", java.util.Set.of()));
+        assertTrue(reloaded.getBoolean("keep_unsent", false));
+        assertFalse(Settings.suppressUnsent(true, "from-old-version"));
+        assertEquals("[unsent] text", Settings.labelKeptUnsent("text", "message-99"));
+    }
+
+    @Test @Config(sdk = {28, 36}) public void inactiveUnsendCallsAddNothingAndKeepStockBehavior() {
+        for (String inactive : new String[] {"off", "paused", "safe_mode", "uninstalled"}) {
+            Settings.installed = "uninstalled".equals(inactive) ? java.util.Set.of() : java.util.Set.of("keep_unsent");
+            Settings.preferences.edit().clear().putBoolean("keep_unsent", !"off".equals(inactive))
+                .putBoolean("paused", "paused".equals(inactive)).putBoolean("safe_mode", "safe_mode".equals(inactive))
+                .putStringSet("kept_unsent_ids", java.util.Set.of("existing-message")).commit();
+            CrashGuard.resetForTests();
+            CrashGuard.onProcessStart(RuntimeEnvironment.getApplication());
+            Settings.recordUnsent("must-not-be-added");
+            assertEquals(inactive, java.util.Set.of("existing-message"), Settings.preferences.getStringSet("kept_unsent_ids", java.util.Set.of()));
+            assertEquals("text", Settings.labelKeptUnsent("text", "existing-message"));
+            assertTrue(Settings.suppressUnsent(true, "existing-message"));
+            assertFalse(Settings.suppressUnsent(false, "existing-message"));
+        }
+    }
+
     @Test public void encryptedTypingFlagDropsOnlyWhileTheSwitchIsOn() {
         assertTrue(Settings.outgoingTyping(true));
         assertFalse(Settings.outgoingTyping(false));
