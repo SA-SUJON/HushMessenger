@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Development version 0.11.0. The public download remains v0.8.0.
+Development version 0.12.0. The public download remains v0.8.0.
 
 ### New
 

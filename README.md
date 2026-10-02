@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="CHANGELOG.md#unreleased"><img src="https://img.shields.io/badge/development-0.11.0-0084FF" alt="Development version 0.11.0"></a>
+  <a href="CHANGELOG.md#unreleased"><img src="https://img.shields.io/badge/development-0.12.0-0084FF" alt="Development version 0.12.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -12,9 +12,9 @@
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 31 patches. 28 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-Main builds v0.11.0. It hasn't been published. Morphe's remote source and the download instructions below use public v0.8.0. See [Unreleased](CHANGELOG.md#unreleased) for the development changes.
+Main builds v0.12.0. It hasn't been published. Morphe's remote source and the download instructions below use public v0.8.0. See [Unreleased](CHANGELOG.md#unreleased) for the development changes.
 
-Development v0.11.0 adds a settings entry for Messenger 580's side menu. Both layouts opened settings on a test phone. Root Mount installs haven't been checked yet, so [#26](https://github.com/SysAdminDoc/HushMessenger/issues/26) stays open. Public v0.8.0 has the Menu tab entry.
+Development v0.12.0 adds a settings entry for Messenger 580's side menu. Both layouts opened settings on a test phone, but Root Mount installs haven't been checked yet, so [#26](https://github.com/SysAdminDoc/HushMessenger/issues/26) stays open. Public v0.8.0 has the Menu tab entry. It also makes **Use system emoji** draw your phone's own emoji on Android 12 and newer ([#25](https://github.com/SysAdminDoc/HushMessenger/issues/25)), and the settings directions now name Messenger's home screen icon ([#27](https://github.com/SysAdminDoc/HushMessenger/issues/27)).
 
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
@@ -266,12 +266,12 @@ python -m unittest discover -s scripts/tests -v
 To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the dexlib2 3.0.9 and Guava 33.2.1-jre JARs from the Gradle cache:
 
 ```powershell
-python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.11.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>" --java "$env:JAVA_HOME\bin\java.exe"
+python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.12.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>" --java "$env:JAVA_HOME\bin\java.exe"
 ```
 
 Each build runs in its own temporary folder with all patches selected and a 1024 MB heap. The check verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
-The output from main is `patches/build/libs/patches-0.11.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output from main is `patches/build/libs/patches-0.12.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 28 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 
