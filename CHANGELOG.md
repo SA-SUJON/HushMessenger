@@ -10,6 +10,8 @@ Development version 0.10.0. The public download remains v0.8.0.
 
 ### Changed and fixed
 
+- Local Android builds use AGP 9.4.1 and Android Test Engine in place of the older UTP/Netty device-test transport. The build and all 21 supported patch inputs pass. A separate settings-preview test passed on Android 16 and verifies that host test libraries aren't bundled into the extension. SDK/lint tooling still contains advisory-matched HttpClient and Commons Lang versions; this update doesn't claim to fix those matches.
+
 - Choice files accept content-provider documents outside Messenger's own UID, so a picker cannot read or overwrite its private files through a file path or an app-owned provider. Provider failures leave choices alone and omit private exception details from logs.
 - Choice-file checks normalize Android user prefixes before checking provider ownership, so alternate addresses can't reach Messenger's private providers. External documents still round-trip.
 - File backups show progress and prevent overlapping file work. A delayed restore leaves newer switch changes or clipboard restores alone and explains how to retry.

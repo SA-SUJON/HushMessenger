@@ -11,6 +11,7 @@ android {
         targetSdk = 36
         versionCode = 100
         versionName = project.version.toString()
+        testInstrumentationRunner = "app.hushmessenger.extension.BuildTransportProbe"
     }
     buildFeatures { buildConfig = true }
     testOptions { unitTests.isIncludeAndroidResources = true }

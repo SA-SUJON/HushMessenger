@@ -252,7 +252,7 @@ The supported tool baseline is [Morphe Manager 1.33.0](https://github.com/Morphe
 
 This command lists patches. Source updates and Messenger installation are separate steps.
 
-To build the bundle on Windows, use JDK 21, Android SDK 36 and the Gradle wrapper. Set `ANDROID_HOME` to your SDK directory. The Morphe Gradle plugin needs GitHub Packages credentials:
+To build the bundle on Windows, use JDK 21, Android SDK 36 and the Gradle wrapper. The Android build pins AGP 9.4.1 and uses Android Test Engine for device tests. Those host tools aren't bundled into Messenger. Set `ANDROID_HOME` to your SDK directory. The Morphe Gradle plugin needs GitHub Packages credentials:
 
 ```powershell
 $env:GITHUB_ACTOR = gh api user --jq .login
