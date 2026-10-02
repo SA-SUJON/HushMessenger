@@ -39,6 +39,18 @@ class ExpandedControlsTest {
         }
     }
 
+    // #27: "Long-press Messenger" read as the Messenger title inside the app, where nothing happens.
+    @Test fun settingsDirectionsNameTheHomeScreenIcon() {
+        val patches = Class.forName("app.hushmessenger.patches.controls.MessengerControlsPatchKt").methods
+            .filter { it.name.startsWith("get") && it.returnType == BytecodePatch::class.java }
+            .map { it.invoke(null) as BytecodePatch }.filter { it.name != null }
+        val directed = patches.filter { "Patch controls" in it.description.orEmpty() }
+        assertEquals(27, directed.size)
+        for (patch in directed) {
+            assertTrue("Long-press Messenger's home screen icon > Patch controls." in patch.description!!, "${patch.name}")
+        }
+    }
+
     @Test fun selectingPeopleDoesNotRequireAnyUnselectedHook() {
         val first = method("LX/1pm;", "A0C", 8, "Z", "const/4 v0, 0x1\nreturn v0")
         val second = method("LX/2Wl;", "A04", 8, "Z", "const/4 v0, 0x1\nreturn v0")

@@ -14,6 +14,8 @@ Development version 0.11.0. The public download remains v0.8.0.
 
 - **Use system emoji** now draws the phone's own emoji set on Android 12 and newer. It used to load Android's standard Noto font every time, so Samsung phones, other phones with their own emoji and emoji modules got Google's emoji instead of their own. HushMessenger now asks Android which font it draws emoji with and uses that. Android 9 to 11 keep the standard font. Refs #25.
 
+- Directions to the settings now say **Long-press Messenger's home screen icon > Patch controls** in Manager's patch descriptions, the settings help text and the recovery message. "Long-press Messenger" was read as the Messenger title inside the app, where a long-press does nothing. Refs #27.
+
 - Local Android builds use AGP 9.4.1 and Android Test Engine in place of the older UTP/Netty device-test transport. The build and all 21 supported patch inputs pass. A separate settings-preview test passed on Android 16 and verifies that host test libraries aren't bundled into the extension. SDK/lint tooling still contains advisory-matched HttpClient and Commons Lang versions; this update doesn't claim to fix those matches.
 
 - Choice files accept content-provider documents outside Messenger's own UID, so a picker cannot read or overwrite its private files through a file path or an app-owned provider. Provider failures leave choices alone and omit private exception details from logs.
