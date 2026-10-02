@@ -209,12 +209,13 @@ public class UpdateCheckTest {
     }
 
     @Test public void optOutDestructionAndNewerRequestsCancelDelayedCompletions() throws Exception {
-        for (String action : new String[] {"optout", "destroy", "newer"}) {
-            CountDownLatch received = new CountDownLatch(1), finish = new CountDownLatch(1);
+        for (int code : new int[] {200, 403}) for (String action : new String[] {"optout", "destroy", "newer"}) {
+            CountDownLatch received = new CountDownLatch(1), finish = new CountDownLatch(1), answered = new CountDownLatch(1);
             reply = out -> {
                 received.countDown();
                 try { finish.await(3, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                json(200, release("v99.0.0", RELEASE_PAGE)).send(out);
+                try { json(code, release("v99.0.0", RELEASE_PAGE)).send(out); }
+                finally { answered.countDown(); }
             };
             Settings.preferences.edit().putBoolean("check_updates", true).commit();
             var screen = Robolectric.buildActivity(SettingsActivity.class).setup();
@@ -230,6 +231,7 @@ public class UpdateCheckTest {
             }
             assertNull(org.robolectric.util.ReflectionHelpers.getField(screen.get(), "updateConnection"));
             finish.countDown();
+            assertTrue(answered.await(2, TimeUnit.SECONDS));
             Thread.sleep(100);
             Shadows.shadowOf(Looper.getMainLooper()).idle();
             assertNull(root.findViewWithTag("update_release"));
