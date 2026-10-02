@@ -293,22 +293,66 @@ public final class Settings {
         return original;
     }
 
-    /** Where Android keeps its color emoji font. Tests point this at a missing file. */
-    static String systemEmojiFont = "/system/fonts/NotoColorEmoji.ttf";
+    /** Android's standard color emoji font, used when the phone can't say which font it draws emoji with. */
+    static final String NOTO_EMOJI_FONT = "/system/fonts/NotoColorEmoji.ttf";
+    /** Null asks Android which font it draws emoji with. Tests point this at a missing file. */
+    static String systemEmojiFont;
     static android.graphics.Typeface systemEmoji;
     static boolean systemEmojiMissing;
+    /** Which font the emoji typeface came from, for diagnostics and tests. */
+    static String systemEmojiSource;
     public static android.graphics.Typeface systemEmojiTypeface() {
         // Checked before enabled(), so a font that failed to load doesn't count as a use.
         if (systemEmojiMissing || !enabled("use_system_emoji")) return null;
         if (systemEmoji != null) return systemEmoji;
         try {
-            systemEmoji = android.graphics.Typeface.createFromFile(systemEmojiFont);
+            // Samsung, many other phones and emoji modules draw emoji with a font other than NotoColorEmoji.ttf (#25).
+            android.graphics.Typeface shaped = systemEmojiFont == null ? shapedEmojiTypeface() : null;
+            if (shaped != null) {
+                systemEmoji = shaped;
+            } else {
+                String path = systemEmojiFont != null ? systemEmojiFont : NOTO_EMOJI_FONT;
+                systemEmoji = android.graphics.Typeface.createFromFile(path);
+                systemEmojiSource = path;
+            }
         } catch (Exception error) {
             // The font file won't appear later, so Messenger's own emoji stay without retrying on every draw.
             systemEmojiMissing = true;
             hookFailed("use_system_emoji", "Can't load the system emoji font", error);
         }
         return systemEmoji;
+    }
+
+    /** Default emoji presentation, so Android picks its emoji font rather than a text symbol font. */
+    static final String EMOJI_PROBE = "😀";
+
+    /**
+     * Android 12 and newer report the font they shape an emoji with, which is the phone's own emoji set. The typeface
+     * keeps Android's usual fallback, so flags in a separate font still draw. Null means use the font file path instead.
+     */
+    static android.graphics.Typeface shapedEmojiTypeface() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return null;
+        try {
+            android.graphics.text.PositionedGlyphs glyphs = android.graphics.text.TextRunShaper.shapeTextRun(
+                EMOJI_PROBE, 0, EMOJI_PROBE.length(), 0, EMOJI_PROBE.length(), 0f, 0f, false, new android.graphics.Paint());
+            // Glyph 0 is the missing-glyph box: the phone has no emoji font, so Messenger's set should stay.
+            if (glyphs.glyphCount() == 0 || glyphs.getGlyphId(0) == 0) return null;
+            android.graphics.fonts.Font font = glyphs.getFont(0);
+            java.io.File file = font.getFile();
+            android.graphics.Typeface typeface;
+            if (file != null && file.canRead()) {
+                typeface = android.graphics.Typeface.createFromFile(file);
+            } else {
+                // Updated emoji fonts can live where the app can't open them; the shaped font is already loaded.
+                typeface = new android.graphics.Typeface.CustomFallbackBuilder(
+                    new android.graphics.fonts.FontFamily.Builder(font).build()).setSystemFallback("sans-serif").build();
+            }
+            systemEmojiSource = file != null ? file.getPath() : "shaped emoji font";
+            return typeface;
+        } catch (RuntimeException error) {
+            android.util.Log.w("HushMessenger", "Can't find the phone's emoji font, using " + NOTO_EMOJI_FONT, error);
+            return null;
+        }
     }
 
     /** Null means return the exact original list. Only typed ad rows are removed. */

@@ -100,7 +100,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Keep unsent messages | Keeps messages on verified legacy unsend routes and marks them "[unsent]". End-to-end encrypted chats aren't supported, and group coverage isn't verified. Your own unsend may be limited while it's on. |
 
 | Allow screenshots | Lets you screenshot photos, media and video that Messenger protects in a chat, and stops it telling the other person you took a screenshot. View-once media stays protected. |
-| Use system emoji | Draws emoji with your phone's font instead of Messenger's. Messenger's set stays if the phone has no emoji font. |
+| Use system emoji | Draws emoji with your phone's own emoji set instead of Messenger's on Android 12 and newer. Android 9 to 11 get Android's standard emoji. Messenger's set stays if the phone has no emoji font. |
 | Send photos at original quality | With HD on, a JPEG photo goes out with its own image data instead of Messenger's smaller re-encoded copy. Its metadata, such as location and camera details, is left out, as it is from Messenger's copy. Only the tag that turns a sideways photo upright stays. Photos over 20 MB and videos still get Messenger's compression. |
 | Open web links externally | Uses the stock external-browser branch for HTTP and HTTPS. |
 | Allow chat bubbles | Development settings offer Stock, Chat Heads and Native Bubbles on Android 11 or newer when the host routes are verified. Native mode uses Messenger's conversation notifications and keeps its account eligibility check. Android permissions still apply. |
