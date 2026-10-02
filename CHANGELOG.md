@@ -10,7 +10,7 @@ Development version 0.11.0. The public download remains v0.8.0.
 
 ### Changed and fixed
 
-- The settings-entry patch adds Messenger 580's side menu alongside its Menu tab. It builds a separate native folder row without changing existing folders, badges or snippets. Changed constructors, unallocatable models and a folder click path that can reach the row without passing the settings hook stop patching before any menu changes. An Android launch failure keeps the added row from falling into Messenger's own click handler and shows recovery guidance. Live side-menu and Root Mount checks remain open. Refs #26.
+- The settings-entry patch adds Messenger 580's side menu alongside its Menu tab. It builds a separate native folder row without changing existing folders, badges or snippets. Changed constructors, unallocatable models and a folder click path that can reach the row without passing the settings hook stop patching before any menu changes. An Android launch failure keeps the added row from falling into Messenger's own click handler and shows recovery guidance. On a test phone, the side-menu row and the Menu tab row both opened settings, and the side menu kept exactly one row through a cold start. Root Mount installs haven't been checked yet. Refs #26.
 
 - Local Android builds use AGP 9.4.1 and Android Test Engine in place of the older UTP/Netty device-test transport. The build and all 21 supported patch inputs pass. A separate settings-preview test passed on Android 16 and verifies that host test libraries aren't bundled into the extension. SDK/lint tooling still contains advisory-matched HttpClient and Commons Lang versions; this update doesn't claim to fix those matches.
 

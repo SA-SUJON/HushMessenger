@@ -14,7 +14,7 @@ HushMessenger is a Morphe patch source for Facebook Messenger. It offers 31 patc
 
 Main builds v0.11.0. It hasn't been published. Morphe's remote source and the download instructions below use public v0.8.0. See [Unreleased](CHANGELOG.md#unreleased) for the development changes.
 
-Development v0.11.0 adds a settings entry for Messenger 580's side menu. Live checks of that entry and both layouts on Root Mount remain open in [#26](https://github.com/SysAdminDoc/HushMessenger/issues/26). Public v0.8.0 has the Menu tab entry.
+Development v0.11.0 adds a settings entry for Messenger 580's side menu. Both layouts opened settings on a test phone. Root Mount installs haven't been checked yet, so [#26](https://github.com/SysAdminDoc/HushMessenger/issues/26) stays open. Public v0.8.0 has the Menu tab entry.
 
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
