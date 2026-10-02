@@ -37,6 +37,10 @@ public final class ChatAnimation {
     /** Chats this slid in. Only those slide back out, so chat heads, bubbles and restored chats keep their own. */
     static final Map<Object, Boolean> slidIn = Collections.synchronizedMap(new WeakHashMap<>());
     static volatile long slidOutAt = Long.MIN_VALUE / 2;
+    /** When a chat last faded in over another one. */
+    static volatile long switchedAt = Long.MIN_VALUE / 2;
+    /** Messenger asks for both fragments of one transaction within this long of each other. */
+    static final long SAME_PASS = 50;
 
     private ChatAnimation() {}
 
@@ -53,6 +57,7 @@ public final class ChatAnimation {
 
     /** Messenger gives a chat it opens from the inbox, search or a notification an entrance. Restored ones get none. */
     static Animation open(Object chat, int nextAnim) {
+        if (nextAnim == SWITCH_FADE) switchedAt = SystemClock.uptimeMillis();
         if (nextAnim == 0 || nextAnim == SWITCH_FADE || !on()) return null;
         slidIn.put(chat, Boolean.TRUE);
         // The inbox can draw its first held frame before the chat draws its first one.
@@ -62,16 +67,20 @@ public final class ChatAnimation {
 
     static Animation close(Object chat) {
         if (slidIn.remove(chat) == null || !on()) return null;
+        // Another chat fading in over this one replaces it rather than going back.
+        if (SystemClock.uptimeMillis() - switchedAt < SAME_PASS) return null;
         slidOutAt = SystemClock.uptimeMillis();
         return slide(false);
     }
 
     /**
-     * Messenger hides the inbox the moment a chat opens and fades it back in on Back. This keeps it drawn under a
-     * chat sliding over it, and shows it at once under one sliding away.
+     * Messenger hides the inbox the moment a chat opens and fades it back in on Back. This keeps it drawn under a chat
+     * sliding over it, and shows it at once under one sliding away. Messenger asks for the opening chat first, so any
+     * other screen that covers the inbox keeps Messenger's own.
      */
     static Animation inbox(boolean enter) {
-        if (enter && slidIn.isEmpty() && SystemClock.uptimeMillis() - slidOutAt > SLIDE_OUT) return null;
+        long now = SystemClock.uptimeMillis();
+        if (enter ? slidIn.isEmpty() && now - slidOutAt > SLIDE_OUT : now >= slidingInUntil) return null;
         if (!on()) return null;
         Animation hold = new Hold();
         hold.setDuration(SLIDE_IN);

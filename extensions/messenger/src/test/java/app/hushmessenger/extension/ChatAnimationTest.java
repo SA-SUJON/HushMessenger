@@ -51,6 +51,7 @@ public class ChatAnimationTest {
         Settings.hookErrors.clear();
         ChatAnimation.slidIn.clear();
         ChatAnimation.slidOutAt = Long.MIN_VALUE / 2;
+        ChatAnimation.switchedAt = Long.MIN_VALUE / 2;
         ChatAnimation.slidingInUntil = 0;
         ChatAnimation.slidActivities.clear();
         ChatAnimation.animations = (context, name) -> ANIMS.getOrDefault(name, 0);
@@ -97,12 +98,13 @@ public class ChatAnimationTest {
     @Test public void openingSlidesTheChatOverTheInboxAndBackSlidesItAway() {
         on();
         Object chat = new Object();
+        // Messenger asks for both before either draws a frame.
         Animation open = ChatAnimation.create(chat, CHAT, true, THREAD_ENTER);
+        Animation under = ChatAnimation.create(new Object(), INBOX, false, 0);
         assertTrue(open instanceof TranslateAnimation);
         assertEquals(ChatAnimation.SLIDE_IN, open.getDuration());
         assertEquals(100f, startX(open), 0.01f);
         // The inbox stays drawn under the chat for the whole slide instead of vanishing.
-        Animation under = ChatAnimation.create(new Object(), INBOX, false, 0);
         assertTrue(under instanceof AlphaAnimation);
         assertEquals(ChatAnimation.SLIDE_IN, under.getDuration());
 
@@ -132,10 +134,35 @@ public class ChatAnimationTest {
         }
         assertTrue(ChatAnimation.slidIn.isEmpty());
         // Only the chat that slid in slides out.
+        ShadowLooper.idleMainLooper(ChatAnimation.SAME_PASS, TimeUnit.MILLISECONDS);
         Object slid = new Object();
         assertNotNull(ChatAnimation.create(slid, CHAT, true, THREAD_ENTER));
         assertNull(ChatAnimation.create(new Object(), CHAT, false, 0));
         assertNotNull(ChatAnimation.create(slid, CHAT, false, 0));
+    }
+
+    @Test public void anotherScreenCoveringTheInboxKeepsItsOwnExit() {
+        on();
+        // Nothing is sliding in, so whatever covers the inbox, it leaves the way Messenger has it.
+        assertNull(ChatAnimation.create(new Object(), INBOX, false, 0));
+        assertNotNull(ChatAnimation.create(new Object(), CHAT, true, THREAD_ENTER));
+        assertNotNull(ChatAnimation.create(new Object(), INBOX, false, 0));
+        // Long after the chat opened, the next screen over the inbox is Messenger's own again.
+        ShadowLooper.idleMainLooper(ChatAnimation.PENDING, TimeUnit.MILLISECONDS);
+        assertNull(ChatAnimation.create(new Object(), INBOX, false, 0));
+    }
+
+    @Test public void aChatThatAnotherChatReplacesDoesNotSlideOut() {
+        on();
+        Object first = new Object();
+        assertNotNull(ChatAnimation.create(first, CHAT, true, THREAD_ENTER));
+        ShadowLooper.idleMainLooper(ChatAnimation.SLIDE_IN, TimeUnit.MILLISECONDS);
+        // A second chat fades in over the first, which leaves with it instead of sliding away.
+        assertNull(ChatAnimation.create(new Object(), CHAT, true, android.R.anim.fade_in));
+        assertNull(ChatAnimation.create(first, CHAT, false, 0));
+        assertTrue(ChatAnimation.slidIn.isEmpty());
+        // The inbox under them wasn't uncovered, so it doesn't jump in either.
+        assertNull(ChatAnimation.create(new Object(), INBOX, true, 0));
     }
 
     @Test public void pauseRemoveAnimationsAndAMissingInstallKeepStock() {
