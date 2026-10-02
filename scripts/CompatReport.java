@@ -75,6 +75,8 @@ public class CompatReport {
     static final String IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;";
     static final String PREFERENCES = "Lcom/facebook/prefs/shared/FbSharedPreferences;";
     static final String MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;";
+    static final String ANIMATION = "Landroid/view/animation/Animation;";
+    static final String FRAGMENT_ANIMATION = "Landroidx/fragment/app/Fragment;->onCreateAnimation(IZI)" + ANIMATION;
     static final String PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segments/friendrequests/usecase/"
         + "PeopleTabPYMKHandler$fetchPymkSuggestions$$inlined$CoroutineExceptionHandler$1;";
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
@@ -169,6 +171,7 @@ public class CompatReport {
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
         PATCHES.put("View stories anonymously", List.of("anonymous_stories"));
         PATCHES.put("Save any story", List.of("save_stories"));
+        PATCHES.put("Slide chats in and out", List.of("chat_animation", "chat_fragment", "chat_inbox", "chat_legacy"));
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
 
@@ -1594,6 +1597,21 @@ public class CompatReport {
                 if ("onClick".equals(method.getName()) && "V".equals(method.getReturnType()) &&
                     paramTypes.equals(List.of("Landroid/view/View;")) && strings.contains("toolbar_click_menu_button")) {
                     found.get("save_stories").add(method);
+                }
+
+                // chat_animation: androidx's answer of no animation, which every fragment is asked for first
+                if (FRAGMENT_ANIMATION.equals(hookId(method))) found.get("chat_animation").add(method);
+
+                // chat_fragment and chat_inbox: the chat and the inbox under it, named by the constructor androidx needs
+                if ("<init>".equals(method.getName()) && paramTypes.isEmpty()) {
+                    if ("MsysThreadViewFragment".equals(original)) found.get("chat_fragment").add(method);
+                    if ("M4TabNavigationFragment".equals(original)) found.get("chat_inbox").add(method);
+                }
+
+                // chat_legacy: the chat fragment on Messenger's older route, which loads its own animation
+                if ("ThreadViewFragment".equals(original) &&
+                    (cls.getType() + "->onCreateAnimation(IZI)" + ANIMATION).equals(hookId(method))) {
+                    found.get("chat_legacy").add(method);
                 }
 
                 // growth_notes: the launcher every notes tip sheet (Make my notes public, Add lyrics) goes through

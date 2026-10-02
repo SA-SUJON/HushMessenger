@@ -28,6 +28,10 @@ hook bubbles LX/2ZW;->A00()Z
 hook business_suggestions LX/7Sd;->A05(LX/7Sd;)Z
 hook business_suggestions LX/7Tb;->A04(LX/7Tb;)Z
 hook business_suggestions LX/ThO;->A04()Z
+hook chat_animation Landroidx/fragment/app/Fragment;->onCreateAnimation(IZI)Landroid/view/animation/Animation;
+hook chat_fragment LX/1hl;-><init>()V
+hook chat_inbox LX/1fs;-><init>()V
+hook chat_legacy LX/1hd;->onCreateAnimation(IZI)Landroid/view/animation/Animation;
 hook chat_promotions LX/ThP;->A0D()Z
 hook chat_promotions LX/ThP;->A0E()Z
 hook delta_unsent LX/K1Y;->Btd(I)Z

@@ -44,6 +44,11 @@ public final class HostScreens {
     /** The patched factory hands over Messenger's Application here, just before Android attaches it. */
     public static void applicationCreated(Application app) {
         application = app;
+        try {
+            if (Settings.bundled(bundledControls()).contains(ChatAnimation.KEY)) ChatAnimation.register(app);
+        } catch (RuntimeException error) {
+            Log.e("HushMessenger", "Can't watch for chats opening", error);
+        }
     }
 
     /** The patched factory asks this first; a result replaces the stock activity it was about to create. */

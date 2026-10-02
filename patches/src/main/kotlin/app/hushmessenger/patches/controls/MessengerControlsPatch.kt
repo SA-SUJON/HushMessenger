@@ -346,6 +346,60 @@ val saveStoriesPatch = bytecodePatch(
     }
 }
 
+private val CHAT_ANIMATION_HOOKS = setOf("chat_animation", "chat_fragment", "chat_inbox", "chat_legacy")
+private var chatAnimationApplied = false
+
+private val chatAnimationResources = resourcePatch(description = "Record HushMessenger capability: chat_animation") {
+    dependsOn(settingsResources)
+    execute {
+        chatAnimationApplied = false
+        document("AndroidManifest.xml").use { it.requireFeatureAbsent("chat_animation") }
+    }
+    finalize {
+        if (!chatAnimationApplied) return@finalize
+        // Search and notifications open a chat as an activity of its own, and Android animates those from resources.
+        for ((path, xml) in CHAT_ANIMATION_FILES) {
+            val file = get(path)
+            if (file.exists()) throw PatchException("HushMessenger: $path is already in the APK. Start with the stock APK.")
+            file.parentFile.mkdirs()
+            file.writeText(xml)
+        }
+        document("AndroidManifest.xml").use { it.addFeature("chat_animation") }
+    }
+}
+
+@Suppress("unused")
+val chatAnimationPatch = bytecodePatch(
+    name = "Slide chats in and out",
+    description = "Slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. Chat heads and bubbles keep their own animations. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+    default = true,
+) {
+    category("Navigation")
+    compatibleWith(MessengerTarget.COMPATIBILITY)
+    dependsOn(settingsExtension, chatAnimationResources)
+    execute {
+        validateControls(discoveredControls, CHAT_ANIMATION_HOOKS)
+        fun original(key: String) = discoveredControls.getValue(key).single()
+        fun mutable(key: String) = original(key).let { found ->
+            mutableClassDefBy(found.definingClass).methods.single { it.hookId() == found.hookId() }
+        }
+        val chat = original("chat_fragment").definingClass
+        val inbox = original("chat_inbox").definingClass
+        // Everything is checked before the first edit, so a changed build fails with the APK untouched.
+        for (type in listOf(chat, inbox)) validateInheritsFragmentAnimation(type) { classDefByOrNull(it) }
+        // The extension slides chats opened from search and notifications by this activity's name.
+        if (classDefByOrNull(CHAT_ACTIVITY) == null) throw PatchException(
+            "Slide chats in and out: Messenger's chat activity differs from the tested builds. Start with an unmodified supported APK.",
+        )
+        val base = mutable("chat_animation").apply { validateFragmentAnimation() }
+        val legacy = mutable("chat_legacy").apply { validateLegacyChatAnimation() }
+        base.injectFragmentAnimation(chat, inbox)
+        legacy.injectLegacyChatAnimation()
+        recordControl("chat_animation")
+        chatAnimationApplied = true
+    }
+}
+
 private var menuRowApplied = false
 
 // Lets the settings screen mention the Menu tab row only on builds that have it.

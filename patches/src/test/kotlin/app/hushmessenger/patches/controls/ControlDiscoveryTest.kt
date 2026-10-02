@@ -22,6 +22,9 @@ class ControlDiscoveryTest {
         "LX/Ahp;" to "ConversationTypingContext\$sendActiveStateRunnable\$1",
         "LX/N2h;" to "SecureWindowUtils\$1",
         "LX/AX0;" to "ReadThreadManager\$1",
+        "LX/1hl;" to "MsysThreadViewFragment",
+        "LX/1fs;" to "M4TabNavigationFragment",
+        "LX/1hd;" to "ThreadViewFragment",
     )
 
     private fun completeFixture(): List<MutableClass> {
@@ -63,6 +66,9 @@ class ControlDiscoveryTest {
                     "read_mailbox" -> "const-string v0, \"$READ_MAILBOX_CALL\"\nreturn-void"
                     "anonymous_stories" -> STORY_MARK_READ_BODY
                     "save_stories" -> "const-string v0, \"$STORY_MENU_TAG\"\nreturn-void"
+                    "chat_animation" -> FRAGMENT_ANIMATION_BODY
+                    "chat_fragment", "chat_inbox" -> "return-void"
+                    "chat_legacy" -> LEGACY_CHAT_ANIMATION_BODY
                     "growth_notes" -> "const-string v0, \"$NOTES_TIP_SHEET\"\nconst-string v0, \"$NOTES_TIP_TYPE_ARG\"\nconst/4 v0, 0x0\nreturn-object v0"
                     "growth_story_card" -> "sget-object v0, LX/JVI;->A0E:LX/1BL;\nconst/4 v0, 0x1\nreturn v0"
                     "menu_settings" -> when {
@@ -89,7 +95,7 @@ class ControlDiscoveryTest {
                     else -> error("Missing synthetic resolver fixture for $key")
                 }
                 val staticGate = (key in pluginGates || key == "ai_search" || key == "growth_story_card") && !id.substringAfter('(').startsWith(')')
-                fixtureMethod(id, body, registers = if (key == "original_photo") 22 else 8, flags = AccessFlags.PUBLIC.value or
+                fixtureMethod(id, body, registers = when (key) { "original_photo" -> 22; "chat_animation", "chat_legacy" -> 5; else -> 8 }, flags = AccessFlags.PUBLIC.value or
                     if (staticGate) AccessFlags.STATIC.value else 0)
             }
         }
@@ -127,7 +133,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(91, found.values.sumOf { it.size })
+        assertEquals(95, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

@@ -7,6 +7,7 @@ Development version 0.13.0. The public download remains v0.8.0.
 ### New
 
 - **Allow chat bubbles** offers **Stock**, **Chat Heads** and **Native Bubbles** when Messenger's native routes are verified. Native mode uses its conversation notifications, long-lived shortcuts and embedded chat screen on Android 11 or newer. Account eligibility and Android's permissions still apply. Notification and conversation settings links include recovery guidance when a phone omits either page. Pause or Stock restores the original routing. Refs #19.
+- **Slide chats in and out** slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. It works for chats opened from the chat list and from search, and right-to-left languages slide from the left. Chat heads and bubbles keep their own animations, as do chats Messenger restores. The switch starts off, and Pause or Android's **Remove animations** setting keeps Messenger's own. A Galaxy S22 on Android 16 showed it from the chat list in both themes and from search in dark mode, and turning the switch off brought back the stock transitions. Opening a chat from a notification hasn't been checked on a phone yet. Refs #28.
 
 ### Changed and fixed
 
