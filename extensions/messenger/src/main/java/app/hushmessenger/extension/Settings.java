@@ -375,6 +375,93 @@ public final class Settings {
         return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) || original;
     }
 
+    private static Object legacyDrawerKey;
+
+    /** Replaced by the menu patch with constructors from the validated host build. */
+    public static Object legacyDrawerSection(Context context) {
+        return null;
+    }
+
+    /** Only the independent folder identity survives refreshes, never a context or a row. */
+    public static synchronized Object cachedLegacyDrawerKey(Object proposed) {
+        if (proposed == null) return null;
+        if (legacyDrawerKey == null) legacyDrawerKey = proposed;
+        return legacyDrawerKey.getClass() == proposed.getClass() ? legacyDrawerKey : null;
+    }
+
+    /** The legacy drawer can omit Settings entirely, so construct a separate native section. */
+    @SuppressWarnings("unchecked")
+    public static List addLegacyDrawerEntry(Object fragment, List sections) {
+        if (fragment == null || sections == null) return sections;
+        try {
+            java.lang.reflect.Method getContext = fragment.getClass().getMethod("getContext");
+            getContext.setAccessible(true);
+            Object current = getContext.invoke(fragment);
+            if (!(current instanceof Context)) return sections;
+            Context context = (Context) current;
+            Object section = legacyDrawerSection(context);
+            if (section == null) return sections;
+
+            Class<?> sectionClass = section.getClass();
+            java.lang.reflect.Field rowsField = sectionClass.getDeclaredField("A06");
+            if (rowsField.getType() != List.class) throw new IllegalArgumentException("Drawer rows changed");
+            rowsField.setAccessible(true);
+            Object rows = rowsField.get(section);
+            if (!(rows instanceof List) || ((List) rows).size() != 1)
+                throw new IllegalArgumentException("Drawer factory rows changed");
+            Object row = ((List) rows).get(0);
+            if (row == null) throw new IllegalArgumentException("Drawer factory row missing");
+            Class<?> rowClass = row.getClass();
+            java.lang.reflect.Field title = rowClass.getDeclaredField("A06");
+            java.lang.reflect.Field owner = rowClass.getDeclaredField("A00");
+            java.lang.reflect.Field key = rowClass.getDeclaredField("A03");
+            java.lang.reflect.Field metadata = rowClass.getDeclaredField("A04");
+            if (title.getType() != String.class || owner.getType() != Context.class
+                    || !key.getType().getName().endsWith("DrawerFolderKey")
+                    || !metadata.getType().getName().endsWith("HeterogeneousMap"))
+                throw new IllegalArgumentException("Drawer row fields changed");
+            title.setAccessible(true);
+            owner.setAccessible(true);
+            key.setAccessible(true);
+            metadata.setAccessible(true);
+            Object ownKey = key.get(row);
+            if (!"HushMessenger".equals(title.get(row)) || owner.get(row) != context
+                    || ownKey == null || !ownKey.getClass().getName().endsWith("SettingsFolderKey")
+                    || !key.getType().isInstance(ownKey) || metadata.get(row) == null
+                    || !metadata.getType().isInstance(metadata.get(row)))
+                throw new IllegalArgumentException("Drawer factory values changed");
+
+            boolean present = false;
+            // Validate the complete input even when an earlier section already contains our row.
+            for (Object originalSection : sections) {
+                if (originalSection == null || originalSection.getClass() != sectionClass)
+                    throw new IllegalArgumentException("Drawer section changed");
+                Object originalRows = rowsField.get(originalSection);
+                if (!(originalRows instanceof List)) throw new IllegalArgumentException("Drawer rows missing");
+                for (Object originalRow : (List) originalRows) {
+                    if (originalRow == null || originalRow.getClass() != rowClass)
+                        throw new IllegalArgumentException("Drawer row changed");
+                    Object originalKey = key.get(originalRow);
+                    Object originalMetadata = metadata.get(originalRow);
+                    Object originalTitle = title.get(originalRow);
+                    if (originalKey == null || !key.getType().isInstance(originalKey)
+                            || originalTitle == null || !(originalTitle instanceof String)
+                            || (originalMetadata != null && !metadata.getType().isInstance(originalMetadata)))
+                        throw new IllegalArgumentException("Drawer row values changed");
+                    if ("HushMessenger".equals(originalTitle) && originalKey.getClass() == ownKey.getClass())
+                        present = true;
+                }
+            }
+            if (present) return sections;
+            ArrayList result = new ArrayList(sections);
+            result.add(section);
+            return result;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+            hookFailedPrivately("menu_row", "Legacy drawer entry unavailable", error);
+            return sections;
+        }
+    }
+
     /** Appends a HushMessenger copy of the Menu tab's Settings folder row (one title String per row). */
     @SuppressWarnings("unchecked")
     public static void addMenuSettingsEntry(ArrayList list) {
@@ -423,8 +510,9 @@ public final class Settings {
     /** Opens settings for the HushMessenger folder row and returns null; other rows come back unchanged. */
     public static Object drawerFolderClicked(Object item) {
         if (item == null) return null;
+        boolean recognized = false;
+        Context context = null;
         try {
-            Context context = null;
             boolean titled = false, settingsKey = false;
             for (java.lang.reflect.Field f : item.getClass().getDeclaredFields()) {
                 if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
@@ -436,11 +524,19 @@ public final class Settings {
                 else if (value != null && value.getClass().getName().endsWith("SettingsFolderKey")) settingsKey = true;
             }
             if (!titled || !settingsKey || context == null) return item;
+            recognized = true;
             HostScreens.open(context, HostScreens.SETTINGS);
             return null;
-        } catch (Exception e) {
-            hookFailed("menu_row", "drawerFolderClicked failed", e);
-            return item;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+            hookFailedPrivately("menu_row", "Opening the drawer entry failed", error);
+            if (recognized) try {
+                android.widget.Toast.makeText(context, new SettingsText(context).get("settings_open_failed"),
+                        android.widget.Toast.LENGTH_LONG).show();
+            } catch (RuntimeException | LinkageError feedbackError) {
+                hookFailedPrivately("menu_row", "Drawer entry feedback unavailable", feedbackError);
+            }
+            // Our independent row has no native dispatcher, including when Android rejects the launch.
+            return recognized ? null : item;
         }
     }
 

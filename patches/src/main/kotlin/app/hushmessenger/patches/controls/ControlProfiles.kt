@@ -90,7 +90,7 @@ internal val PROFILE_346013370 = ControlProfile(
         "inbox_promotions" to setOf("LX/2Ee;->A0J()Z", "LX/2Ee;->A0K()Z"),
         "keep_unsent" to setOf("LX/VTZ;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
         "menu_settings" to setOf(
-            "LX/HBx;->Ax3(LX/0MG;)Ljava/util/ArrayList;", "LX/Jpx;->onClick(Landroid/view/View;)V",
+            "LX/9qQ;->A1i()V", "LX/HBx;->Ax3(LX/0MG;)Ljava/util/ArrayList;", "LX/Jpx;->onClick(Landroid/view/View;)V",
             "LX/NjG;->CAp(LX/4k1;I)V", "LX/WnD;->A0J(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HC4;->A05()Z", "LX/Jdr;->A05()Z"),
@@ -172,7 +172,7 @@ internal val PROFILE_346013423 = ControlProfile(
         "inbox_promotions" to setOf("LX/2Fj;->A0J()Z", "LX/2Fj;->A0K()Z"),
         "keep_unsent" to setOf("LX/M4U;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
         "menu_settings" to setOf(
-            "LX/HB5;->AxC(LX/0MJ;)Ljava/util/ArrayList;", "LX/Jq9;->onClick(Landroid/view/View;)V",
+            "LX/9uD;->A1i()V", "LX/HB5;->AxC(LX/0MJ;)Ljava/util/ArrayList;", "LX/Jq9;->onClick(Landroid/view/View;)V",
             "LX/Wh6;->CB5(LX/4nF;I)V", "LX/Wh7;->A0I(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HBB;->A05()Z", "LX/JdK;->A05()Z"),
@@ -254,7 +254,7 @@ internal val PROFILE_346013357 = ControlProfile(
         "inbox_promotions" to setOf("LX/2Ef;->A0J()Z", "LX/2Ef;->A0K()Z"),
         "keep_unsent" to setOf("LX/SM8;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
         "menu_settings" to setOf(
-            "LX/HEw;->Ax2(LX/0MG;)Ljava/util/ArrayList;", "LX/JwE;->onClick(Landroid/view/View;)V",
+            "LX/9rb;->A1i()V", "LX/HEw;->Ax2(LX/0MG;)Ljava/util/ArrayList;", "LX/JwE;->onClick(Landroid/view/View;)V",
             "LX/U8O;->CAm(LX/4jq;I)V", "LX/U8R;->A0J(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HEz;->A05()Z", "LX/JiI;->A05()Z"),
@@ -336,7 +336,7 @@ internal val PROFILE_346013374 = ControlProfile(
         "inbox_promotions" to setOf("LX/2Ee;->A0J()Z", "LX/2Ee;->A0K()Z"),
         "keep_unsent" to setOf("LX/VOA;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
         "menu_settings" to setOf(
-            "LX/HKK;->Ax0(LX/0MG;)Ljava/util/ArrayList;", "LX/JyZ;->onClick(Landroid/view/View;)V",
+            "LX/9se;->A1i()V", "LX/HKK;->Ax0(LX/0MG;)Ljava/util/ArrayList;", "LX/JyZ;->onClick(Landroid/view/View;)V",
             "LX/Khk;->CAn(LX/4lo;I)V", "LX/Khr;->A0I(Ljava/util/List;)V",
         ),
         "moments" to setOf("LX/HKQ;->A05()Z", "LX/Jk4;->A05()Z"),

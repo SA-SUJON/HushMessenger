@@ -48,6 +48,7 @@ internal const val PEOPLE_SEARCH_SOURCE = "PeopleYouMayKnowSectionDataSource"
 /** The story viewer requests its page of suggested people under this query name. */
 internal const val STORY_SUGGESTIONS_QUERY = "MsgrPeopleYouMayKnowQuery"
 internal const val DRAWER_FOLDER_SELECTED = "HomeDrawerFragmentBase.handleOnFolderSelected"
+internal const val DRAWER_REFRESH = "HomeDrawerFragmentBase.refreshDrawerItems"
 internal const val AVATAR_TAB_EVENT = "Lcom/facebook/xapp/messaging/composer/avatar/composertab/event/ActivateAvatarSticker;"
 internal const val COMPOSER_FACTORY = "Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;"
 internal const val SEARCH_CLEAR_TAG = "messenger_search_clear_button_tag"
@@ -134,6 +135,7 @@ internal val expectedHooks = mapOf(
     "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
+        "LX/9rv;->A1i()V",
         "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
         "LX/TxV;->CAo(LX/4jw;I)V",
         "LX/Txc;->A0I(Ljava/util/List;)V",
@@ -313,6 +315,8 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             if (method.name == "onClick" && method.returnType == "V" &&
                 method.parameterTypes == listOf("Landroid/view/View;") &&
                 DRAWER_FOLDER_SELECTED in strings) add("menu_settings")
+            if (method.returnType == "V" && method.parameterTypes.isEmpty() &&
+                !AccessFlags.STATIC.isSet(method.accessFlags) && DRAWER_REFRESH in strings) add("menu_settings")
             // The Litho sticker keyboard's tab list builder reads the avatar tab's activate event.
             if (method.returnType == IMMUTABLE_LIST && method.parameterTypes.isEmpty() &&
                 refs.any { it.toString().startsWith("$AVATAR_TAB_EVENT->") }) add("avatar_tabs")
@@ -619,7 +623,7 @@ internal fun List<Instruction>.branchTarget(index: Int): Int {
 }
 
 /** Instruction indexes a branch, a switch case or a catch handler can land on. */
-internal fun MutableMethod.jumpTargets(): Set<Int> {
+internal fun Method.jumpTargets(): Set<Int> {
     val code = implementation!!.instructions.toList()
     val addresses = IntArray(code.size + 1)
     for (i in code.indices) addresses[i + 1] = addresses[i] + code[i].codeUnits
@@ -816,7 +820,7 @@ internal fun MutableMethod.injectPeopleStory() {
     """.trimIndent(), ExternalLabel("skip_suggestions", skipped))
 }
 
-internal fun MutableMethod.validateMenuSettingsAdd() {
+internal fun Method.validateMenuSettingsAdd() {
     val impl = implementation ?: throw PatchException("Messenger controls: menu settings item builder has no code")
     val code = impl.instructions.toList()
     val returns = code.count { it.opcode == Opcode.RETURN_OBJECT }
@@ -837,7 +841,7 @@ internal fun MutableMethod.injectMenuSettingsAdd() {
     addInstructions(ret + 1, "return-object v$retReg")
 }
 
-internal fun MutableMethod.validateMenuSettingsBind() {
+internal fun Method.validateMenuSettingsBind() {
     val impl = implementation ?: throw PatchException("Messenger controls: menu settings binder has no code")
     val code = impl.instructions.toList()
     if (code.none { it.opcode == Opcode.RETURN_VOID }) throw PatchException("Messenger controls: menu settings binder has no normal exit")
@@ -859,7 +863,7 @@ internal fun MutableMethod.injectMenuSettingsBind() {
     }
 }
 
-internal fun MutableMethod.validateMenuDrawerAdd() {
+internal fun Method.validateMenuDrawerAdd() {
     if (returnType != "V") throw PatchException("Messenger controls: menu drawer items setter returns $returnType")
     if (parameterTypes != listOf("Ljava/util/List;")) throw PatchException("Messenger controls: menu drawer items setter takes ${parameterTypes.joinToString()}")
     val impl = implementation ?: throw PatchException("Messenger controls: menu drawer items setter has no code")
@@ -947,7 +951,7 @@ internal fun MutableMethod.injectOutgoingTyping() {
 }
 
 /** The Settings folder builder creates exactly one class: the Menu tab's folder row. */
-internal fun MutableMethod.menuFolderItemType(): String {
+internal fun Method.menuFolderItemType(): String {
     val types = implementation!!.instructions.filter { it.opcode == Opcode.NEW_INSTANCE }
         .map { ((it as ReferenceInstruction).reference as TypeReference).type }.toSet()
     return types.singleOrNull()
@@ -955,7 +959,7 @@ internal fun MutableMethod.menuFolderItemType(): String {
 }
 
 /** Messenger casts the tapped folder row just before its folder-selected trace section starts. */
-internal fun MutableMethod.menuFolderCastIndex(folderItemType: String): Int {
+internal fun Method.menuFolderCastIndex(folderItemType: String): Int {
     if (returnType != "V") throw PatchException("Messenger controls: drawer folder click returns $returnType")
     val impl = implementation ?: throw PatchException("Messenger controls: drawer folder click has no code")
     if (AccessFlags.STATIC.isSet(accessFlags) || parameterTypes != listOf("Landroid/view/View;") || impl.registerCount < 2) {
@@ -975,6 +979,47 @@ internal fun MutableMethod.menuFolderCastIndex(folderItemType: String): Int {
         ?: throw PatchException("Messenger controls: drawer folder click has ${casts.size} row casts before its marker, expected 1")
     if ((code[cast] as OneRegisterInstruction).registerA >= impl.registerCount) {
         throw PatchException("Messenger controls: drawer folder click row register is outside the method")
+    }
+    if ((cast + 1..marker).any { it in jumpTargets() }) {
+        throw PatchException("Messenger controls: drawer folder click can bypass its row cast")
+    }
+    // Other cases in this merged click handler may branch beyond the marker. Only native row handling
+    // must be dominated by the selected cast, where the consuming settings hook will be inserted.
+    val addresses = IntArray(code.size + 1)
+    for (i in code.indices) addresses[i + 1] = addresses[i] + code[i].codeUnits
+    val indexAt = code.indices.associateBy { addresses[it] }
+    val pending = ArrayDeque<Int>()
+    val seen = mutableSetOf<Int>()
+    pending.add(0)
+    while (pending.isNotEmpty()) {
+        val index = pending.removeFirst()
+        if (index == cast || !seen.add(index)) continue
+        val instruction = code[index]
+        val reference = (instruction as? ReferenceInstruction)?.reference
+        val rowOwner = (reference as? FieldReference)?.definingClass
+            ?: (reference as? DexMethodReference)?.definingClass
+        if (index > cast && rowOwner == folderItemType) {
+            throw PatchException("Messenger controls: drawer folder handling can bypass its settings hook")
+        }
+        if (instruction is OffsetInstruction && instruction.opcode != Opcode.FILL_ARRAY_DATA) {
+            val landing = indexAt[addresses[index] + instruction.codeOffset]
+                ?: throw PatchException("Messenger controls: drawer folder click branch is invalid")
+            if (instruction.opcode == Opcode.PACKED_SWITCH || instruction.opcode == Opcode.SPARSE_SWITCH) {
+                val payload = code[landing] as? SwitchPayload
+                    ?: throw PatchException("Messenger controls: drawer folder click switch is invalid")
+                payload.switchElements.forEach { element ->
+                    pending.add(indexAt[addresses[index] + element.offset]
+                        ?: throw PatchException("Messenger controls: drawer folder click case is invalid"))
+                }
+            } else pending.add(landing)
+        }
+        if (instruction.opcode.canThrow()) impl.tryBlocks.filter {
+            addresses[index] >= it.startCodeAddress && addresses[index] < it.startCodeAddress + it.codeUnitCount
+        }.forEach { block -> block.exceptionHandlers.forEach { handler ->
+            pending.add(indexAt[handler.handlerCodeAddress]
+                ?: throw PatchException("Messenger controls: drawer folder click handler is invalid"))
+        } }
+        if (instruction.opcode.canContinue() && index + 1 < code.size) pending.add(index + 1)
     }
     return cast
 }

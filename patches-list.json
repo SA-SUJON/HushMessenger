@@ -1,6 +1,6 @@
 {
     "NOTE": "Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand.",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "patches": [
         {
             "name": "Allow chat bubbles",
@@ -1359,7 +1359,7 @@
         },
         {
             "name": "Open settings from menu",
-            "description": "Adds a HushMessenger entry to the Menu tab. Always on.",
+            "description": "Adds a HushMessenger entry to the Menu tab and side menu. Always on.",
             "default": true,
             "category": "Navigation",
             "dependencies": [

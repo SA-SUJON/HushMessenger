@@ -1643,7 +1643,7 @@ public class CompatReport {
                     found.get("avatar_tabs").add(method);
                 }
 
-                // menu_settings: Settings folder builder, grid binder and the drawer's folder click
+                // menu_settings: Settings folder builder, grid binder, folder click and legacy section refresh.
                 if ("Ljava/util/ArrayList;".equals(method.getReturnType()) && paramTypes.size() == 1 && !isStatic &&
                     strings.stream().anyMatch(s -> s.contains("settingsfolder.folderitem.SettingsFolderItem"))) {
                     found.get("menu_settings").add(method);
@@ -1655,6 +1655,10 @@ public class CompatReport {
                 if ("onClick".equals(method.getName()) && "V".equals(method.getReturnType()) &&
                     paramTypes.equals(List.of("Landroid/view/View;")) &&
                     strings.contains("HomeDrawerFragmentBase.handleOnFolderSelected")) {
+                    found.get("menu_settings").add(method);
+                }
+                if ("V".equals(method.getReturnType()) && paramTypes.isEmpty() && !isStatic &&
+                    strings.contains("HomeDrawerFragmentBase.refreshDrawerItems")) {
                     found.get("menu_settings").add(method);
                 }
             }

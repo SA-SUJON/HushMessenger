@@ -363,7 +363,7 @@ private val menuRowResources = resourcePatch(description = "Record HushMessenger
 @Suppress("unused")
 val menuSettingsPatch = bytecodePatch(
     name = "Open settings from menu",
-    description = "Adds a HushMessenger entry to the Menu tab. Always on.",
+    description = "Adds a HushMessenger entry to the Menu tab and side menu. Always on.",
     default = true,
 ) {
     category("Navigation")
@@ -376,20 +376,35 @@ val menuSettingsPatch = bytecodePatch(
         val bindMethod = methods.single { it.returnType == "V" && it.parameterTypes.size == 2 }
         val drawerMethod = methods.single { it.returnType == "V" && it.parameterTypes == listOf("Ljava/util/List;") }
         val clickMethod = methods.single { it.name == "onClick" }
+        val refreshMethod = methods.single { it.returnType == "V" && it.parameterTypes.isEmpty() }
+        // Inspect immutable sources and assemble the replacement before requesting any mutable target.
+        addMethod.validateMenuSettingsAdd()
+        bindMethod.validateMenuSettingsBind()
+        drawerMethod.validateMenuDrawerAdd()
+        val folderItemType = addMethod.menuFolderItemType()
+        clickMethod.menuFolderCastIndex(folderItemType)
+        val legacy = prepareLegacyDrawer(refreshMethod, addMethod, classDefBy(SETTINGS)) { classDefByOrNull(it) }
+        val controls = classDefBy(HOST_SCREENS).methods.single { it.hookId() == BUNDLED_CONTROLS }
+        MutableMethod(controls).writeBundledControls(bundledControls + "menu_row")
         val addTarget = mutableClassDefBy(addMethod.definingClass).methods.single { it.hookId() == addMethod.hookId() }
         val bindTarget = mutableClassDefBy(bindMethod.definingClass).methods.single { it.hookId() == bindMethod.hookId() }
         val drawerTarget = mutableClassDefBy(drawerMethod.definingClass).methods.single { it.hookId() == drawerMethod.hookId() }
         val clickTarget = mutableClassDefBy(clickMethod.definingClass).methods.single { it.hookId() == clickMethod.hookId() }
-        // Every target, including encoding limits, must pass before the first instruction changes.
-        addTarget.validateMenuSettingsAdd()
-        bindTarget.validateMenuSettingsBind()
-        drawerTarget.validateMenuDrawerAdd()
-        val folderItemType = addTarget.menuFolderItemType()
-        clickTarget.menuFolderCastIndex(folderItemType)
+        val refreshTarget = mutableClassDefBy(refreshMethod.definingClass).methods.single { it.hookId() == refreshMethod.hookId() }
+        val extension = mutableClassDefBy(SETTINGS)
+        val stub = extension.methods.single { it.hookId() == LEGACY_SECTION }
+        // MutableMethod.implementation has no setter. Keep both method indexes in sync when replacing it.
+        val direct = extension.directMethods
+        val factory = MutableMethod(legacy.factory)
+        extension.methods.remove(stub)
+        direct.remove(stub)
+        extension.methods.add(factory)
+        direct.add(factory)
         addTarget.injectMenuSettingsAdd()
         bindTarget.injectMenuSettingsBind()
         drawerTarget.injectMenuDrawerAdd()
         clickTarget.injectMenuFolderClick(folderItemType)
+        refreshTarget.injectLegacyDrawer(legacy.refresh)
         recordControl("menu_row")
         menuRowApplied = true
     }

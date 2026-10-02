@@ -65,6 +65,7 @@ hook hide_read_receipts LX/AX0;->run()V
 hook inbox_promotions LX/2Ef;->A0J()Z
 hook inbox_promotions LX/2Ef;->A0K()Z
 hook keep_unsent LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V
+hook menu_settings LX/9rv;->A1i()V
 hook menu_settings LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;
 hook menu_settings LX/Jwp;->onClick(Landroid/view/View;)V
 hook menu_settings LX/TxV;->CAo(LX/4jw;I)V
