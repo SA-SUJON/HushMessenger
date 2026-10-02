@@ -60,6 +60,7 @@ public final class SettingsActivity extends Activity {
     private final List<View> tabLines = new ArrayList<>();
     private TextView searchStatus, enabledCount, setupNote;
     private Button safeModeAction;
+    private Button drawerSearchLink;
     private LinearLayout emptyState;
     static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102;
     private String documentExport;
@@ -419,6 +420,10 @@ public final class SettingsActivity extends Activity {
         searchStatus.setTag("search_status");
         searchStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         ui.add(content, searchStatus, 8);
+        drawerSearchLink = ui.button(text.get("drawer_search"));
+        drawerSearchLink.setTag("find_drawer_icon");
+        drawerSearchLink.setOnClickListener(view -> showPage("app"));
+        ui.add(content, drawerSearchLink, 8);
         LinearLayout group = null;
         String last = "";
         for (String[] spec : CONTROLS) {
@@ -557,7 +562,14 @@ public final class SettingsActivity extends Activity {
         boolean menuRow = Settings.installed.contains("menu_row");
         // A Root Mount install has no drawer entry to mention or hide.
         boolean hosted = HostScreens.hosted(this);
-        TextView accessHelp = ui.text(text.get((hosted ? "access_help_hosted" : "access_help") + (menuRow ? "_menu" : "")), 14, ui.muted, false);
+        boolean drawerAlias = false;
+        if (!hosted) try {
+            getPackageManager().getActivityInfo(new ComponentName(getPackageName(), DRAWER_ALIAS), PackageManager.MATCH_DISABLED_COMPONENTS);
+            drawerAlias = true;
+        } catch (PackageManager.NameNotFoundException | SecurityException unavailable) {
+            // Some bundles have settings activities but omit the launcher alias.
+        }
+        TextView accessHelp = ui.text(text.get((hosted ? "access_help_hosted" : drawerAlias ? "access_help" : "access_help_missing") + (menuRow ? "_menu" : "")), 14, ui.muted, false);
         accessHelp.setTag("access_help");
         ui.add(access, accessHelp, 0);
         Button restart = ui.button(text.get("restart"));
@@ -565,9 +577,13 @@ public final class SettingsActivity extends Activity {
         restart.setOnClickListener(view -> HostScreens.open(this, HostScreens.RESTART));
         ui.add(access, restart, 14);
         // Without the Menu row, a launcher that has no app shortcuts would leave no way back in.
-        if (menuRow && !hosted) {
+        if (menuRow && drawerAlias && !hosted) {
             ui.rule(access, 14);
             ui.add(access, controlRow("hide_drawer_icon", text.format("hide_drawer_icon"), text.format("hide_drawer_icon_help"), false), 14);
+        } else {
+            TextView drawerHelp = ui.text(text.get(hosted ? "drawer_root" : !drawerAlias ? "drawer_missing" : "drawer_requires_menu"), 14, ui.muted, false);
+            drawerHelp.setTag("drawer_help");
+            ui.add(access, drawerHelp, 14);
         }
         ui.add(content, access, 12);
         ui.add(content, ui.heading(text.get("appearance")), 22);
@@ -959,6 +975,8 @@ public final class SettingsActivity extends Activity {
 
     private void filterControls(String query) {
         String needle = query.trim().toLowerCase(Locale.ROOT);
+        String drawerWords = "hide app drawer icon launcher settings " + text.get("hide_drawer_icon");
+        drawerSearchLink.setVisibility(controlRows.isEmpty() || (!needle.isEmpty() && drawerWords.toLowerCase(Locale.ROOT).contains(needle)) ? View.VISIBLE : View.GONE);
         int visible = 0;
         for (int i = 0; i < controlRows.size(); i++) {
             String[] spec = installedControls.get(i);

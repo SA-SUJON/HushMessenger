@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- App explains why the drawer-icon switch is absent on Root Mount, bundles without a launcher alias, or installations without the Menu row. Search links to the relevant App setting. A disabled but installed alias remains configurable, and shortcuts alone cannot hide the only reliable icon. Refs #6.
+
 - The heap verifier and its regression tests now pass the pinned formatter. Their syntax trees and assertions are unchanged.
 
 - Keep unsent activity now advances only when a legacy unsend with an identifier is intercepted. Reading ordinary or previously retained messages leaves the timestamp alone. Status checks also sample pixels from the rendered screen and inspect Android's accessibility node in both themes.

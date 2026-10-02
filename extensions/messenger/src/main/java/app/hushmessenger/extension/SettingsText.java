@@ -101,6 +101,12 @@ final class SettingsText {
         ENGLISH.put("access_help_hosted", "Long-press Messenger's icon for Patch controls or Restart Messenger. A Root Mount install has no separate settings icon in your app drawer.");
         ENGLISH.put("access_help_hosted_menu", "Long-press Messenger's icon for Patch controls or Restart Messenger, or open HushMessenger settings from its row in Messenger's Menu tab. A Root Mount install has no separate settings icon in your app drawer.");
         ENGLISH.put("access_help_menu", "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from its row in Messenger's Menu tab or from your app drawer.");
+        ENGLISH.put("access_help_missing", "Long-press Messenger's icon for Patch controls or Restart Messenger. This bundle has no settings icon in the app drawer.");
+        ENGLISH.put("access_help_missing_menu", "Open HushMessenger from Messenger's Menu tab, or long-press Messenger's icon for Patch controls or Restart Messenger. This bundle has no settings icon in the app drawer.");
+        ENGLISH.put("drawer_search", "App drawer icon settings");
+        ENGLISH.put("drawer_root", "Hide app drawer icon isn't needed on Root Mount. There is no separate settings icon to hide.");
+        ENGLISH.put("drawer_missing", "Hide app drawer icon is unavailable because this bundle has no settings launcher alias.");
+        ENGLISH.put("drawer_requires_menu", "Hide app drawer icon requires the HushMessenger row in Messenger's Menu tab. The icon stays available when shortcuts are the only other entry route.");
         ENGLISH.put("restart", "Restart Messenger");
         ENGLISH.put("restarting", "Restarting Messenger...");
         ENGLISH.put("restart_unavailable", "Couldn't restart. Close Messenger, then open it from your app drawer.");

@@ -218,6 +218,26 @@ public class SetupSummaryTest {
         assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
     }
 
+    @Test public void aMissingAliasExplainsItsAbsenceAndSearchOpensTheAppPage() throws Exception {
+        installedFeatures("people", "menu_row");
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            View root = screen.get().getWindow().getDecorView();
+            assertNull(root.findViewWithTag("hide_drawer_icon"));
+            assertTrue(((android.widget.TextView) root.findViewWithTag("drawer_help")).getText().toString().contains("no settings launcher alias"));
+            assertFalse(((android.widget.TextView) root.findViewWithTag("access_help")).getText().toString().contains("or from your app drawer"));
+            android.widget.EditText search = root.findViewWithTag("find_control");
+            search.setText("drawer icon");
+            View link = root.findViewWithTag("find_drawer_icon");
+            assertEquals(View.VISIBLE, link.getVisibility());
+            link.performClick();
+            assertEquals(View.VISIBLE, root.findViewWithTag("app_page").getVisibility());
+            assertTrue(root.findViewWithTag("drawer_help").isShown());
+            root.findViewWithTag("tab_controls").performClick();
+            search.setText("stickers");
+            assertEquals(View.GONE, link.getVisibility());
+        }
+    }
+
     @Test public void withoutTheMenuRowTheDrawerIconCantBeHiddenAndComesBack() throws Exception {
         installedFeatures("people");
         var app = RuntimeEnvironment.getApplication();
@@ -234,6 +254,7 @@ public class SetupSummaryTest {
                 View root = screen.get().getWindow().getDecorView();
                 root.findViewWithTag("tab_app").performClick();
                 assertNull(root.findViewWithTag("hide_drawer_icon"));
+                assertTrue(((android.widget.TextView) root.findViewWithTag("drawer_help")).getText().toString().contains("requires the HushMessenger row"));
             }
         } finally {
             Settings.preferences.edit().putBoolean("hide_drawer_icon", false).commit();
