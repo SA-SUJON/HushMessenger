@@ -1091,7 +1091,11 @@ public final class SettingsActivity extends Activity {
         documentStatus.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
-                android.content.pm.ProviderInfo provider = getPackageManager().resolveContentProvider(uri.getAuthority(), 0);
+                String authority = uri.getAuthority();
+                if (authority == null || authority.isEmpty()) throw new SecurityException("Choices document has no provider");
+                // ContentResolver strips Android's userId@ prefix before resolving a provider.
+                authority = authority.substring(authority.lastIndexOf('@') + 1);
+                android.content.pm.ProviderInfo provider = getPackageManager().resolveContentProvider(authority, 0);
                 if (provider != null && (getPackageName().equals(provider.packageName) ||
                         (provider.applicationInfo != null && provider.applicationInfo.uid == android.os.Process.myUid())))
                     throw new SecurityException("Choices document belongs to this app");

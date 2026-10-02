@@ -254,6 +254,81 @@ public class ChoiceBackupTest {
         }
     }
 
+    @Test public void pickerCannotUseAUserPrefixedPrivateProvider() throws Exception {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            SettingsActivity activity = screen.get();
+            android.content.pm.ProviderInfo provider = new android.content.pm.ProviderInfo();
+            provider.name = "PrivateProvider";
+            provider.authority = "choices.user.private";
+            provider.packageName = activity.getPackageName();
+            provider.applicationInfo = new android.content.pm.ApplicationInfo();
+            provider.applicationInfo.uid = android.os.Process.myUid();
+            var owner = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
+            owner.providers = new android.content.pm.ProviderInfo[] {provider};
+            Shadows.shadowOf(activity.getPackageManager()).installPackage(owner);
+            for (String authority : new String[] {"0@choices.user.private", "0%40choices.user.private"}) {
+                Uri uri = Uri.parse("content://" + authority + "/sentinel");
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                var reads = new java.util.concurrent.atomic.AtomicInteger();
+                ByteArrayInputStream input = new ByteArrayInputStream(
+                    (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8)) {
+                    @Override public synchronized int read(byte[] bytes, int offset, int length) {
+                        reads.incrementAndGet();
+                        return super.read(bytes, offset, length);
+                    }
+                };
+                Shadows.shadowOf(activity.getContentResolver()).registerOutputStream(uri, output);
+                Shadows.shadowOf(activity.getContentResolver()).registerInputStream(uri, input);
+                Map<String, ?> before = Settings.preferences.getAll();
+                ShadowToast.reset();
+                activity.getWindow().getDecorView().findViewWithTag("read_choices_file").performClick();
+                activity.onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+                awaitToast("Not a valid");
+                assertEquals(before, Settings.preferences.getAll());
+                assertEquals(0, reads.get());
+                ShadowToast.reset();
+                activity.getWindow().getDecorView().findViewWithTag("save_choices_file").performClick();
+                activity.onActivityResult(SettingsActivity.SAVE_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+                awaitToast("Couldn't export");
+                assertEquals(0, output.size());
+            }
+        }
+    }
+
+    @Test public void userPrefixedExternalDocumentsStillRoundTrip() throws Exception {
+        Settings.installed = new HashSet<>(Set.of("stories"));
+        Settings.preferences.edit().putBoolean("stories", false).commit();
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            SettingsActivity activity = screen.get();
+            var provider = new android.content.pm.ProviderInfo();
+            provider.name = "DocumentProvider";
+            provider.authority = "choices.external";
+            provider.packageName = "org.example.documents";
+            provider.applicationInfo = new android.content.pm.ApplicationInfo();
+            provider.applicationInfo.uid = android.os.Process.myUid() + 1;
+            var owner = new android.content.pm.PackageInfo();
+            owner.packageName = provider.packageName;
+            owner.applicationInfo = provider.applicationInfo;
+            owner.providers = new android.content.pm.ProviderInfo[] {provider};
+            Shadows.shadowOf(activity.getPackageManager()).installPackage(owner);
+            Uri uri = Uri.parse("content://0@choices.external/backup");
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            Shadows.shadowOf(activity.getContentResolver()).registerOutputStream(uri, output);
+            Shadows.shadowOf(activity.getContentResolver()).registerInputStream(uri,
+                new ByteArrayInputStream((ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8)));
+            ShadowToast.reset();
+            activity.getWindow().getDecorView().findViewWithTag("save_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.SAVE_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Choices file saved");
+            assertEquals(ChoiceCodec.encode(Settings.preferences, Settings.installed), output.toString(StandardCharsets.UTF_8));
+            ShadowToast.reset();
+            activity.getWindow().getDecorView().findViewWithTag("read_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Restored 1 choice");
+            assertTrue(Settings.preferences.getBoolean("stories", false));
+        }
+    }
+
     @Test public void slowImportCannotOverwriteANewerImportOrChoice() throws Exception {
         for (boolean clipboard : new boolean[] {true, false}) {
             try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
