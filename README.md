@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="CHANGELOG.md#unreleased"><img src="https://img.shields.io/badge/development-0.9.0-0084FF" alt="Development version 0.9.0"></a>
+  <a href="CHANGELOG.md#unreleased"><img src="https://img.shields.io/badge/development-0.10.0-0084FF" alt="Development version 0.10.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -12,7 +12,7 @@
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 31 patches. 28 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-Main builds v0.9.0. It hasn't been published. Morphe's remote source and the download instructions below use public v0.8.0. See [Unreleased](CHANGELOG.md#unreleased) for the development changes.
+Main builds v0.10.0. It hasn't been published. Morphe's remote source and the download instructions below use public v0.8.0. See [Unreleased](CHANGELOG.md#unreleased) for the development changes.
 
 **[Add HushMessenger to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushMessenger)**
 
@@ -29,6 +29,8 @@ Main builds v0.9.0. It hasn't been published. Morphe's remote source and the dow
 For a local source, download [`patches-0.8.0.mpp`](https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.8.0) and add it through **Sources > + > Local**. A local source won't update itself. The `.mpp` file is a patch bundle, not an installable Messenger APK. These source steps follow [Morphe's source guide](https://github.com/MorpheApp/morphe-manager/blob/main/docs/patch-sources.md). Morphe Desktop can load the same source URL, and the command below lists its 31 entries. Source refreshes download patches. They do not modify an installed Messenger app. S25 runs a patched build, updated in place with its existing sign-in preserved. S22 now runs a patched build too.
 
 ### If something doesn't work
+
+The **HushMessenger settings** icon belongs to the same installed app as Messenger. Uninstalling either icon removes Messenger and its local data. Use **App > Hide app drawer icon** to hide only the settings entry. Refs [#26](https://github.com/SysAdminDoc/HushMessenger/issues/26).
 
 - **Can't find the settings:** Long-press the Messenger icon and tap **Patch controls**. Bundles with a settings launcher alias also offer **HushMessenger settings** in the app drawer. The Menu tab has a **HushMessenger** row when that patch is included. **Hide app drawer icon** appears in App only when both the alias and Menu route are available. Root Mount has no separate icon. App explains missing routes, and searching for “drawer icon” links to that explanation or toggle. If none of the entry routes appear, refresh the source and patch Messenger again.
 - **Switches have no effect:** The settings must be embedded in the patched Messenger APK. A separate settings preview cannot change stock Messenger. Both test phones run patched builds with the embedded controls. Refreshing a Morphe source only downloads patches. Use **Restart Messenger** after changing inbox options or the Meta AI tab, which only changes on a restart, even when you pause.
@@ -113,7 +115,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
   <img src="assets/settings-light.png" width="300" alt="Controls tab in the light theme, with search and category filters">
 </p>
 
-These screenshots were captured from v0.9.0 embedded settings on 2026-10-01. Both tabs and themes were also checked at 200% text size. The separate developer preview has no app-drawer entry and cannot change Messenger.
+These screenshots were captured from v0.10.0 embedded settings on 2026-10-02. Both tabs and themes were also checked at 200% text size. The separate developer preview has no app-drawer entry and cannot change Messenger.
 
 Settings use stable page and category IDs, so changing the language keeps navigation and saved choices intact. English is the fallback. The `en-XA` and `ar-XB` test languages expand or mirror the actual text, including accessible labels and count messages. Multi-digit numbers retain their reading order. The settings screen doesn't depend on Messenger's UI resource IDs. The launcher shortcuts add two string resources and preserve the existing resource values.
 
@@ -149,7 +151,7 @@ Messenger already has chat heads. Development settings can also select its nativ
 
 **Bubble modes in the development build.** **Stock** leaves Messenger's routing alone. **Chat Heads** selects its overlay route. Turn on Messenger's **Settings > Chat heads** and grant **Appear on top** if prompted. The checked Samsung Android 16 installation needed **Unrestricted** battery use for chat heads to arrive in the background. Other phones may differ.
 
-**Native Bubbles** selects Messenger's existing conversation-notification route on Android 11 or newer. Your account must still qualify, and Android must allow Messenger's bubbles under app info > **Notifications**. The settings offer guarded links to the notification and conversation pages, with recovery guidance if the phone has no matching page. An incoming owned-message test passed on Samsung Android 16 using the native-route prototype. The v0.9.0 embedded build also opened that conversation as a bubble, collapsed to the home screen and restored stock routing while paused. Restart Messenger after switching modes. Turning the control off or pausing restores stock routing without forgetting the saved choice. Hosts without validated notification, shortcut and embedded-activity routes keep stock behavior. Custom-ROM and low-memory-phone behavior remain unverified. Android's touch protections are unchanged. See [Android's bubble requirements](https://developer.android.com/develop/ui/views/notifications/bubbles) and [issue #19](https://github.com/SysAdminDoc/HushMessenger/issues/19). Public v0.8.0 has the older eligibility control.
+**Native Bubbles** selects Messenger's existing conversation-notification route on Android 11 or newer. Your account must still qualify, and Android must allow Messenger's bubbles. Use **Android bubble settings** below the mode buttons. The general notification page on some Samsung phones doesn't expose that option. Settings also offer guarded links to the notification and conversation pages, with recovery guidance if the phone has no matching page. An incoming owned-message test passed on Samsung Android 16 using the native-route prototype. The v0.9.0 embedded build also opened that conversation as a bubble, collapsed to the home screen and restored stock routing while paused. Restart Messenger after switching modes. Turning the control off or pausing restores stock routing without forgetting the saved choice. Hosts without validated notification, shortcut and embedded-activity routes keep stock behavior. Custom-ROM and low-memory-phone behavior remain unverified. Android's touch protections are unchanged. See [Android's bubble requirements](https://developer.android.com/develop/ui/views/notifications/bubbles) and [issue #19](https://github.com/SysAdminDoc/HushMessenger/issues/19). Public v0.8.0 has the older eligibility control.
 
 **Photo quality.** The gallery picker has an **HD** switch above your photos, and Messenger remembers it between sends. A 4032x3024 photo sent with HD off arrived at 2048x1536. With HD on it arrived at the full 4032x3024, but Messenger still re-encoded it on the phone first, so a 6.4 MB photo went out as about 1.8 MB.
 
@@ -232,13 +234,13 @@ On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.a
 
 The S25 took each update in place with the same signing key as its installed Messenger and Facebook apps, keeping its original install date, its sign-in and 19 enabled controls. With the v0.5.0 patch code it passed voice calls, one-to-one notifications, silence for muted chats, facebook.com links opening the Facebook app, and a same-key update and rollback that kept all data. Turning switches on and off showed the expected change for Facebook shortcuts, stories and notes, the Meta AI button, the "Ask Meta AI" search button, People You May Know on the Notifications tab, external links, system emoji and the avatar sticker tab. A two-phone check in an end-to-end encrypted chat showed no typing indicator with the switch on and the usual one while paused, and messages still arrived. Restart Messenger refuses requests from other apps, while the long-press shortcut and the App tab button still restart into the signed-in chat list. At Android's largest font size the chat list, chats and settings stayed usable. The S22 now runs a patched build as well.
 
-The local suite has 132 Kotlin tests, 375 Android unit tests and 47 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and 11 warnings, including two package-visibility notices for queries restricted to this app.
+The local suite has 132 Kotlin tests, 397 Android unit tests and 47 Python checks. It covers separate patch selection, changed targets, feature availability, pause, saved choices, search and typed ad filtering. Release builds run locally. Android lint reports no errors and 11 warnings, including two package-visibility notices for queries restricted to this app.
 
 For v0.8.0, Morphe Desktop 1.18.0 applied all 31 patches, Material You included, to private copies of all 21 supported builds with a 1024 MB Java heap, and `scripts/verify_patch_heap.py` passed every output. One build from each of the five naming groups (`346013440`, `346013372`, `346013423`, `346013357` and `346013374`) was also patched and signed, and Android verified each v3 signature. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control S25 build selected only **Hide People You May Know**: it changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check. On 2026-09-30, builds `346013394` and `346013423` took all 27 patches in Desktop 1.17.0 too, and both outputs passed Android's v3 signature check and 16KB alignment. Later that day the 14 single-density builds did the same. Every one of the 21 builds has a committed hook record from `scripts/CompatReport.java`, and a test fails the build if a record and the patch code disagree.
 
-The v0.9.0 development bundle also applied all 31 patches to all 21 supported builds at 1024 MB. Each compiled output had its native-route capability checked, so falling back to unsupported couldn't count as native validation. The stock APK checksums stayed unchanged.
+The v0.10.0 development bundle also applied all 31 patches to all 21 supported builds at 1024 MB. Each compiled output had its native-route capability checked, so falling back to unsupported couldn't count as native validation. The stock APK checksums stayed unchanged.
 
-The current screenshots show v0.9.0 inside patched Messenger on the S22. Both pages and themes were checked there at 200% text, including the bubble mode buttons. Earlier checks used a clearly marked standalone UI preview, and the mirrored test language preserved multi-digit counts there. Automated tests cover API 28, 30 and 36, short windows at 200% text, state restoration and accessible actions. Crash-recovery fixtures also cover API 37. These checks verify settings behavior. Live TalkBack speech hasn't been tested yet.
+The current screenshots show v0.10.0 inside patched Messenger on the S22. Both pages and themes were checked there at 200% text, including the bubble mode buttons. Earlier checks used a clearly marked standalone UI preview, and the mirrored test language preserved multi-digit counts there. Automated tests cover API 28, 30 and 36, short windows at 200% text, state restoration and accessible actions. Crash-recovery fixtures also cover API 37. These checks verify settings behavior. Live TalkBack speech hasn't been tested yet.
 
 Before patching, the stock apps on S22 and S25 exchanged messages between two owned accounts in an end-to-end encrypted chat, and both phones showed the messages and read receipts. HTTP and HTTPS link tests on S22 confirmed the stock external-browser switch works.
 
@@ -262,12 +264,12 @@ python -m unittest discover -s scripts/tests -v
 To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the dexlib2 3.0.9 and Guava 33.2.1-jre JARs from the Gradle cache:
 
 ```powershell
-python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.9.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>" --java "$env:JAVA_HOME\bin\java.exe"
+python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.10.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>" --java "$env:JAVA_HOME\bin\java.exe"
 ```
 
 Each build runs in its own temporary folder with all patches selected and a 1024 MB heap. The check verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
-The output from main is `patches/build/libs/patches-0.9.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output from main is `patches/build/libs/patches-0.10.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 28 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 

@@ -530,23 +530,29 @@ public final class SettingsActivity extends Activity {
         ui.add(content, modes, 8);
         ui.add(content, ui.text(text.get(Settings.available("bubbles") ? "bubble_help" :
             Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable"), 13, ui.muted, false), 8);
+        if (Build.VERSION.SDK_INT >= 30) {
+            Button permissions = ui.button(text.get("bubble_permissions"));
+            permissions.setTag("bubble_permissions");
+            permissions.setOnClickListener(view -> openNotificationSettings(android.provider.Settings.ACTION_APP_NOTIFICATION_BUBBLE_SETTINGS));
+            ui.add(content, permissions, 8);
+        }
         Button notifications = ui.button(text.get("bubble_notifications"));
         notifications.setTag("bubble_notifications");
-        notifications.setOnClickListener(view -> openNotificationSettings(false));
+        notifications.setOnClickListener(view -> openNotificationSettings(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS));
         ui.add(content, notifications, 8);
         if (Build.VERSION.SDK_INT >= 30) {
             Button conversations = ui.button(text.get("bubble_conversations"));
             conversations.setTag("bubble_conversations");
-            conversations.setOnClickListener(view -> openNotificationSettings(true));
+            conversations.setOnClickListener(view -> openNotificationSettings("android.settings.CONVERSATION_SETTINGS"));
             ui.add(content, conversations, 8);
         }
     }
 
-    private void openNotificationSettings(boolean conversations) {
-        // AOSP exposes this action to system apps; vendor phones may omit its activity.
-        Intent intent = new Intent(conversations ? "android.settings.CONVERSATION_SETTINGS" :
-            android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-        if (!conversations) intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+    private void openNotificationSettings(String action) {
+        // The conversation action may be restricted or absent on a vendor phone.
+        Intent intent = new Intent(action);
+        if (!"android.settings.CONVERSATION_SETTINGS".equals(action))
+            intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
         // Samsung's settings homepage can otherwise reuse an unrelated screen for a new deep link.
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         try {
@@ -670,6 +676,11 @@ public final class SettingsActivity extends Activity {
             TextView drawerHelp = ui.text(text.get(hosted ? "drawer_root" : !drawerAlias ? "drawer_missing" : "drawer_requires_menu"), 14, ui.muted, false);
             drawerHelp.setTag("drawer_help");
             ui.add(access, drawerHelp, 14);
+        }
+        if (drawerAlias && !hosted) {
+            TextView sharedInstall = ui.text(text.get("shared_install_help"), 14, ui.muted, false);
+            sharedInstall.setTag("shared_install_help");
+            ui.add(access, sharedInstall, 12);
         }
         ui.add(content, access, 12);
         ui.add(content, ui.heading(text.get("appearance")), 22);

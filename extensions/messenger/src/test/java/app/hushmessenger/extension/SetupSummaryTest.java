@@ -235,6 +235,23 @@ public class SetupSummaryTest {
         assertNotEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, packages.getComponentEnabledSetting(alias));
     }
 
+    @Test public void drawerAliasExplainsThatUninstallingItRemovesMessenger() throws Exception {
+        installedFeatures("people", "menu_row");
+        var app = RuntimeEnvironment.getApplication();
+        Shadows.shadowOf(app.getPackageManager()).addActivityIfNotPresent(
+            new android.content.ComponentName(app.getPackageName(), SettingsActivity.DRAWER_ALIAS));
+        for (boolean light : new boolean[] {false, true}) {
+            Settings.preferences.edit().putBoolean("light", light).commit();
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                android.widget.TextView help = screen.get().getWindow().getDecorView().findViewWithTag("shared_install_help");
+                assertNotNull(help);
+                assertTrue(help.getText().toString().contains("removes Messenger and its local data"));
+                assertTrue(help.getText().toString().contains("Hide app drawer icon"));
+                assertNotEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, help.getImportantForAccessibility());
+            }
+        }
+    }
+
     @Test public void aMissingAliasExplainsItsAbsenceAndSearchOpensTheAppPage() throws Exception {
         installedFeatures("people", "menu_row");
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {

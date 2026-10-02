@@ -98,6 +98,7 @@ final class SettingsText {
         ENGLISH.put("access_help", "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from your app drawer.");
         ENGLISH.put("hide_drawer_icon", "Hide app drawer icon");
         ENGLISH.put("hide_drawer_icon_help", "Removes HushMessenger settings from your app list. Open it from Messenger's Menu tab, or long-press Messenger's icon and tap Patch controls.");
+        ENGLISH.put("shared_install_help", "The settings icon belongs to Messenger. Uninstalling either icon removes Messenger and its local data. Use Hide app drawer icon to hide only this entry.");
         ENGLISH.put("access_help_hosted", "Long-press Messenger's icon for Patch controls or Restart Messenger. A Root Mount install has no separate settings icon in your app drawer.");
         ENGLISH.put("access_help_hosted_menu", "Long-press Messenger's icon for Patch controls or Restart Messenger, or open HushMessenger settings from its row in Messenger's Menu tab. A Root Mount install has no separate settings icon in your app drawer.");
         ENGLISH.put("access_help_menu", "Long-press Messenger's icon for Patch controls or Restart Messenger. You can also open HushMessenger settings from its row in Messenger's Menu tab or from your app drawer.");
@@ -122,8 +123,9 @@ final class SettingsText {
         ENGLISH.put("bubble_chat_heads", "Chat Heads");
         ENGLISH.put("bubble_native", "Native Bubbles");
         ENGLISH.put("bubble_changed", "%s selected. Restart Messenger to apply.");
-        ENGLISH.put("bubble_help", "Stock leaves Messenger's choice in charge. Chat Heads also needs Messenger's Chat heads switch and overlay permission. Native Bubbles uses Android conversations and needs bubbles allowed in notification settings. Unsupported accounts keep Messenger's original route. Pause all changes restores the stock route.");
+        ENGLISH.put("bubble_help", "Stock leaves Messenger's choice in charge. Chat Heads also needs Messenger's Chat heads switch and overlay permission. For Native Bubbles, use Android bubble settings below to allow Messenger's bubbles. Notification and account support still apply. Unsupported accounts keep Messenger's original route. Pause all changes restores the stock route.");
         ENGLISH.put("bubble_unsupported", "This bundle has no verified native bubble route. Messenger keeps stock behavior. Your saved choice is kept.");
+        ENGLISH.put("bubble_permissions", "Android bubble settings");
         ENGLISH.put("bubble_notifications", "Messenger notification settings");
         ENGLISH.put("bubble_conversations", "Android conversation settings");
         ENGLISH.put("bubble_settings_missing", "This phone has no matching settings screen. Open Messenger's app info, then Notifications.");

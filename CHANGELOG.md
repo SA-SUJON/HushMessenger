@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Development version 0.9.0. The public download remains v0.8.0.
+Development version 0.10.0. The public download remains v0.8.0.
 
 ### New
 
@@ -16,8 +16,10 @@ Development version 0.9.0. The public download remains v0.8.0.
 - Pause, switching Material You off and clearing safe mode refresh the cached dark surfaces. Palette listeners start after crash recovery is known, without holding the startup lock.
 - A hook that keeps failing refreshes its saved diagnostic timestamp once a minute. Repeated failures keep the latest time in memory without writing preferences on every draw.
 - Original-quality photos remove RGB thumbnails embedded in JFIF headers. Both send paths keep the main image data, density fields and color profiles, and leave the source file untouched.
+- Settings and the install guide explain that uninstalling the settings icon also removes Messenger. Hide app drawer icon removes only the launcher entry. The alternate-menu report remains open. Refs #26.
+- Native Bubbles has a direct Android bubble settings link. Samsung's app notification page can omit that option, so the general notification link alone couldn't finish setup. Missing settings screens leave choices unchanged and show recovery guidance.
 
-- Both settings tabs have fresh screenshots from the embedded v0.9.0 build. Install guidance separates message-content prompts from store updates, explains drawer access and unsent/read-receipt limits, and preserves account data when an installation conflicts. Manager 1.33.0 and Desktop 1.18.0 are the documented baseline, with manual signed-checksum verification.
+- Both settings tabs have fresh screenshots from the embedded v0.10.0 build. Install guidance separates message-content prompts from store updates, explains drawer access and unsent/read-receipt limits, and preserves account data when an installation conflicts. Manager 1.33.0 and Desktop 1.18.0 are the documented baseline, with manual signed-checksum verification.
 - Native capability checks follow the values connecting Messenger's shortcut, notification metadata and embedded activity. Null, disconnected and ambiguous routes keep stock behavior.
 
 ## 0.8.0 (2026-10-01)
