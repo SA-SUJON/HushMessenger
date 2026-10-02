@@ -225,6 +225,35 @@ public class ChoiceBackupTest {
         }
     }
 
+    @Test public void pickerCannotUseAProviderOwnedByMessenger() throws Exception {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            SettingsActivity activity = screen.get();
+            android.content.pm.ProviderInfo provider = new android.content.pm.ProviderInfo();
+            provider.name = "PrivateProvider";
+            provider.authority = "choices.private";
+            provider.packageName = activity.getPackageName();
+            provider.applicationInfo = new android.content.pm.ApplicationInfo();
+            provider.applicationInfo.uid = android.os.Process.myUid();
+            var owner = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
+            owner.providers = new android.content.pm.ProviderInfo[] {provider};
+            Shadows.shadowOf(activity.getPackageManager()).installPackage(owner);
+            Uri uri = Uri.parse("content://choices.private/sentinel");
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            Shadows.shadowOf(activity.getContentResolver()).registerOutputStream(uri, output);
+            Shadows.shadowOf(activity.getContentResolver()).registerInputStream(uri,
+                new ByteArrayInputStream((ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8)));
+            Map<String, ?> before = Settings.preferences.getAll();
+            activity.getWindow().getDecorView().findViewWithTag("read_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Not a valid");
+            assertEquals(before, Settings.preferences.getAll());
+            activity.getWindow().getDecorView().findViewWithTag("save_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.SAVE_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Couldn't export");
+            assertEquals(0, output.size());
+        }
+    }
+
     @Test public void slowImportCannotOverwriteANewerImportOrChoice() throws Exception {
         for (boolean clipboard : new boolean[] {true, false}) {
             try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {

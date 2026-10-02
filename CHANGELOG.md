@@ -10,7 +10,7 @@ Development version 0.9.0. The public download remains v0.8.0.
 
 ### Changed and fixed
 
-- Choice files accept content-provider documents only, so a picker cannot read or overwrite private Messenger files. Provider failures leave choices alone and omit private exception details from logs.
+- Choice files accept content-provider documents outside Messenger's own UID, so a picker cannot read or overwrite its private files through a file path or an app-owned provider. Provider failures leave choices alone and omit private exception details from logs.
 - File backups show progress and prevent overlapping file work. A delayed restore leaves newer switch changes or clipboard restores alone and explains how to retry.
 - Bubble hooks initialize saved choices when they are the first control called on a Root Mount startup. Unsupported Android versions and secondary processes keep stock behavior.
 - Pause, switching Material You off and clearing safe mode refresh the cached dark surfaces. Palette listeners start after crash recovery is known, without holding the startup lock.
