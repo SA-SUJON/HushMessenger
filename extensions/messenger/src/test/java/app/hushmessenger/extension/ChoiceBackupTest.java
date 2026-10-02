@@ -11,9 +11,12 @@ import android.view.View;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -183,6 +186,85 @@ public class ChoiceBackupTest {
             screen.get().onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(Uri.parse("content://choices/import")));
             Shadows.shadowOf(Looper.getMainLooper()).idle();
             assertEquals(before, Settings.preferences.getAll());
+        }
+    }
+
+    @Test public void pickerCannotReadOrOverwritePrivateFiles() throws Exception {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            SettingsActivity activity = screen.get();
+            java.io.File file = new java.io.File(activity.getFilesDir(), "private-sentinel.txt");
+            byte[] original = (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8);
+            Files.write(file.toPath(), original);
+            Map<String, ?> before = Settings.preferences.getAll();
+            Uri uri = Uri.fromFile(file);
+            activity.getWindow().getDecorView().findViewWithTag("read_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Not a valid");
+            assertEquals(before, Settings.preferences.getAll());
+            ShadowToast.reset();
+            activity.getWindow().getDecorView().findViewWithTag("save_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.SAVE_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Couldn't export");
+            assertArrayEquals(original, Files.readAllBytes(file.toPath()));
+        }
+    }
+
+    @Test public void documentProviderRuntimeFailuresLeaveChoicesAlone() throws Exception {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            SettingsActivity activity = screen.get();
+            Map<String, ?> before = Settings.preferences.getAll();
+            Uri uri = Uri.parse("content://choices/provider-failed");
+            Shadows.shadowOf(activity.getContentResolver()).registerInputStreamSupplier(uri,
+                () -> { throw new IllegalStateException("private provider details"); });
+            activity.getWindow().getDecorView().findViewWithTag("read_choices_file").performClick();
+            activity.onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+            awaitToast("Not a valid");
+            assertEquals(before, Settings.preferences.getAll());
+            assertTrue(org.robolectric.shadows.ShadowLog.getLogsForTag("HushMessenger").stream()
+                .noneMatch(log -> log.throwable != null && "private provider details".equals(log.throwable.getMessage())));
+        }
+    }
+
+    @Test public void slowImportCannotOverwriteANewerImportOrChoice() throws Exception {
+        for (boolean clipboard : new boolean[] {true, false}) {
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                SettingsActivity activity = screen.get();
+                CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1), closed = new CountDownLatch(1);
+                Uri uri = Uri.parse("content://choices/slow");
+                Shadows.shadowOf(activity.getContentResolver()).registerInputStream(uri,
+                    new ByteArrayInputStream((ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8)) {
+                        @Override public synchronized int read(byte[] bytes, int offset, int length) {
+                            started.countDown();
+                            try { if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Timed out"); }
+                            catch (InterruptedException error) { throw new IllegalStateException(error); }
+                            return super.read(bytes, offset, length);
+                        }
+                        @Override public void close() { closed.countDown(); }
+                    });
+                activity.getWindow().getDecorView().findViewWithTag("read_choices_file").performClick();
+                activity.onActivityResult(SettingsActivity.READ_CHOICES, Activity.RESULT_OK, new Intent().setData(uri));
+                try {
+                    assertTrue(started.await(5, TimeUnit.SECONDS));
+                    assertFalse(activity.getWindow().getDecorView().findViewWithTag("read_choices_file").isEnabled());
+                    assertFalse(activity.getWindow().getDecorView().findViewWithTag("save_choices_file").isEnabled());
+                    assertEquals("Reading choices file...", ((android.widget.TextView) activity.getWindow().getDecorView()
+                        .findViewWithTag("choices_file_status")).getText().toString());
+                    if (clipboard) {
+                        clipboard(ChoiceCodec.HEADER + "\nstories=false\n");
+                        activity.getWindow().getDecorView().findViewWithTag("import_choices").performClick();
+                    } else {
+                        Settings.preferences.edit().putBoolean("people", true).commit();
+                    }
+                } finally { release.countDown(); }
+                assertTrue(closed.await(5, TimeUnit.SECONDS));
+                // Closing the stream precedes posting the result, so drain after the worker exits.
+                for (Thread thread : Thread.getAllStackTraces().keySet())
+                    if ("HushChoicesDocument".equals(thread.getName())) thread.join(5000);
+                Shadows.shadowOf(Looper.getMainLooper()).idle();
+                assertFalse(Settings.preferences.getBoolean("stories", false));
+                assertTrue(activity.getWindow().getDecorView().findViewWithTag("read_choices_file").isEnabled());
+                assertEquals(View.GONE, activity.getWindow().getDecorView().findViewWithTag("choices_file_status").getVisibility());
+            }
         }
     }
 

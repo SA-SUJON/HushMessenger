@@ -171,6 +171,9 @@ final class SettingsText {
         ENGLISH.put("read_choices_file", "Restore choices from a file");
         ENGLISH.put("choices_file_help", "Settings only, up to 16 KiB. Chats, accounts and recovery material stay out. Omitted or unavailable choices keep their saved values. Choose the file again if settings reopen.");
         ENGLISH.put("choices_file_saved", "Choices file saved");
+        ENGLISH.put("choices_file_saving", "Saving choices file...");
+        ENGLISH.put("choices_file_reading", "Reading choices file...");
+        ENGLISH.put("choices_file_changed", "Choices changed while the file was loading. Restore the file again to replace them.");
         ENGLISH.put("check_updates", "Check for updates");
         ENGLISH.put("check_updates_help", "Checks GitHub when enabled or when settings opens. Off by default. GitHub receives your IP address and connection metadata. No account or chat content is uploaded.");
         ENGLISH.put("check_now", "Check now");

@@ -53,7 +53,10 @@ public final class SettingsActivity extends Activity {
     private final List<RadioButton> bubbleModes = new ArrayList<>();
     private final Map<String, TextView> activityLabels = new java.util.HashMap<>();
     private final Map<Switch, CharSequence> switchDescriptions = new java.util.HashMap<>();
+    private long documentGeneration;
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> {
+        if (key == null || "paused".equals(key) || Settings.BUBBLE_CHAT_HEADS.equals(key) || Settings.installed.contains(key))
+            documentGeneration++;
         refreshChoices();
         if (key == null || "check_updates".equals(key)) syncUpdateChoice(true);
     };
@@ -75,6 +78,9 @@ public final class SettingsActivity extends Activity {
     static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102;
     private String documentExport;
     private boolean documentImport;
+    private boolean documentBusy;
+    private Button saveChoicesFile, readChoicesFile;
+    private TextView documentStatus;
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
     static final String[][] CONTROLS = {
@@ -253,6 +259,7 @@ public final class SettingsActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        documentGeneration++;
         cancelUpdateCheck();
         super.onDestroy();
     }
@@ -695,10 +702,11 @@ public final class SettingsActivity extends Activity {
         ui.add(about, importBtn, 8);
         ui.add(about, ui.text(text.get("import_help"), 13, ui.muted, false), 8);
         ui.rule(about, 12);
-        Button saveFile = ui.button(text.get("save_choices_file"));
+        Button saveFile = saveChoicesFile = ui.button(text.get("save_choices_file"));
         saveFile.setTag("save_choices_file");
         saveFile.setOnClickListener(view -> {
-            if (documentImport || documentExport != null) return;
+            if (documentBusy || documentImport || documentExport != null) return;
+            documentGeneration++;
             documentImport = false;
             documentExport = ChoiceCodec.encode(Settings.preferences, Settings.installed);
             Intent picker = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
@@ -710,10 +718,11 @@ public final class SettingsActivity extends Activity {
             }
         });
         ui.add(about, saveFile, 8);
-        Button readFile = ui.button(text.get("read_choices_file"));
+        Button readFile = readChoicesFile = ui.button(text.get("read_choices_file"));
         readFile.setTag("read_choices_file");
         readFile.setOnClickListener(view -> {
-            if (documentImport || documentExport != null) return;
+            if (documentBusy || documentImport || documentExport != null) return;
+            documentGeneration++;
             documentExport = null;
             documentImport = true;
             Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/*");
@@ -724,6 +733,11 @@ public final class SettingsActivity extends Activity {
             }
         });
         ui.add(about, readFile, 8);
+        documentStatus = ui.text("", 13, ui.muted, false);
+        documentStatus.setTag("choices_file_status");
+        documentStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        documentStatus.setVisibility(View.GONE);
+        ui.add(about, documentStatus, 8);
         ui.add(about, ui.text(text.get("choices_file_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
         LinearLayout updates = ui.panel();
@@ -995,6 +1009,7 @@ public final class SettingsActivity extends Activity {
     }
 
     private void importChoices() {
+        documentGeneration++;
         try {
             ClipboardManager clipboard = getSystemService(ClipboardManager.class);
             if (clipboard == null || !clipboard.hasPrimaryClip()) {
@@ -1051,6 +1066,18 @@ public final class SettingsActivity extends Activity {
         if (result != RESULT_OK || data == null || data.getData() == null ||
             (request == SAVE_CHOICES ? export == null : !importing)) return;
         android.net.Uri uri = data.getData();
+        // A document picker must return a provider grant, never a path opened with Messenger's own UID.
+        if (!"content".equals(uri.getScheme())) {
+            feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG);
+            return;
+        }
+        long generation = documentGeneration;
+        String before = ChoiceCodec.encode(Settings.preferences, Settings.installed);
+        documentBusy = true;
+        saveChoicesFile.setEnabled(false);
+        readChoicesFile.setEnabled(false);
+        documentStatus.setText(text.get(request == SAVE_CHOICES ? "choices_file_saving" : "choices_file_reading"));
+        documentStatus.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
                 if (request == SAVE_CHOICES) {
@@ -1064,11 +1091,27 @@ public final class SettingsActivity extends Activity {
                     try (java.io.InputStream stream = getContentResolver().openInputStream(uri)) {
                         choices = ChoiceCodec.parse(ChoiceCodec.read(stream));
                     }
-                    runOnUiThread(() -> { if (!isDestroyed()) restoreChoices(choices); });
+                    runOnUiThread(() -> {
+                        if (!isDestroyed()) {
+                            if (generation == documentGeneration && before.equals(ChoiceCodec.encode(Settings.preferences, Settings.installed)))
+                                restoreChoices(choices);
+                            else feedback(text.get("choices_file_changed"), Toast.LENGTH_LONG);
+                        }
+                    });
                 }
-            } catch (java.io.IOException | IllegalArgumentException | SecurityException error) {
-                android.util.Log.e("HushMessenger", "Can't use choices document", error);
+            } catch (java.io.IOException | RuntimeException error) {
+                // Providers run outside this app's trust boundary. Their messages can include private paths or contents.
+                android.util.Log.e("HushMessenger", "Can't use choices document: " + error.getClass().getName());
                 runOnUiThread(() -> { if (!isDestroyed()) feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG); });
+            } finally {
+                runOnUiThread(() -> {
+                    if (!isDestroyed()) {
+                        documentBusy = false;
+                        saveChoicesFile.setEnabled(true);
+                        readChoicesFile.setEnabled(true);
+                        documentStatus.setVisibility(View.GONE);
+                    }
+                });
             }
         }, "HushChoicesDocument").start();
     }

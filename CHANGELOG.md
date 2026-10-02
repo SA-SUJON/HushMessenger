@@ -10,6 +10,9 @@ Development version 0.9.0. The public download remains v0.8.0.
 
 ### Changed and fixed
 
+- Choice files accept content-provider documents only, so a picker cannot read or overwrite private Messenger files. Provider failures leave choices alone and omit private exception details from logs.
+- File backups show progress and prevent overlapping file work. A delayed restore leaves newer switch changes or clipboard restores alone and explains how to retry.
+
 - Both settings tabs have fresh screenshots from the embedded v0.9.0 build. Install guidance separates message-content prompts from store updates, explains drawer access and unsent/read-receipt limits, and preserves account data when an installation conflicts. Manager 1.33.0 and Desktop 1.18.0 are the documented baseline, with manual signed-checksum verification.
 - Native capability checks follow the values connecting Messenger's shortcut, notification metadata and embedded activity. Null, disconnected and ambiguous routes keep stock behavior.
 
