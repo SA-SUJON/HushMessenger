@@ -92,7 +92,7 @@ public final class Settings {
         android.util.Log.e("HushMessenger", what + ": " + recordHookError(key, error));
     }
 
-    private static String recordHookError(String key, Throwable error) {
+    private static synchronized String recordHookError(String key, Throwable error) {
         StackTraceElement[] stack = error.getStackTrace();
         StackTraceElement frame = stack.length == 0 ? null : stack[0];
         for (StackTraceElement element : stack) {
@@ -102,11 +102,15 @@ public final class Settings {
             + "." + frame.getMethodName() + (frame.getLineNumber() >= 0 ? ":" + frame.getLineNumber() : "");
         String failure = error.getClass().getName() + " at " + where;
         long now = System.currentTimeMillis();
-        String previous = hookErrors.put(key, failure + "|" + now);
+        hookErrors.put(key, failure + "|" + now);
         SharedPreferences prefs = preferences;
         // A hook can fail on every screen draw, so the saved copy changes only for a new failure or once a minute.
-        if (prefs != null && (previous == null || !previous.startsWith(failure + "|") || now - hookErrorTime(previous) >= 60_000))
-            prefs.edit().putString(HOOK_ERROR + key, failure + "|" + now).apply();
+        if (prefs != null) {
+            String previous = prefs.getString(HOOK_ERROR + key, null);
+            if (previous == null || !previous.startsWith(failure + "|") || now - hookErrorTime(previous) >= 60_000
+                    || now < hookErrorTime(previous))
+                prefs.edit().putString(HOOK_ERROR + key, failure + "|" + now).apply();
+        }
         return failure;
     }
 
@@ -167,7 +171,12 @@ public final class Settings {
     public static boolean suppressTyping() { return enabled("typing"); }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
-    static boolean available(String key) { return !"bubbles".equals(key) || (Build.VERSION.SDK_INT >= 30 && bubbleRoutes); }
+    static boolean available(String key) {
+        if (!"bubbles".equals(key)) return true;
+        if (Build.VERSION.SDK_INT < 30) return false;
+        if (!HostScreens.started) HostScreens.initializeLate();
+        return !HostScreens.failed && bubbleRoutes;
+    }
     public static boolean enableBubbles() {
         return available("bubbles") && enabled("bubbles") && !preferences.getBoolean(BUBBLE_CHAT_HEADS, false);
     }

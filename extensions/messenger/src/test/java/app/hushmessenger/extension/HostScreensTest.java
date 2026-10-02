@@ -168,6 +168,22 @@ public class HostScreensTest {
         assertTrue(Settings.installed.contains("people"));
     }
 
+    @Test @Config(sdk = 36) public void bubbleHooksCanBeTheFirstUseWithoutAProvider() {
+        Application app = RuntimeEnvironment.getApplication();
+        for (boolean chatHeads : new boolean[] {false, true}) {
+            CrashGuard.resetForTests();
+            Settings.preferences = null;
+            Settings.installed = Set.of();
+            Settings.bubbleRoutes = false;
+            HostScreens.applicationCreated(app);
+            app.getSharedPreferences("hushmessenger", 0).edit().putBoolean("bubbles", true)
+                .putBoolean(Settings.BUBBLE_CHAT_HEADS, chatHeads).commit();
+            assertTrue(chatHeads ? Settings.forceChatHeads() : Settings.enableBubbles());
+            assertTrue(HostScreens.started);
+            assertNotNull(Settings.preferences);
+        }
+    }
+
     @Test public void anApplicationAndroidHasntAttachedYetIsLeftAlone() {
         Settings.preferences = null;
         Settings.installed = Set.of();

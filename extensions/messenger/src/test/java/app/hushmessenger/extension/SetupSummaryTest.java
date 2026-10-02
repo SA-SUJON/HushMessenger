@@ -190,6 +190,21 @@ public class SetupSummaryTest {
         }
     }
 
+    @Test public void continuousFailuresRefreshTheSavedTimestampAfterAMinute() {
+        IllegalStateException failure = new IllegalStateException("private details");
+        Settings.hookFailedPrivately("menu_row", "Failed", failure);
+        String first = Settings.preferences.getString("hook_error_menu_row", "");
+        // A minute has passed since the saved failure, but another draw just updated the in-memory copy.
+        Settings.preferences.edit().putString("hook_error_menu_row", first.substring(0, first.lastIndexOf('|') + 1)
+            + (Settings.hookErrorTime(first) - 60_001)).commit();
+        Settings.hookFailedPrivately("menu_row", "Failed", failure);
+        String refreshed = Settings.preferences.getString("hook_error_menu_row", "");
+        assertEquals(Settings.hookErrors.get("menu_row"), refreshed);
+        assertTrue(Settings.hookErrorTime(refreshed) >= Settings.hookErrorTime(first));
+        Settings.hookErrors.clear();
+        assertEquals(Settings.hookErrorTime(refreshed), Settings.hookErrorAt("menu_row"));
+    }
+
     @Test public void hidingTheDrawerIconDisablesOnlyTheLauncherAlias() throws Exception {
         installedFeatures("people", "menu_row");
         var app = RuntimeEnvironment.getApplication();

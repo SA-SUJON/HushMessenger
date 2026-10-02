@@ -89,6 +89,9 @@ public final class HostScreens {
                 Log.e("HushMessenger", "Can't start settings", error);
             }
         }
+        // Colour hooks can initialize this process while their class initializer is running. Bind after releasing
+        // the startup lock so a second startup thread cannot wait on that initializer while it waits on this lock.
+        if (started && !failed && Settings.installed.contains("material_you")) MaterialYouTheme.bind();
     }
 
     /** True when PackageManager doesn't know HushMessenger's own activities, as on a Root Mount install. */
