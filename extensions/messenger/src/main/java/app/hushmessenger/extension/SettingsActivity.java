@@ -1080,6 +1080,10 @@ public final class SettingsActivity extends Activity {
         documentStatus.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
+                android.content.pm.ProviderInfo provider = getPackageManager().resolveContentProvider(uri.getAuthority(), 0);
+                if (provider != null && (getPackageName().equals(provider.packageName) ||
+                        (provider.applicationInfo != null && provider.applicationInfo.uid == android.os.Process.myUid())))
+                    throw new SecurityException("Choices document belongs to this app");
                 if (request == SAVE_CHOICES) {
                     try (java.io.OutputStream stream = getContentResolver().openOutputStream(uri, "wt")) {
                         if (stream == null) throw new java.io.IOException("No writable document");
@@ -1091,10 +1095,6 @@ public final class SettingsActivity extends Activity {
                     try (java.io.InputStream stream = getContentResolver().openInputStream(uri)) {
                         choices = ChoiceCodec.parse(ChoiceCodec.read(stream));
                     }
-                android.content.pm.ProviderInfo provider = getPackageManager().resolveContentProvider(uri.getAuthority(), 0);
-                if (provider != null && (getPackageName().equals(provider.packageName) ||
-                        (provider.applicationInfo != null && provider.applicationInfo.uid == android.os.Process.myUid())))
-                    throw new SecurityException("Choices document belongs to this app");
                     runOnUiThread(() -> {
                         if (!isDestroyed()) {
                             if (generation == documentGeneration && before.equals(ChoiceCodec.encode(Settings.preferences, Settings.installed)))
