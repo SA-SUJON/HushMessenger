@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 (2026-10-01)
+
+This release keeps the same 31 patches, 28 of them switches, for all 21 arm64 builds of Messenger 580.0.0.49.91. Patching with Material You theme fits in a 1 GB heap now, and you can save your choices to a file. Most of the other work makes the settings screen say plainly what each switch is doing.
 
 ### New
 
