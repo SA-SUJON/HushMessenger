@@ -118,6 +118,15 @@ final class SettingsText {
         ENGLISH.put("empty_help", "Try a different search or category. Only patches included in this installation appear here.");
         ENGLISH.put("clear", "Clear filters");
         ENGLISH.put("unavailable", "Unavailable on this Android version. Your choice is kept.");
+        ENGLISH.put("bubble_stock", "Stock");
+        ENGLISH.put("bubble_chat_heads", "Chat Heads");
+        ENGLISH.put("bubble_native", "Native Bubbles");
+        ENGLISH.put("bubble_changed", "%s selected. Restart Messenger to apply.");
+        ENGLISH.put("bubble_help", "Stock leaves Messenger's choice in charge. Chat Heads also needs Messenger's Chat heads switch and overlay permission. Native Bubbles uses Android conversations and needs bubbles allowed in notification settings. Unsupported accounts keep Messenger's original route. Pause all changes restores the stock route.");
+        ENGLISH.put("bubble_unsupported", "This bundle has no verified native bubble route. Messenger keeps stock behavior. Your saved choice is kept.");
+        ENGLISH.put("bubble_notifications", "Messenger notification settings");
+        ENGLISH.put("bubble_conversations", "Android conversation settings");
+        ENGLISH.put("bubble_settings_missing", "This phone has no matching settings screen. Open Messenger's app info, then Notifications.");
         ENGLISH.put("experimental", "Experimental");
         ENGLISH.put("choice_on", "%s on");
         ENGLISH.put("choice_off", "%s off");

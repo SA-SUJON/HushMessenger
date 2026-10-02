@@ -26,6 +26,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.graphics.drawable.Drawable;
@@ -48,6 +50,7 @@ public final class SettingsActivity extends Activity {
     private boolean compact, scrollHeader, binding, lightTheme, recreatingTheme;
     private int restoreControlsScroll = -1, restoreAppScroll = -1;
     private final List<Switch> switches = new ArrayList<>();
+    private final List<RadioButton> bubbleModes = new ArrayList<>();
     private final Map<String, TextView> activityLabels = new java.util.HashMap<>();
     private final Map<Switch, CharSequence> switchDescriptions = new java.util.HashMap<>();
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener = (preferences, key) -> {
@@ -96,9 +99,9 @@ public final class SettingsActivity extends Activity {
         {"use_system_emoji", "Use system emoji", "Renders emoji with your phone's own font instead of Messenger's built-in set.", "conversations"},
         {"original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of Messenger's re-encoded copy. Its metadata, such as location and camera details, is left out, as it is from Messenger's copy, except the tag that turns a sideways photo upright. Photos over 20 MB and videos still get Messenger's compression.", "conversations"},
         {"external_browser", "Open web links externally", "Uses your default browser for HTTP and HTTPS links. Other link types keep their original behavior.", "links_bubbles"},
-        {"bubbles", "Allow chat bubbles", "Removes the low-memory restriction on Android 11 or newer. Enable bubbles in Android notification settings too.", "links_bubbles"},
+        {"bubbles", "Allow chat bubbles", "Choose Stock, Chat Heads or Native Bubbles below. Native Bubbles needs Android 11, account support and notification permissions. Restart Messenger after changing modes.", "links_bubbles"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected.", "privacy"},
-        {"hide_read_receipts", "Hide read receipts", "Stops your read receipt from being sent. In end-to-end encrypted chats, chats you open stay unread until you reply.", "privacy"},
+        {"hide_read_receipts", "Hide read receipts", "Stops sending read receipts. Opened encrypted chats can stay unread on this phone. Replying or switching this off may notify the sender. Group coverage isn't verified.", "privacy"},
         {"keep_unsent", "Keep unsent messages", "Keeps messages on verified legacy unsend routes. End-to-end encrypted chats aren't supported, and group coverage isn't verified. Activity records intercepted legacy unsends, not whether a chat is supported. Your own unsend may be limited.", "privacy"},
         {"anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. Stories you open this way are still marked as seen on your side.", "privacy"},
         {"save_stories", "Save any story", "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own.", "privacy"},
@@ -268,6 +271,7 @@ public final class SettingsActivity extends Activity {
                 control.setChecked(Settings.preferences.getBoolean((String) control.getTag(), false));
                 refreshStatus(control);
             }
+            for (RadioButton mode : bubbleModes) mode.setChecked(mode.getTag().equals("bubble_" + Settings.selectedBubbleMode()));
         } finally { binding = false; }
         updateSetup();
     }
@@ -454,6 +458,12 @@ public final class SettingsActivity extends Activity {
                 groups.add(group);
             }
             LinearLayout row = controlRow(spec[0], text.control(spec, 1), text.control(spec, 2), true);
+            if ("bubbles".equals(spec[0])) {
+                LinearLayout wrapper = ui.column();
+                ui.add(wrapper, row, 0);
+                addBubbleModes(wrapper);
+                row = wrapper;
+            }
             row.setTag(spec[3]);
             ui.add(group, row, 0);
             controlRows.add(row);
@@ -484,10 +494,66 @@ public final class SettingsActivity extends Activity {
         });
     }
 
+    private void addBubbleModes(LinearLayout content) {
+        RadioGroup modes = new RadioGroup(this);
+        modes.setOrientation(LinearLayout.VERTICAL);
+        for (String mode : new String[] {"stock", "chat_heads", "native"}) {
+            RadioButton choice = new RadioButton(this);
+            choice.setId(View.generateViewId());
+            choice.setTag("bubble_" + mode);
+            choice.setText(text.get("bubble_" + mode));
+            choice.setTextColor(ui.text);
+            choice.setTextSize(16);
+            choice.setMinHeight(ui.dp(48));
+            choice.setPadding(ui.dp(8), ui.dp(8), ui.dp(8), ui.dp(8));
+            choice.setButtonTintList(new android.content.res.ColorStateList(
+                new int[][] {new int[] {android.R.attr.state_checked}, new int[] {}}, new int[] {ui.accent, ui.muted}));
+            choice.setChecked(mode.equals(Settings.selectedBubbleMode()));
+            choice.setEnabled(Settings.available("bubbles") || "stock".equals(mode));
+            if (!choice.isEnabled()) choice.setAlpha(0.4f);
+            choice.setOnClickListener(view -> {
+                Settings.preferences.edit().putBoolean("bubbles", !"stock".equals(mode))
+                    .putBoolean(Settings.BUBBLE_CHAT_HEADS, "chat_heads".equals(mode)).apply();
+                refreshChoices();
+                feedback(text.get("bubble_changed", text.base("bubble_" + mode)), Toast.LENGTH_SHORT);
+            });
+            modes.addView(choice, new RadioGroup.LayoutParams(-1, -2));
+            bubbleModes.add(choice);
+        }
+        ui.add(content, modes, 8);
+        ui.add(content, ui.text(text.get(Settings.available("bubbles") ? "bubble_help" :
+            Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable"), 13, ui.muted, false), 8);
+        Button notifications = ui.button(text.get("bubble_notifications"));
+        notifications.setTag("bubble_notifications");
+        notifications.setOnClickListener(view -> openNotificationSettings(false));
+        ui.add(content, notifications, 8);
+        if (Build.VERSION.SDK_INT >= 30) {
+            Button conversations = ui.button(text.get("bubble_conversations"));
+            conversations.setTag("bubble_conversations");
+            conversations.setOnClickListener(view -> openNotificationSettings(true));
+            ui.add(content, conversations, 8);
+        }
+    }
+
+    private void openNotificationSettings(boolean conversations) {
+        // AOSP exposes this action to system apps; vendor phones may omit its activity.
+        Intent intent = new Intent(conversations ? "android.settings.CONVERSATION_SETTINGS" :
+            android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        if (!conversations) intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+        // Samsung's settings homepage can otherwise reuse an unrelated screen for a new deep link.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        try {
+            if (getPackageManager().resolveActivity(intent, 0) == null) throw new android.content.ActivityNotFoundException();
+            startActivity(intent);
+        } catch (RuntimeException unavailable) {
+            feedback(text.get("bubble_settings_missing"), Toast.LENGTH_LONG);
+        }
+    }
+
     @SuppressWarnings("deprecation")
     private LinearLayout controlRow(String key, String title, String description, boolean divided) {
         boolean available = Settings.available(key);
-        if (!available) description += " " + text.format("unavailable");
+        if (!available) description += " " + text.format("bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -951,11 +1017,13 @@ public final class SettingsActivity extends Activity {
     private void restoreChoices(Map<String, Boolean> choices) {
         java.util.Set<String> known = new java.util.HashSet<>();
         for (String[] spec : CONTROLS) known.add(spec[0]);
+        known.add(Settings.BUBBLE_CHAT_HEADS);
         Map<String, Boolean> supported = new java.util.LinkedHashMap<>();
         int unknown = 0, unavailable = 0;
         for (Map.Entry<String, Boolean> choice : choices.entrySet()) {
             String key = choice.getKey();
-            if ("paused".equals(key) || (known.contains(key) && Settings.installed.contains(key))) supported.put(key, choice.getValue());
+            if ("paused".equals(key) || (known.contains(key) && Settings.installed.contains(
+                Settings.BUBBLE_CHAT_HEADS.equals(key) ? "bubbles" : key))) supported.put(key, choice.getValue());
             else if (known.contains(key)) unavailable++;
             else unknown++;
         }

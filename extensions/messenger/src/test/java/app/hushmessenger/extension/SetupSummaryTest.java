@@ -37,6 +37,8 @@ public class SetupSummaryTest {
         info.setLongVersionCode((7L << 32) | 346013387L);
         info.applicationInfo.metaData = new Bundle();
         for (String key : keys) info.applicationInfo.metaData.putBoolean("hush.feature." + key, true);
+        // An installed bubbles fixture must also declare the host routes validated by the patch.
+        for (String key : keys) if ("bubbles".equals(key)) info.applicationInfo.metaData.putBoolean("hush.native_bubble_routes", true);
         Shadows.shadowOf(app.getPackageManager()).installPackage(info);
     }
 

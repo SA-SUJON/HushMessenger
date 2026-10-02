@@ -20,6 +20,8 @@ public final class Settings {
     static volatile Context appContext;
     static volatile Set<String> installed = Collections.emptySet();
     static boolean preview;
+    static boolean bubbleRoutes;
+    static final String BUBBLE_CHAT_HEADS = "bubble_chat_heads";
     static final ConcurrentHashMap<String, Long> activeAt = new ConcurrentHashMap<>();
 
     public static void initialize(Context context) {
@@ -28,9 +30,12 @@ public final class Settings {
         appContext = app != null ? app : context;
         Set<String> features = new HashSet<>();
         preview = false;
+        bubbleRoutes = false;
         try {
             Bundle metadata = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA).metaData;
             preview = metadata != null && metadata.getBoolean("hush.preview", false);
+            bubbleRoutes = preview || HostScreens.nativeBubbleRoutes() ||
+                    (metadata != null && metadata.getBoolean("hush.native_bubble_routes", false));
             if (metadata != null) for (String name : metadata.keySet()) {
                 if (name.startsWith("hush.feature.") && metadata.getBoolean(name, false)) features.add(name.substring(13));
             }
@@ -162,8 +167,20 @@ public final class Settings {
     public static boolean suppressTyping() { return enabled("typing"); }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
-    static boolean available(String key) { return !"bubbles".equals(key) || Build.VERSION.SDK_INT >= 30; }
-    public static boolean enableBubbles() { return available("bubbles") && enabled("bubbles"); }
+    static boolean available(String key) { return !"bubbles".equals(key) || (Build.VERSION.SDK_INT >= 30 && bubbleRoutes); }
+    public static boolean enableBubbles() {
+        return available("bubbles") && enabled("bubbles") && !preferences.getBoolean(BUBBLE_CHAT_HEADS, false);
+    }
+    public static boolean forceChatHeads() {
+        return available("bubbles") && enabled("bubbles") && preferences.getBoolean(BUBBLE_CHAT_HEADS, false);
+    }
+    public static boolean nativeBubbleRollout(boolean original) {
+        return original || enableBubbles();
+    }
+    static String selectedBubbleMode() {
+        if (preferences == null || !preferences.getBoolean("bubbles", false)) return "stock";
+        return preferences.getBoolean(BUBBLE_CHAT_HEADS, false) ? "chat_heads" : "native";
+    }
     public static boolean allowScreenshot() { return enabled("allow_screenshot"); }
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return wouldUse("keep_unsent"); }

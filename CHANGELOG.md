@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+Development version 0.9.0. The public download remains v0.8.0.
+
+### New
+
+- **Allow chat bubbles** offers **Stock**, **Chat Heads** and **Native Bubbles** when Messenger's native routes are verified. Native mode uses its conversation notifications, long-lived shortcuts and embedded chat screen on Android 11 or newer. Account eligibility and Android's permissions still apply. Notification and conversation settings links include recovery guidance when a phone omits either page. Pause or Stock restores the original routing. Refs #19.
+
+### Changed and fixed
+
+- Both settings tabs have fresh screenshots from the embedded v0.9.0 build. Install guidance separates message-content prompts from store updates, explains drawer access and unsent/read-receipt limits, and preserves account data when an installation conflicts. Manager 1.33.0 and Desktop 1.18.0 are the documented baseline, with manual signed-checksum verification.
+- Native capability checks follow the values connecting Messenger's shortcut, notification metadata and embedded activity. Null, disconnected and ambiguous routes keep stock behavior.
+
 ## 0.8.0 (2026-10-01)
 
 This release keeps the same 31 patches, 28 of them switches, for all 21 arm64 builds of Messenger 580.0.0.49.91. Patching with Material You theme fits in a 1 GB heap now, and you can save your choices to a file. Most of the other work makes the settings screen say plainly what each switch is doing.
