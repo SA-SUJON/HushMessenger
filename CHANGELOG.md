@@ -16,6 +16,8 @@ Development version 0.12.0. The public download remains v0.8.0.
 
 - Directions to the settings now say **Long-press Messenger's home screen icon > Patch controls** in Manager's patch descriptions, the settings help text and the recovery message. "Long-press Messenger" was read as the Messenger title inside the app, where a long-press does nothing. Refs #27.
 
+- On a Root Mount install, Android never reads the patched long-press shortcuts, so **Patch controls** and **Restart Messenger** were missing from Messenger's icon. HushMessenger now adds both itself when Messenger starts there, and puts them back if Messenger's recent-chat shortcuts push them out. The missing shortcuts were reproduced on a rooted test emulator with a mounted build. A real Root Mount phone hasn't been checked yet. Refs #27.
+
 - Local Android builds use AGP 9.4.1 and Android Test Engine in place of the older UTP/Netty device-test transport. The build and all 21 supported patch inputs pass. A separate settings-preview test passed on Android 16 and verifies that host test libraries aren't bundled into the extension. SDK/lint tooling still contains advisory-matched HttpClient and Commons Lang versions; this update doesn't claim to fix those matches.
 
 - Choice files accept content-provider documents outside Messenger's own UID, so a picker cannot read or overwrite its private files through a file path or an app-owned provider. Provider failures leave choices alone and omit private exception details from logs.

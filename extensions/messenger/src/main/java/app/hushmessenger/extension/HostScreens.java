@@ -4,8 +4,13 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.graphics.drawable.Icon;
 import android.os.Bundle;
 import android.util.Log;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Opens settings and restart on installs whose manifest changes never reached PackageManager, such as
@@ -23,6 +28,10 @@ public final class HostScreens {
      * stock activity has no task affinity, so Messenger's own task is left alone.
      */
     static final String SHORTCUT_HOST = "com.facebook.zero.upsell.activity.ZeroUpsellBuyConfirmInterstitialActivity";
+    /** The patch adds this to Messenger's shortcuts file; Android publishes it only on an install or update. */
+    static final String STATIC_CONTROLS_SHORTCUT = "hushmessenger_controls";
+    static final String CONTROLS_SHORTCUT = "hushmessenger_dynamic_controls";
+    static final String RESTART_SHORTCUT = "hushmessenger_dynamic_restart";
 
     private static volatile Application application;
     /** Settings and CrashGuard have started in this process, from SettingsProvider, a settings screen or a hook. */
@@ -71,6 +80,45 @@ public final class HostScreens {
         Application app = application;
         if (app == null || app.getBaseContext() == null || !app.getPackageName().equals(Application.getProcessName())) return;
         start(app);
+        if (started && hosted(app)) publishShortcuts(app);
+    }
+
+    /**
+     * Android reads static shortcuts when a package is installed or updated, and a Root Mount install is neither, so
+     * the pair the patch adds never shows up there. Publish the same two as dynamic shortcuts instead. Messenger's
+     * conversation shortcuts can push them out, so each start puts back what's missing.
+     */
+    static void publishShortcuts(Context context) {
+        try {
+            ShortcutManager manager = context.getSystemService(ShortcutManager.class);
+            if (manager == null) return;
+            List<String> published = new ArrayList<>();
+            for (ShortcutInfo shortcut : manager.getDynamicShortcuts()) {
+                if (CONTROLS_SHORTCUT.equals(shortcut.getId()) || RESTART_SHORTCUT.equals(shortcut.getId())) published.add(shortcut.getId());
+            }
+            for (ShortcutInfo shortcut : manager.getManifestShortcuts()) {
+                if (!STATIC_CONTROLS_SHORTCUT.equals(shortcut.getId())) continue;
+                // The static pair arrived after all, so the copies would only show twice.
+                if (!published.isEmpty()) manager.removeDynamicShortcuts(published);
+                return;
+            }
+            List<ShortcutInfo> missing = new ArrayList<>();
+            if (!published.contains(CONTROLS_SHORTCUT)) missing.add(shortcut(context, CONTROLS_SHORTCUT, "Patch controls", SETTINGS,
+                android.R.drawable.ic_menu_preferences, 0));
+            if (!published.contains(RESTART_SHORTCUT)) missing.add(shortcut(context, RESTART_SHORTCUT, "Restart Messenger", RESTART,
+                android.R.drawable.ic_popup_sync, 1));
+            if (!missing.isEmpty()) manager.addDynamicShortcuts(missing);
+        } catch (RuntimeException error) {
+            // A rate limit or launcher refusal leaves the Menu tab and side menu rows as the way in.
+            Log.w("HushMessenger", "Can't add HushMessenger's launcher shortcuts", error);
+        }
+    }
+
+    /** Same target and extra as the static shortcut, so ShortcutTrampoline opens the hosted screen. */
+    private static ShortcutInfo shortcut(Context context, String id, String label, String screen, int icon, int rank) {
+        Intent intent = new Intent(Intent.ACTION_VIEW).setClassName(context.getPackageName(), SHORTCUT_HOST).putExtra(EXTRA, screen);
+        return new ShortcutInfo.Builder(context, id).setShortLabel(label).setLongLabel(label)
+            .setIcon(Icon.createWithResource("android", icon)).setIntent(intent).setRank(rank).build();
     }
 
     /**
