@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- The heap verifier and its regression tests now pass the pinned formatter. Their syntax trees and assertions are unchanged.
+
 - Keep unsent activity now advances only when a legacy unsend with an identifier is intercepted. Reading ordinary or previously retained messages leaves the timestamp alone. Status checks also sample pixels from the rendered screen and inspect Android's accessibility node in both themes.
 
 - Retained-unsend identifiers are added under one lock, so concurrent events no longer overwrite each other. Duplicate events avoid another write. Calls while the control is off, paused, unavailable or in safe mode add nothing. Tests preserve 100 concurrent identifiers and existing entries through a fresh read from disk.
