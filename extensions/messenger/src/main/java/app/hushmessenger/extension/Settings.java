@@ -166,7 +166,7 @@ public final class Settings {
     public static boolean enableBubbles() { return available("bubbles") && enabled("bubbles"); }
     public static boolean allowScreenshot() { return enabled("allow_screenshot"); }
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
-    public static boolean keepUnsent() { return enabled("keep_unsent"); }
+    public static boolean keepUnsent() { return wouldUse("keep_unsent"); }
     public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }
     public static boolean saveAnyStory() { return enabled("save_stories"); }
 
@@ -246,6 +246,7 @@ public final class Settings {
         if (prefs == null) return;
         Set<String> ids = new HashSet<>(prefs.getStringSet(KEPT_UNSENT_KEY, Collections.emptySet()));
         if (ids.add(messageId)) prefs.edit().putStringSet(KEPT_UNSENT_KEY, ids).apply();
+        activeAt.put("keep_unsent", System.currentTimeMillis());
     }
 
     public static boolean isKeptUnsent(String messageId) {
@@ -256,13 +257,13 @@ public final class Settings {
     }
 
     public static String labelKeptUnsent(String text, String messageId) {
-        if (!enabled("keep_unsent") || text == null) return text;
+        if (!wouldUse("keep_unsent") || text == null) return text;
         if (isKeptUnsent(messageId)) return "[unsent] " + text;
         return text;
     }
 
     public static boolean suppressUnsent(boolean original, String messageId) {
-        if (original && enabled("keep_unsent") && isKeptUnsent(messageId)) return false;
+        if (original && wouldUse("keep_unsent") && isKeptUnsent(messageId)) return false;
         return original;
     }
 

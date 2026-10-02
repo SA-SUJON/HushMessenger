@@ -65,9 +65,15 @@ public class SettingsTest {
     }
 
     @Test @Config(sdk = {28, 36}) public void legacyUnsendHelpersRetainAndLabelOnlyRecordedMessages() {
+        Settings.activeAt.clear();
         Settings.preferences.edit().putBoolean("keep_unsent", true).commit();
         assertTrue(Settings.keepUnsent());
+        assertEquals("Eligibility is not an interception", 0, Settings.lastActive("keep_unsent"));
+        assertEquals("ordinary text", Settings.labelKeptUnsent("ordinary text", "other-message"));
+        assertTrue(Settings.suppressUnsent(true, "other-message"));
+        assertEquals("Ordinary message reads are not interceptions", 0, Settings.lastActive("keep_unsent"));
         Settings.recordUnsent("retained-message");
+        assertTrue(Settings.lastActive("keep_unsent") > 0);
         Settings.recordUnsent(null);
         Settings.recordUnsent("");
         assertEquals(java.util.Set.of("retained-message"), Settings.preferences.getStringSet("kept_unsent_ids", java.util.Set.of()));
@@ -113,6 +119,7 @@ public class SettingsTest {
         }
         assertEquals("[unsent] original text", Settings.labelKeptUnsent("original text", "retained-message"));
         assertFalse(Settings.suppressUnsent(true, "retained-message"));
+        assertEquals("Reading an old retained message is not a new interception", 0, Settings.lastActive("keep_unsent"));
     }
 
     @Test @Config(sdk = {28, 36}) public void concurrentUnsendIdentifiersSurviveADiskReload() throws Exception {

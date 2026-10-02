@@ -8,6 +8,8 @@
 
 ### Changed and fixed
 
+- Keep unsent activity now advances only when a legacy unsend with an identifier is intercepted. Reading ordinary or previously retained messages leaves the timestamp alone. Status checks also sample pixels from the rendered screen and inspect Android's accessibility node in both themes.
+
 - Retained-unsend identifiers are added under one lock, so concurrent events no longer overwrite each other. Duplicate events avoid another write. Calls while the control is off, paused, unavailable or in safe mode add nothing. Tests preserve 100 concurrent identifiers and existing entries through a fresh read from disk.
 
 - Keep unsent describes its verified legacy routes, unsupported encrypted chats and unverified group coverage beside the switch. **No unsend activity observed since restart** describes hook activity without implying chat support. Tests cover retained-message labels, stock behavior while off or paused, and choices retained after settings reinitializes. Refs #23.
