@@ -173,11 +173,22 @@ object CatalogTool {
                 (type < 0x1000 || offset >= uint(108))) { "Invalid DEX mapped section extent" }
             if (type == 0x2002) require(size == uint(56)) { "DEX string data count differs from identifiers" }
         }
-        val annotator = DexAnnotator(dex, 120)
+        val starts = mutableMapOf<Int, MutableSet<Int>>()
+        val annotator = object : DexAnnotator(dex, 120) {
+            var activeType = 0
+            override fun annotate(length: Int, message: String, vararg arguments: Any?) {
+                if (length == 0 && message in setOf("[%d] %s", "[%d] %s: %s") &&
+                    arguments.getOrNull(1) == requireNotNull(getAnnotator(activeType)).itemName) {
+                    require(starts.getOrPut(activeType) { mutableSetOf() }.add(cursor)) { "Overlapping DEX item starts" }
+                }
+                super.annotate(length, message, *arguments)
+            }
+        }
         for ((index, entry) in mapped.withIndex()) {
             val (type, _, offset) = entry
             val limit = mapped.getOrNull(index + 1)?.third ?: data.size.toLong()
             annotator.setLimit(offset.toInt(), limit.toInt())
+            annotator.activeType = type
             // writeAnnotations catches parser errors for a diagnostic dump. Call the parser directly.
             requireNotNull(annotator.getAnnotator(type)).annotateSection(annotator)
             val parsedEnd = annotator.cursor.toLong()
@@ -188,6 +199,46 @@ object CatalogTool {
                 "DEX map count leaves unparsed section bytes"
             }
             annotator.clearLimit()
+        }
+        fun reference(offset: Long, type: Int, optional: Boolean = true) {
+            require((optional && offset == 0L) || (offset <= Int.MAX_VALUE && starts[type]?.contains(offset.toInt()) == true)) {
+                "DEX reference doesn't point to a mapped item start"
+            }
+        }
+        for (index in 0 until uint(56).toInt()) reference(uint(uint(60).toInt() + index * 4), 0x2002, false)
+        for (index in 0 until uint(72).toInt()) reference(uint(uint(76).toInt() + index * 12 + 8), 0x1001)
+        for (index in 0 until uint(96).toInt()) {
+            val at = uint(100).toInt() + index * 32
+            reference(uint(at + 12), 0x1001)
+            reference(uint(at + 20), 0x2006)
+            reference(uint(at + 24), 0x2000)
+            reference(uint(at + 28), 0x2005)
+        }
+        for (at in starts[7].orEmpty()) reference(uint(at), 0x2005, false)
+        for (at in starts[0x1002].orEmpty()) for (index in 0 until uint(at).toInt())
+            reference(uint(at + 4 + index * 4), 0x1003)
+        for (at in starts[0x1003].orEmpty()) for (index in 0 until uint(at).toInt())
+            reference(uint(at + 4 + index * 4), 0x2004, false)
+        for (at in starts[0x2006].orEmpty()) {
+            reference(uint(at), 0x1003)
+            val fields = uint(at + 4).toInt()
+            val methods = uint(at + 8).toInt()
+            val parameters = uint(at + 12).toInt()
+            for (index in 0 until fields + methods + parameters)
+                reference(uint(at + 20 + index * 8), if (index < fields + methods) 0x1003 else 0x1002, false)
+        }
+        for (at in starts[0x2001].orEmpty()) reference(uint(at + 8), 0x2003)
+        for (at in starts[0x2000].orEmpty()) {
+            val reader = dex.dataBuffer.readerAt(at)
+            val staticFields = reader.readSmallUleb128()
+            val instanceFields = reader.readSmallUleb128()
+            val directMethods = reader.readSmallUleb128()
+            val virtualMethods = reader.readSmallUleb128()
+            repeat(staticFields + instanceFields) { reader.readSmallUleb128(); reader.readSmallUleb128() }
+            repeat(directMethods + virtualMethods) {
+                reader.readSmallUleb128(); reader.readSmallUleb128()
+                reference(reader.readSmallUleb128().toLong(), 0x2001)
+            }
         }
         // Dexlib uses lazy views. Force every identifier and the complete class/body data to be read.
         for (type in ReferenceType.STRING..ReferenceType.METHOD_PROTO) for (reference in dex.getReferences(type)) {

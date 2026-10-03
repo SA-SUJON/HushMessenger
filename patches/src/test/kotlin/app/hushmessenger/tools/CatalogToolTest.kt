@@ -19,6 +19,30 @@ import kotlinx.serialization.json.*
 import kotlin.test.*
 
 class CatalogToolTest {
+    @Test fun aMethodCannotPointInsideAnotherParsedCodeItem() {
+        val store = MemoryDataStore()
+        val definition = fixtureClass("Lfixture/Overlapping;", listOf(
+            fixtureMethod("Lfixture/Overlapping;->a()V", "return-void", 1),
+            fixtureMethod("Lfixture/Overlapping;->b()V", "return-void", 1)))
+        DexPool.writeTo(store, ImmutableDexFile(Opcodes.getDefault(), listOf(definition)))
+        val changed = store.data.copyOf()
+        store.close()
+        CatalogTool.validateDex(changed)
+        val bytes = ByteBuffer.wrap(changed).order(ByteOrder.LITTLE_ENDIAN)
+        val map = bytes.getInt(52)
+        val codeEntry = (0 until bytes.getInt(map)).map { map + 4 + it * 12 }
+            .single { bytes.getShort(it).toInt() == 0x2001 }
+        assertEquals(2, bytes.getInt(codeEntry + 4))
+        val code = bytes.getInt(codeEntry + 8)
+        val end = (0 until bytes.getInt(map)).map { bytes.getInt(map + 4 + it * 12 + 8) }
+            .filter { it > code }.min()
+        bytes.putInt(codeEntry + 4, 1)
+        bytes.putInt(code + 12, (end - code - 16) / 2)
+        MessageDigest.getInstance("SHA-1").digest(changed.copyOfRange(32, changed.size)).copyInto(changed, 12)
+        bytes.putInt(8, Adler32().apply { update(changed, 12, changed.size - 12) }.value.toInt())
+        assertFails("The second method points inside the first code item") { CatalogTool.validateDex(changed) }
+    }
+
     @Test fun mapDataCountsAndExtentsMustDescribeTheActualBytes() {
         val store = MemoryDataStore()
         val definition = fixtureClass("Lfixture/MapCounts;", listOf(fixtureMethod(
