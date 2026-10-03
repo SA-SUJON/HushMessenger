@@ -2,11 +2,15 @@
 
 ## Unreleased
 
-Development build 0.19.2. The public release remains 0.14.0.
+Development build 0.19.3. The public release remains 0.14.0.
 
-The frozen 0.19.2 development bundle is SHA-256 `e7c978962d3ace5d52915ad1059f421df1a95119bd900de1b3400a221f8a1897`. It rebuilds the same patch code that passed the 1024 MB patching gate across all 21 supported inputs in v0.19.1 with all 33 patches selected. The five signed mapping-family checks pass with v3 signatures, unchanged native libraries and no duplicate classes. The signed checksum verifies with the release key. The retained 0.19.0 bundle also reproduced from a fresh checkout. The three earlier discovery failures pass now, but their original termination cause remains unconfirmed because those logs omitted exit codes.
+- **Open** in settings and **Restart Messenger** now find Messenger when you've switched to one of its alternate app icons. They used to report that no launcher was available, because they read each icon's built-in default instead of whether Messenger had turned it on.
 
-The issue tracker drain triaged the remaining open reports. View-once media saving and replay, local read state without sending receipts, and Messenger 581 support with the reported heat and scroll lag all need native fixtures or exact 581 inputs before a safe code change.
+- Safe mode keeps counting startup crashes even when its saved count can't be read, so a crash loop still pauses the controls after three tries.
+
+- Update checks recover on their own if GitHub's reply no longer matches the saved release details. A retry time from GitHub never holds checks back for more than a day, and it never shortens the normal wait between failed checks.
+
+- Development release checks compare the held public feed with the one published under its release tag, and the development version must be newer. Catalog validation runs the Gradle wrapper directly and stops the whole process tree if it times out. The compatibility report keeps going when the community route changes on a new build, and the memory gate reports a damaged output APK without dropping the other results.
 
 - The memory gate runs at most two builds at once, with two processors per Java process. Compatibility and patching failures include their subprocess exit codes. Regression tests check that all inputs run without exceeding the concurrency limit.
 
@@ -14,7 +18,7 @@ The issue tracker drain triaged the remaining open reports. View-once media savi
 
 - Opted-in update checks reuse validated release details for an hour and send their ETag on later checks. GitHub retry times are shown in settings and respected. Quota reset times apply only to an exhausted quota, so secondary limits keep their own retry wait. Release links must match their tags, and development builds ahead of the public release show both versions. Late replies can't save cache data after cancellation.
 
-- Copy setup includes the control descriptions shown in settings and explains what recorded activity proves. Receipt wording keeps the local unread and reply limits explicit. Screenshot access doesn't imply replay or saving. Sign-in and past-call-log documentation now reflect the observed results.
+- Copy setup includes the control descriptions shown in settings and explains what recorded activity proves. Receipt wording keeps the local unread and reply limits explicit. Sign-in and past-call-log documentation now reflect the observed results.
 
 - Original-quality photos enforce the 20 MB limit throughout preparation and delivery. Files that grow during a read or while a callback waits are rejected. Cleanup keeps the source and earlier copies intact. Existing scan bytes, color profiles and orientation handling are preserved.
 
@@ -22,15 +26,15 @@ The issue tracker drain triaged the remaining open reports. View-once media savi
 
 - Development bundles can be validated while the public feed remains held. Validation checks both DEX files, including mapped section counts, bounds and referenced item starts, and the exact loaded catalog. Cached catalog comparisons preserve JSON types. Validation freezes the bundle with its checksum outside the build folder. The memory gate uses that snapshot and checks that its bytes stay unchanged. Release validation keeps its publication checks separate.
 
-- File saves and restores can be canceled. Settings stop waiting after 30 seconds and release the screen when it closes. Late results can't change choices, and a storage app that ignores cancellation can't start unlimited background work. File slices retain their absolute boundaries, including files supplied with a different initial position. A canceled save may leave an incomplete file.
+- File saves and restores can be canceled. Settings stop waiting after 30 seconds and release the screen when it closes. Late results can't change choices, and a storage app that ignores cancellation can't start unlimited background work. File slices retain their absolute boundaries, including files supplied with a different initial position. If you cancel a save, save again before you rely on that file.
 
-- Hide joined community chats is a new control that starts off. It filters subscribed channels and announcements from the main Chats display while keeping conversation data, delivery and unread state intact. Displayed row counts follow the filtered list. Off or Pause restores the original list on the next render. Search and community folders keep their rows. Folder and membership checks cover all 21 supported builds. Live joined-community checks remain open.
+- Hide joined community chats is a new control that starts off. It filters subscribed channels and announcements from the main Chats list (the All chip) while keeping conversation data, delivery and unread state intact. Displayed row counts follow the filtered list. Off or Pause restores the original list on the next render. Other chips such as Channels and Unread, search and community folders keep their rows. Folder and membership checks cover all 21 supported builds.
 
 - Repository links now use the HushMessenger artwork as their social preview.
 
 - Manager 1.33.0 applied all 32 patches at its existing 640 MB process limit, with a peak heap of 290 MB. The signed result passed archive checks and kept every native library unchanged. Fresh-checkout reproduction and non-English setup diagnostics also passed. The development build updated an existing signed-in installation without replacing its key or losing its chat history.
 
-- **Hide AI sticker tools** also hides the Generate buttons in Messenger's newer sticker keyboard. The guard matches the verified AI label and leaves other cells alone. **Allow screenshots** also covers the secure-window calls in view-once media and Quicksnap. It preserves unrelated flags, lifecycle code and the original calls while off or paused. All 21 supported builds have records for these routes. Live keyboard and protected-media checks remain open.
+- **Hide AI sticker tools** also hides the Generate buttons in Messenger's newer sticker keyboard. The guard matches the verified AI label and leaves other cells alone. **Allow screenshots** also covers the secure-window calls in view-once media and Quicksnap. It preserves unrelated flags, lifecycle code and the original calls while off or paused. All 21 supported builds have records for these routes.
 
 - Patch builds now use Morphe Patcher 1.15.0 and the maintained MorpheApp ARSCLib fork. Migration checks applied all 32 patches to all 21 supported APKs at a 1024 MB heap, verified signatures for the five naming groups and retained their native libraries. Two fresh checkouts produced the same bundle bytes. Kotlin and Bouncy Castle security pins remain in place.
 
