@@ -1275,6 +1275,15 @@ public final class SettingsActivity extends Activity {
                             output.write(bytes);
                         }
                     } else {
+                        if (opened.getDeclaredLength() >= 0) {
+                            // Older AssetFileDescriptor input skips relative to the provider's position.
+                            // Normalize seekable descriptors so the declared slice has an absolute start.
+                            try { android.system.Os.lseek(opened.getFileDescriptor(), 0, android.system.OsConstants.SEEK_SET); }
+                            catch (android.system.ErrnoException error) {
+                                if (error.errno != android.system.OsConstants.ESPIPE)
+                                    throw new java.io.IOException("Choices document seek failed", error);
+                            }
+                        }
                         try (java.io.InputStream input = opened.createInputStream()) {
                             stream = input;
                             if (canceled) return;

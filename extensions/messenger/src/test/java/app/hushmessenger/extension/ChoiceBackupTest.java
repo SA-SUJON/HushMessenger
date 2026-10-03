@@ -37,7 +37,7 @@ import org.robolectric.shadows.ShadowToast;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = {28, 36}, shadows = {ChoiceBackupTest.DocumentResolver.class, ChoiceBackupTest.SeekableDescriptor.class})
+@Config(sdk = {28, 29, 36}, shadows = {ChoiceBackupTest.DocumentResolver.class, ChoiceBackupTest.SeekableDescriptor.class, ChoiceBackupTest.SeekableOs.class})
 public class ChoiceBackupTest {
     @Before public void reset() {
         Settings.initialize(RuntimeEnvironment.getApplication());
@@ -45,6 +45,8 @@ public class ChoiceBackupTest {
         CrashGuard.resetForTests();
         DocumentResolver.opener = null;
         DocumentResolver.onOpen = null;
+        SeekableDescriptor.files.clear();
+        SeekableOs.errno = 0;
         SettingsActivity.documentTimeoutMillis = 30_000;
     }
 
@@ -101,10 +103,41 @@ public class ChoiceBackupTest {
     /** Robolectric 4.17 doesn't implement the seek used by Android's sliced output stream. */
     @Implements(ParcelFileDescriptor.class)
     public static class SeekableDescriptor extends ShadowParcelFileDescriptor {
+        static final java.util.Map<java.io.FileDescriptor, java.io.RandomAccessFile> files = new java.util.concurrent.ConcurrentHashMap<>();
+        @Implementation protected java.io.FileDescriptor getFileDescriptor() {
+            java.io.FileDescriptor descriptor = super.getFileDescriptor();
+            java.io.RandomAccessFile file = org.robolectric.util.ReflectionHelpers.getField(this, "file");
+            if (file != null) files.put(descriptor, file);
+            return descriptor;
+        }
         @Implementation protected long seekTo(long position) throws java.io.IOException {
             java.io.RandomAccessFile file = org.robolectric.util.ReflectionHelpers.getField(this, "file");
             file.seek(position);
             return file.getFilePointer();
+        }
+    }
+
+    /** ShadowOs tracks offsets separately from real host descriptors. Supply the actual seek primitive. */
+    @Implements(android.system.Os.class)
+    public static class SeekableOs {
+        static int errno;
+        @Implementation protected static long sysconf(int name) {
+            return org.robolectric.util.ReflectionHelpers.callStaticMethod(org.robolectric.shadows.ShadowOs.class,
+                "sysconf", org.robolectric.util.ReflectionHelpers.ClassParameter.from(int.class, name));
+        }
+        @Implementation protected static long lseek(java.io.FileDescriptor descriptor, long offset, int whence)
+                throws android.system.ErrnoException {
+            if (errno != 0) throw new android.system.ErrnoException("lseek", errno);
+            java.io.RandomAccessFile file = SeekableDescriptor.files.get(descriptor);
+            if (file == null) throw new android.system.ErrnoException("lseek", android.system.OsConstants.ESPIPE);
+            try {
+                long base = whence == android.system.OsConstants.SEEK_SET ? 0 :
+                    whence == android.system.OsConstants.SEEK_CUR ? file.getFilePointer() : file.length();
+                file.seek(base + offset);
+                return file.getFilePointer();
+            } catch (java.io.IOException error) {
+                throw new android.system.ErrnoException("lseek", android.system.OsConstants.EBADF, error);
+            }
         }
     }
 
@@ -635,6 +668,64 @@ public class ChoiceBackupTest {
             startFile(screen.get(), true, Uri.parse("content://choices/short-slice"));
             awaitToast("Couldn't export");
             finishWorkers();
+            assertArrayEquals(original, Files.readAllBytes(file));
+        } finally { Files.deleteIfExists(file); }
+    }
+
+    @Test public void prepositionedInputSlicesUseTheirAbsoluteStartOffset() throws Exception {
+        byte[] payload = (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8);
+        byte[] prefix = "provider prefix:".getBytes(StandardCharsets.UTF_8);
+        byte[] suffix = ":provider suffix".getBytes(StandardCharsets.UTF_8);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        bytes.write(prefix); bytes.write(payload); bytes.write(suffix);
+        var file = Files.createTempFile("choices-positioned-slice", ".txt");
+        Files.write(file, bytes.toByteArray());
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup();
+             var descriptor = ParcelFileDescriptor.open(file.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)) {
+            Settings.installed = new HashSet<>(Set.of("stories"));
+            // Providers may pass an already-used descriptor rather than a newly opened one.
+            ShadowParcelFileDescriptor shadow = org.robolectric.shadow.api.Shadow.extract(descriptor);
+            java.io.RandomAccessFile underlying = org.robolectric.util.ReflectionHelpers.getField(shadow, "file");
+            underlying.seek(prefix.length + 4);
+            DocumentResolver.opener = (uri, signal) -> new AssetFileDescriptor(descriptor, prefix.length, payload.length);
+            startFile(screen.get(), false, Uri.parse("content://choices/positioned-slice"));
+            awaitToast("Restored 1 choice");
+            finishWorkers();
+            assertTrue(Settings.preferences.getBoolean("stories", false));
+            assertArrayEquals(bytes.toByteArray(), Files.readAllBytes(file));
+        } finally { Files.deleteIfExists(file); }
+    }
+
+    @Test public void aFailedAbsoluteSeekKeepsExistingChoicesAndReportsFailure() throws Exception {
+        var file = Files.createTempFile("choices-bad-seek", ".txt");
+        byte[] original = (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8);
+        Files.write(file, original);
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup();
+             var descriptor = ParcelFileDescriptor.open(file.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)) {
+            Settings.installed = new HashSet<>(Set.of("stories"));
+            SeekableOs.errno = android.system.OsConstants.EBADF;
+            DocumentResolver.opener = (uri, signal) -> new AssetFileDescriptor(descriptor, 0, original.length);
+            startFile(screen.get(), false, Uri.parse("content://choices/bad-seek"));
+            awaitToast("Not a valid HushMessenger backup");
+            finishWorkers();
+            assertFalse(Settings.preferences.getBoolean("stories", false));
+            assertArrayEquals(original, Files.readAllBytes(file));
+        } finally { Files.deleteIfExists(file); }
+    }
+
+    @Test @Config(sdk = {28, 29}) public void aNonSeekableFiniteStreamStillRestoresChoices() throws Exception {
+        var file = Files.createTempFile("choices-nonseekable", ".txt");
+        byte[] original = (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8);
+        Files.write(file, original);
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup();
+             var descriptor = ParcelFileDescriptor.open(file.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)) {
+            Settings.installed = new HashSet<>(Set.of("stories"));
+            SeekableOs.errno = android.system.OsConstants.ESPIPE;
+            DocumentResolver.opener = (uri, signal) -> new AssetFileDescriptor(descriptor, 0, original.length);
+            startFile(screen.get(), false, Uri.parse("content://choices/nonseekable"));
+            awaitToast("Restored 1 choice");
+            finishWorkers();
+            assertTrue(Settings.preferences.getBoolean("stories", false));
             assertArrayEquals(original, Files.readAllBytes(file));
         } finally { Files.deleteIfExists(file); }
     }
