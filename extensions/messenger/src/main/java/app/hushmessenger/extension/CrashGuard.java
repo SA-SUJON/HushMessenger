@@ -37,6 +37,8 @@ final class CrashGuard {
     private static volatile File filesDir;
     private static volatile boolean safeModeActive;
     static java.util.function.Function<File, AtomicFile> atomicFiles = AtomicFile::new;
+    interface StagedInput { FileInputStream open(File file) throws IOException; }
+    static StagedInput stagedInput = FileInputStream::new;
 
     static void onProcessStart(Context context) {
         if (context == null || !STARTED.compareAndSet(false, true)) return;
@@ -241,16 +243,32 @@ final class CrashGuard {
         AtomicFile atomic = null;
         FileOutputStream out = null;
         boolean completed = false;
+        boolean finishing = false;
+        File backup = new File(file.getPath() + ".bak");
+        File staging = new File(file.getPath() + ".new");
         try {
             if (text == null || text.isEmpty() || text.length() > 64 || text.chars().anyMatch(value ->
                     value >= 127 || (value < 32 && value != 9 && value != 10 && value != 13))) throw new IOException("Invalid record text");
             atomic = atomicFiles.apply(file);
+            // Android 9 and 10 can truncate after a failed backup rename. Check it first.
+            if (Build.VERSION.SDK_INT <= 29 && file.exists() && !backup.exists() && !file.renameTo(backup))
+                throw new IOException("Could not preserve the previous record");
             out = atomic.startWrite();
-            out.write(text.getBytes(StandardCharsets.US_ASCII));
+            byte[] encoded = text.getBytes(StandardCharsets.US_ASCII);
+            out.write(encoded);
             out.getFD().sync();
+            // Verify while AtomicFile can still restore the previous record. openRead on the
+            // original would restore its backup on older Android, so read the candidate directly.
+            File candidate = staging;
+            if (!candidate.exists()) candidate = file;
+            try (FileInputStream verify = stagedInput.open(candidate)) {
+                for (byte value : encoded) if (verify.read() != (value & 255)) throw new IOException("Invalid staged record");
+                if (verify.read() != -1) throw new IOException("Invalid staged record size");
+            }
+            finishing = true;
             atomic.finishWrite(out);
             // AtomicFile logs some finish failures instead of throwing. Check that no staging file remains.
-            if (new File(file.getPath() + ".bak").exists() || new File(file.getPath() + ".new").exists() || !text.equals(read(file)))
+            if (backup.exists() || staging.exists())
                 throw new IOException("Record replacement did not finish");
             completed = true;
             return true;
@@ -259,8 +277,15 @@ final class CrashGuard {
             return false;
         } finally {
             if (!completed && atomic != null && out != null) {
-                try { atomic.failWrite(out); }
-                catch (RuntimeException failure) { persistenceFailure("restoring a record", failure); }
+                // finishWrite may have discarded the backup. Never roll back after that point;
+                // an unfinished backup/staging file remains recoverable by the next openRead.
+                if (finishing) {
+                    try { out.close(); }
+                    catch (IOException | RuntimeException failure) { persistenceFailure("closing a record", failure); }
+                } else {
+                    try { atomic.failWrite(out); }
+                    catch (RuntimeException failure) { persistenceFailure("restoring a record", failure); }
+                }
             }
         }
     }
@@ -273,6 +298,7 @@ final class CrashGuard {
         safeModeActive = false;
         filesDir = null;
         atomicFiles = AtomicFile::new;
+        stagedInput = FileInputStream::new;
     }
 
     private CrashGuard() { }

@@ -24,11 +24,11 @@ import org.robolectric.annotation.Config;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = {28, 36}, shadows = CrashGuardTest.PosixAtomicRename.class)
+@Config(sdk = {28, 29, 36}, shadows = CrashGuardTest.PosixAtomicRename.class)
 public class CrashGuardTest {
     // Keep Android's actual AtomicFile algorithm. Its private rename crosses into Java's
     // Windows implementation, which doesn't replace an existing target as Android does.
-    @org.robolectric.annotation.Implements(value = AtomicFile.class, minSdk = 29)
+    @org.robolectric.annotation.Implements(value = AtomicFile.class, minSdk = 30)
     public static class PosixAtomicRename {
         @org.robolectric.annotation.Implementation
         protected static void rename(File source, File target) {
@@ -217,14 +217,95 @@ public class CrashGuardTest {
                 assertNull(CrashGuard.read(file));
             }
             assertFalse(CrashGuard.write(file, "x".repeat(65)));
+            assertTrue(CrashGuard.write(file, "999 123 crashed"));
             CrashGuard.atomicFiles = target -> new AtomicFile(target) {
                 @Override public java.io.FileInputStream openRead() throws java.io.FileNotFoundException {
                     throw new java.io.FileNotFoundException("private storage details");
                 }
             };
-            assertFalse(CrashGuard.write(file, "999 123 crashed"));
+            assertNull(CrashGuard.read(file));
+            CrashGuard.stagedInput = target -> { throw new IOException("private storage details"); };
+            assertFalse(CrashGuard.write(file, "1000 456"));
+            CrashGuard.atomicFiles = AtomicFile::new;
+            CrashGuard.stagedInput = java.io.FileInputStream::new;
+            assertEquals("999 123 crashed", CrashGuard.read(file));
             assertSanitizedPersistenceFailure();
-        } finally { CrashGuard.atomicFiles = AtomicFile::new; new AtomicFile(file).delete(); }
+        } finally { CrashGuard.atomicFiles = AtomicFile::new; CrashGuard.stagedInput = java.io.FileInputStream::new; new AtomicFile(file).delete(); }
+    }
+
+    @Test public void stagedVerificationFailurePreservesThePriorCompleteRecord() throws Exception {
+        File file = new File(dir, "test-staged-verification");
+        try {
+            assertTrue(CrashGuard.write(file, "999 123 crashed"));
+            CrashGuard.stagedInput = target -> { throw new IOException("private storage details"); };
+            assertFalse(CrashGuard.write(file, "1000 456"));
+            CrashGuard.stagedInput = java.io.FileInputStream::new;
+            assertEquals("999 123 crashed", CrashGuard.read(file));
+            CrashGuard.atomicFiles = target -> new AtomicFile(target) {
+                @Override public java.io.FileInputStream openRead() throws java.io.FileNotFoundException {
+                    throw new java.io.FileNotFoundException("private storage details");
+                }
+            };
+            // There is no fallible verification read after committing and discarding the backup.
+            assertTrue(CrashGuard.write(file, "1000 456"));
+            CrashGuard.atomicFiles = AtomicFile::new;
+            assertEquals("1000 456", CrashGuard.read(file));
+            assertFalse(new File(file.getPath() + ".bak").exists());
+            assertFalse(new File(file.getPath() + ".new").exists());
+        } finally {
+            CrashGuard.stagedInput = java.io.FileInputStream::new;
+            CrashGuard.atomicFiles = AtomicFile::new;
+            new AtomicFile(file).delete();
+        }
+    }
+
+    @Test public void legacyBackupRenameFailureNeverStartsADestructiveWrite() {
+        File real = new File(dir, "test-backup-rename");
+        File failedRename = new File(real.getPath()) {
+            @Override public boolean renameTo(File target) { return false; }
+        };
+        var opened = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            assertTrue(CrashGuard.write(real, "999 123 crashed"));
+            CrashGuard.atomicFiles = target -> new AtomicFile(target) {
+                @Override public FileOutputStream startWrite() throws IOException {
+                    opened.set(true);
+                    var output = super.startWrite();
+                    return new FileOutputStream(output.getFD()) {
+                        @Override public void write(byte[] bytes) throws IOException {
+                            output.write(bytes, 0, 3);
+                            throw new IOException("private storage details");
+                        }
+                        @Override public void close() throws IOException { output.close(); }
+                    };
+                }
+            };
+            assertFalse(CrashGuard.write(failedRename, "1000 456"));
+            assertEquals(android.os.Build.VERSION.SDK_INT > 29, opened.get());
+            CrashGuard.atomicFiles = AtomicFile::new;
+            assertEquals("999 123 crashed", CrashGuard.read(real));
+        } finally { CrashGuard.atomicFiles = AtomicFile::new; new AtomicFile(real).delete(); }
+    }
+
+    @Test public void completedWriteDoesNotUseAFalliblePostCommitReadOrRollback() {
+        File real = new File(dir, "test-completed-record");
+        File hiddenMetadata = new File(real.getPath()) {
+            @Override public boolean isFile() { return false; }
+        };
+        var rolledBack = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            assertTrue(CrashGuard.write(real, "999 123 crashed"));
+            CrashGuard.atomicFiles = target -> new AtomicFile(target) {
+                @Override public void failWrite(FileOutputStream output) {
+                    rolledBack.set(true);
+                    super.failWrite(output);
+                }
+            };
+            assertTrue(CrashGuard.write(hiddenMetadata, "1000 456"));
+            assertFalse(rolledBack.get());
+            CrashGuard.atomicFiles = AtomicFile::new;
+            assertEquals("1000 456", CrashGuard.read(real));
+        } finally { CrashGuard.atomicFiles = AtomicFile::new; new AtomicFile(real).delete(); }
     }
 
     @Test public void failedSafeModeCommitKeepsRuntimeProtectionAndTheCrashCount() {

@@ -64,7 +64,7 @@ A successful check doesn't establish cross-app login, provider access or Messeng
 
 ## Find the settings
 
-After three crashes near startup, safe mode pauses the controls and keeps your choices. Open settings and tap **Resume** to use those choices again. If **Pause all changes** is on, tap **Clear safe mode** first, then turn Pause off when you're ready. Interrupted crash-record saves retain the previous complete record. If saving the recovery state fails, settings report the failure and keep changes paused so you can try again. The records and preferences are separate saves.
+After three crashes near startup, safe mode pauses the controls and keeps your choices. Open settings and tap **Resume** to use those choices again. If **Pause all changes** is on, tap **Clear safe mode** first, then turn Pause off when you're ready. Crash-record saves verify the replacement before committing it and retain the previous record on an interrupted write. Android 9 and 10 also check that the backup succeeded before writing. If saving the recovery state fails, settings report the failure and keep changes paused so you can try again. The records and preferences are separate saves.
 
 After installing Messenger with any optional HushMessenger control, **long-press Messenger's icon on your home screen**. Choose **Patch controls** to open settings, or **Restart Messenger** to apply changes that need a fresh process. Both shortcuts work with Messenger's alternate icons. Your launcher may show fewer contact shortcuts when these actions are present.
 

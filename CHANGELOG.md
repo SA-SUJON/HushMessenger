@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Crash records retain their previous complete contents if a replacement is interrupted or fails. Recovery checks preference saves too. If a save fails, settings keep the controls paused and show a retry message. Existing records remain readable.
+- Crash records verify replacement contents before committing them. Android 9 and 10 check the backup rename before a write can overwrite the old record, and a completed save won't trigger a rollback. Recovery checks preference saves too. If a save fails, settings keep the controls paused and show a retry message. Existing records remain readable.
 
 - Development bundles can be validated while the public feed remains held. Validation checks both DEX files and the exact loaded catalog, then freezes the bundle with its checksum outside the build folder. The memory gate uses that snapshot and checks that its bytes stay unchanged. Release validation keeps its publication checks separate.
 
