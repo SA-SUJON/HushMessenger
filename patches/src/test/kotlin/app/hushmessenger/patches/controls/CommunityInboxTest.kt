@@ -336,11 +336,11 @@ class CommunityInboxTest {
 
     @Test fun allExactStockInputsKeepTheSnapshotHeaderCallbacksAndNativeRoutes() {
         val folder = System.getenv("HUSH_NATIVE_FIXTURES")
-        assumeTrue(folder != null, "Set HUSH_NATIVE_FIXTURES to the exact stock21 directory")
+        assumeTrue(folder != null, "Set HUSH_NATIVE_FIXTURES to the exact stock fixture directory")
         val apks = Files.list(Path.of(folder!!)).use { it.filter { p -> p.toString().endsWith(".apk") }.sorted().toList() }
         assertEquals(controlProfiles.size, apks.size)
         for (apk in apks) {
-            val code = apk.fileName.toString().substringAfter("messenger-580-").substringBefore(".apk")
+            val code = apk.fileName.toString().substringBeforeLast(".apk").substringAfterLast('-')
             activeProfile = controlProfileFor(code)
             val expectedHash = Files.readAllLines(Path.of("../scripts/profiles/$code.txt")).single { it.startsWith("sha256 ") }.substringAfter(' ')
             val digest = MessageDigest.getInstance("SHA-256")

@@ -324,6 +324,20 @@ class PatchHeapChecks(unittest.TestCase):
                     )
                 run.assert_not_called()
 
+    def test_stock_apk_is_found_under_any_version_name_but_only_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "messenger-581-123.apk").write_bytes(b"stock")
+            (root / "messenger-580-9123.apk").write_bytes(b"other build")
+            self.assertEqual(root / "messenger-581-123.apk", checker.stock_apk(root, 123))
+            with self.assertRaisesRegex(ValueError, "found 0"):
+                checker.stock_apk(root, 456)
+            (root / "messenger-580-123.apk").write_bytes(b"same code twice")
+            with patch.object(checker.subprocess, "run") as run:
+                with self.assertRaisesRegex(ValueError, "found 2"):
+                    checker.check_build(argparse.Namespace(stock_dir=root), 123, "0" * 64, set())
+                run.assert_not_called()
+
     def test_corrupt_frozen_zip_has_a_controlled_failure_before_patching(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

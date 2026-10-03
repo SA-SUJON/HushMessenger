@@ -23,8 +23,16 @@ else:
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def stock_apk(stock_dir, code):
+    """The one stock APK for a version code, named messenger-<major version>-<code>.apk."""
+    found = sorted(stock_dir.glob(f"messenger-*-{code}.apk"))
+    if len(found) != 1:
+        raise ValueError(f"{code}: expected one stock APK named messenger-<version>-{code}.apk, found {len(found)}")
+    return found[0]
+
+
 def check_build(args, code, expected_hash, names):
-    stock = args.stock_dir / f"messenger-580-{code}.apk"
+    stock = stock_apk(args.stock_dir, code)
     with stock.open("rb") as source:
         if hashlib.file_digest(source, "sha256").hexdigest() != expected_hash:
             raise ValueError(f"{code}: stock APK does not match its recorded hash")
