@@ -381,7 +381,13 @@ public final class Settings {
 
     /** Only the section renderer receives a copy. The captured native snapshot is never changed. */
     public static List<?> filterJoinedCommunityInboxRows(List<?> items, Object callback, Object filter) {
-        return filterJoinedCommunityInboxRows(items, () -> HostScreens.isMainInboxScope(callback, filter), HostScreens::isJoinedCommunityRow);
+        return filterJoinedCommunityInboxRows(items, () -> isAllChatsFilter(filter) && HostScreens.isMainInboxScope(callback, filter),
+            HostScreens::isJoinedCommunityRow);
+    }
+
+    // Every chip except Message Requests keeps the INBOX folder, so Channels and Unread would otherwise count as the main list.
+    static boolean isAllChatsFilter(Object filter) {
+        return filter instanceof Enum && "ALL".equals(((Enum<?>) filter).name());
     }
 
     static List<?> filterJoinedCommunityInboxRows(List<?> items, java.util.function.BooleanSupplier mainInbox,

@@ -93,4 +93,16 @@ public class CommunityInboxTest {
         assertFalse(Settings.lastHookErrors().get("community_inbox").contains("private row detail"));
         assertEquals(4, render(true).size());
     }
+
+    // Messenger's thread-type chips; every one but MESSAGE_REQUESTS keeps the INBOX folder.
+    private enum Chip { ALL, UNREAD, GROUPS, CHANNELS, CHANNELS_INCLUDING_UNJOINED, MESSAGE_REQUESTS }
+
+    @Test public void onlyTheAllChipIsTheMainChatsList() {
+        assertTrue(Settings.isAllChatsFilter(Chip.ALL));
+        for (Chip chip : Chip.values()) if (chip != Chip.ALL) assertFalse(chip.name(), Settings.isAllChatsFilter(chip));
+        assertFalse(Settings.isAllChatsFilter("ALL"));
+        assertFalse(Settings.isAllChatsFilter(null));
+        Settings.preferences.edit().putBoolean("community_inbox", true).commit();
+        assertSame(snapshot, Settings.filterJoinedCommunityInboxRows(snapshot, null, Chip.CHANNELS));
+    }
 }
