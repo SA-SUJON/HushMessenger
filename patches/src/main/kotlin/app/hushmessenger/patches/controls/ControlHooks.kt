@@ -106,6 +106,7 @@ internal val expectedHooks = mapOf(
     ),
     "ai_menu" to setOf("LX/HFe;->A00()Z", "LX/HFe;->A01()Z", "LX/Jiu;->A00()Z", "LX/Jiu;->A01()Z"),
     "ai_fab" to setOf("LX/6k8;->render(LX/2MZ;)LX/1GG;"),
+    "ai_sticker_cell" to setOf("LX/FXP;->render(LX/2MZ;)LX/1GG;"),
     "subtabs" to setOf("LX/2UL;->run()V"),
     "typing" to setOf("LX/Ahp;->run()V"),
     "typing_mailbox" to setOf("LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"),
@@ -124,6 +125,7 @@ internal val expectedHooks = mapOf(
         "LX/8xp;->onScreenCaptured()V",
         "LX/4nW;->A00(Landroid/view/Window;)V",
     ),
+    "screenshot_viewers" to screenshotViewerHooks("A1A"),
     "hide_read_receipts" to setOf("LX/AX0;->run()V"),
     "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
@@ -158,6 +160,7 @@ internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToStr
 /** Match semantics first, then require the complete set from both tested APKs. */
 internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>> {
     val found = expectedHooks.keys.associateWith { mutableListOf<Method>() }
+    found.getValue("ai_sticker_cell").addAll(findAiStickerCells(classes))
     val adContract = classes.any { it.type == AD_ITEM } && classes.any { cls ->
         cls.type == IMMUTABLE_LIST && cls.methods.any {
             it.name == "copyOf" && it.parameterTypes == listOf("Ljava/util/Collection;") &&
@@ -240,6 +243,11 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             val strings = refs.filterIsInstance<StringReference>().map { it.string }.toSet()
             val gate = method.returnType == "Z" && method.parameterTypes.isEmpty()
             fun add(key: String) { found.getValue(key).add(method) }
+            if ((cls.type == EPHEMERAL_VIEWER && method.name in setOf("A1A", "A1C", "onResume")) ||
+                (cls.type == QUICKSNAP_VIEWER && method.name == "onCreateView")) {
+                method.screenshotViewerSites()
+                add("screenshot_viewers")
+            }
             if (method.returnType == "Z" && (method.parameterTypes.isEmpty() ||
                 (AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type)))) {
                 for ((key, spec) in pluginGates) if (strings.any { it in spec.anchors }) add(key)

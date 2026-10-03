@@ -117,6 +117,8 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
     for ((hook, selectedMethods) in methods) for (method in selectedMethods) {
         if (hook in pluginGates) method.validatePluginGate()
         when (hook) {
+            "ai_sticker_cell" -> method.validateAiStickerCell()
+            "screenshot_viewers" -> method.validateScreenshotViewer()
             "subtabs" -> method.validateSubtabs()
             "browser" -> method.validateBrowserPreference()
             "ads" -> method.validateAdFilter()
@@ -140,6 +142,8 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
     }
     for ((hook, selectedMethods) in methods) for (method in selectedMethods) {
         when (hook) {
+            "ai_sticker_cell" -> method.injectAiStickerCell()
+            "screenshot_viewers" -> method.injectScreenshotViewer()
             "subtabs" -> method.injectSubtabs()
             "browser" -> method.injectBrowserPreference()
             "ads" -> method.injectAdFilter()
@@ -241,7 +245,7 @@ val hideMomentsPatch = controlPatch("moments", "Hide Chat Moments", "Hides the C
 @Suppress("unused")
 val hideReelsBadgePatch = controlPatch("reels_badge", "Hide Reels badge", "Hides the Reels notification badge.", "Navigation")
 @Suppress("unused")
-val hideAiStickersPatch = controlPatch("ai_stickers", "Hide AI sticker tools", "Hides the generated-sticker tab and AI sticker suggestions.", "Stickers")
+val hideAiStickersPatch = controlPatch("ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions.", "Stickers", "ai_stickers", "ai_sticker_cell")
 @Suppress("unused")
 val hideAvatarStickersPatch = controlPatch("avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "Stickers", "avatar_stickers", "avatar_tabs")
 @Suppress("unused")
@@ -263,7 +267,7 @@ val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "
 @Suppress("unused")
 val originalPhotoPatch = controlPatch("original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata except the rotation tag. Videos and photos over 20 MB are still compressed.", "Conversations")
 @Suppress("unused")
-val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected.", "Privacy")
+val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Suppresses your outgoing read receipt. In end-to-end encrypted chats, chats you open stay unread until you reply.", "Privacy", "hide_read_receipts", "read_mailbox")
 @Suppress("unused")

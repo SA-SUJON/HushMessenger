@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Hide AI sticker tools** also hides the Generate buttons in Messenger's newer sticker keyboard. The guard matches the verified AI label and leaves other cells alone. **Allow screenshots** also covers the secure-window calls in view-once media and Quicksnap. It preserves unrelated flags, lifecycle code and the original calls while off or paused. All 21 supported builds have records for these routes. Live keyboard and protected-media checks remain open.
+
 - Patch builds now use Morphe Patcher 1.15.0 and the maintained MorpheApp ARSCLib fork. Migration checks applied all 32 patches to all 21 supported APKs at a 1024 MB heap, verified signatures for the five naming groups and retained their native libraries. Two fresh checkouts produced the same bundle bytes. Kotlin and Bouncy Castle security pins remain in place.
 
 - Settings expose each control's full row as one accessible switch. The title, description and activity label share a touch target, and the switch keeps its keyboard focus. Unavailable controls can be read but can't be toggled. Live TalkBack checks on an isolated Android 16 preview read the title and description as one control and changed the saved choice once per double-tap. The enabled-count summary stays readable without announcing after every toggle. Regression checks cover Android 9 and 16.

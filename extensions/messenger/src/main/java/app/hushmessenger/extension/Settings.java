@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.view.Window;
+import android.view.WindowManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -191,6 +193,12 @@ public final class Settings {
         return preferences.getBoolean(BUBBLE_CHAT_HEADS, false) ? "chat_heads" : "native";
     }
     public static boolean allowScreenshot() { return enabled("allow_screenshot"); }
+    public static void addScreenshotFlags(Window window, int flags) {
+        window.addFlags(allowScreenshot() ? flags & ~WindowManager.LayoutParams.FLAG_SECURE : flags);
+    }
+    public static void setScreenshotFlags(Window window, int flags, int mask) {
+        window.setFlags(allowScreenshot() ? flags & ~WindowManager.LayoutParams.FLAG_SECURE : flags, mask);
+    }
     public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
     public static boolean keepUnsent() { return wouldUse("keep_unsent"); }
     public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }

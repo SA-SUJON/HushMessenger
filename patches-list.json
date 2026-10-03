@@ -1,6 +1,6 @@
 {
     "NOTE": "Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand.",
-    "version": "0.16.0",
+    "version": "0.17.0",
     "patches": [
         {
             "name": "Allow chat bubbles",
@@ -61,7 +61,7 @@
         },
         {
             "name": "Allow screenshots",
-            "description": "Lets you screenshot photos, media and video Messenger protects in a chat, and stops screenshot notices. View-once media stays protected. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. Long-press Messenger's home screen icon > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -118,7 +118,7 @@
         },
         {
             "name": "Hide AI sticker tools",
-            "description": "Hides the generated-sticker tab and AI sticker suggestions. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions. Long-press Messenger's home screen icon > Patch controls. Starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [

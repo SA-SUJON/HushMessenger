@@ -11,6 +11,7 @@ hook ai_menu LX/JdK;->A01()Z
 hook ai_search LX/5RV;->A0A(LX/5RV;)Z
 hook ai_search LX/5RV;->A0B(LX/5RV;)Z
 hook ai_search_chip LX/DB7;->render(LX/2Nf;)LX/1Gf;
+hook ai_sticker_cell LX/FSU;->render(LX/2Nf;)LX/1Gf;
 hook ai_stickers LX/YAk;->A03(LX/YAk;)Z
 hook ai_stickers LX/YBZ;->A07(LX/YBZ;)Z
 hook ai_tab LX/1jI;->A02(LX/1jI;)Z
@@ -89,6 +90,9 @@ hook people_tab LX/E9L;->A01(LX/E9L;)V
 hook read_mailbox LX/9v6;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 hook reels_badge LX/7yl;->A09(LX/7yl;)Z
 hook save_stories LX/NT4;->onClick(Landroid/view/View;)V
+hook screenshot_viewers Lcom/facebook/messaging/media/ephemeralmedia/viewer/EphemeralMediaViewerFragment;->A1C(Landroid/os/Bundle;)Landroid/app/Dialog;
+hook screenshot_viewers Lcom/facebook/messaging/media/ephemeralmedia/viewer/EphemeralMediaViewerFragment;->onResume()V
+hook screenshot_viewers Lcom/facebook/messaging/quicksnap/consumption/viewer/MsgrQuicksnapViewerFragment;->onCreateView(Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Landroid/os/Bundle;)Landroid/view/View;
 hook stories LX/1ne;->A00()Z
 hook subtabs LX/2VZ;->run()V
 hook suggested_replies LX/7Tb;->A06(LX/7Tb;)Z
