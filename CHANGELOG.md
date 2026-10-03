@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-Development build 0.19.0. The public release remains 0.14.0.
+Development build 0.19.1. The public release remains 0.14.0.
 
-The memory check passed 18 of 21 inputs. Three compatibility discoveries failed, with the cause still unconfirmed. A fresh checkout rebuild and final signed metadata verification remain pending.
+The frozen 0.19.1 development bundle is SHA-256 `29a00d56bfb7e3e5df4a0c6b6a552d576fc5dc7d934b643971f3c6b293cfb2ae`. It passes the 1024 MB patching gate across all 21 supported inputs with all 33 patches selected. The five signed mapping-family checks pass with v3 signatures, unchanged native libraries and no duplicate classes. A fresh checkout reproduces the same bundle checksum, and the signed checksum verifies with the release key. The retained 0.19.0 bundle also reproduced from a fresh checkout. The three earlier discovery failures pass now, but their original termination cause remains unconfirmed because those logs omitted exit codes.
 
 - The memory gate runs at most two builds at once, with two processors per Java process. Compatibility and patching failures include their subprocess exit codes. Regression tests check that all inputs run without exceeding the concurrency limit.
 
