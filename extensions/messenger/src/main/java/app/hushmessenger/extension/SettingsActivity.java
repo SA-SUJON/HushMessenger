@@ -1443,10 +1443,10 @@ public final class SettingsActivity extends Activity {
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(getPackageName());
         for (android.content.pm.ResolveInfo match : getPackageManager().queryIntentActivities(query, 0)) {
             var activity = match.activityInfo;
-            if (activity == null || !getPackageName().equals(activity.packageName) ||
-                activity.name == null || !activity.enabled ||
+            if (activity == null || !getPackageName().equals(activity.packageName) || activity.name == null ||
                 activity.name.startsWith("app.hushmessenger.extension.") ||
-                (activity.targetActivity != null && activity.targetActivity.startsWith("app.hushmessenger.extension."))) continue;
+                (activity.targetActivity != null && activity.targetActivity.startsWith("app.hushmessenger.extension.")) ||
+                !RestartActivity.enabledNow(getPackageManager(), getPackageName(), activity)) continue;
             try {
                 startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
