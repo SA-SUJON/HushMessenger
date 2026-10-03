@@ -183,12 +183,14 @@ final class SettingsText {
         ENGLISH.put("choices_file_busy", "Earlier file operations are still finishing. Try again when the storage app responds.");
         ENGLISH.put("choices_file_changed", "Choices changed while the file was loading. Restore the file again to replace them.");
         ENGLISH.put("check_updates", "Check for updates");
-        ENGLISH.put("check_updates_help", "Checks GitHub when enabled or when settings opens. Off by default. GitHub receives your IP address and connection metadata. No account or chat content is uploaded.");
+        ENGLISH.put("check_updates_help", "Checks GitHub when enabled or when settings opens. Reuses a saved result for an hour and respects GitHub's retry time. Off by default. GitHub receives your IP address and connection metadata. No account or chat content is uploaded.");
         ENGLISH.put("check_now", "Check now");
         ENGLISH.put("update_loading", "Checking for updates...");
         ENGLISH.put("update_available", "Version %s is available");
         ENGLISH.put("update_action", "View release");
         ENGLISH.put("up_to_date", "You have the latest version.");
+        ENGLISH.put("update_ahead", "Installed %s. Latest published version is %s.");
+        ENGLISH.put("update_retry", "GitHub couldn't answer yet. Try Check now after %s.");
         ENGLISH.put("update_error", "Couldn't check for updates.");
         ENGLISH.put("active_now", "Used just now");
         ENGLISH.put("active_ago", "Used %s ago");

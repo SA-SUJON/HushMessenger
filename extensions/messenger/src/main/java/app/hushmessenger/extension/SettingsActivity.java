@@ -886,6 +886,7 @@ public final class SettingsActivity extends Activity {
     /** Where the update check asks, and how long it waits. Tests point these at a local server. */
     static String releasesUrl = "https://api.github.com/repos/SysAdminDoc/HushMessenger/releases/latest";
     static int updateTimeoutMillis = 5000;
+    static java.util.function.LongSupplier updateClock = System::currentTimeMillis;
 
     /**
      * Compares release numbers part by part as integers, so 0.10.0 is newer than 0.9.0. A leading "v"
@@ -923,6 +924,11 @@ public final class SettingsActivity extends Activity {
             && !htmlUrl.contains("..") ? htmlUrl : "";
     }
 
+    static String releasePage(String htmlUrl, String tag) {
+        return ReleaseCheck.validTag(tag) && !releasePage(htmlUrl).isEmpty()
+            && htmlUrl.equals("https://github.com/SysAdminDoc/HushMessenger/releases/tag/" + tag) ? htmlUrl : "";
+    }
+
     private void syncUpdateChoice(boolean check) {
         if (updateStatus == null) return;
         boolean enabled = Settings.preferences.getBoolean("check_updates", false);
@@ -945,93 +951,114 @@ public final class SettingsActivity extends Activity {
         }
     }
 
+    private boolean currentUpdate(long generation) {
+        return generation == updateGeneration && !isDestroyed() && Settings.preferences.getBoolean("check_updates", false);
+    }
+
+    private void showRelease(long generation, ReleaseCheck release) {
+        runOnUiThread(() -> {
+            if (!currentUpdate(generation)) return;
+            String latest = release.version();
+            int comparison = compareVersions(latest, BuildConfig.VERSION_NAME);
+            updateStatus.setTextColor(comparison > 0 ? ui.accent : ui.muted);
+            if (comparison > 0) {
+                updateStatus.setText(text.get("update_available", latest));
+                Button view = ui.button(text.get("update_action"));
+                view.setTag("update_release");
+                updateRelease = view;
+                view.setOnClickListener(v -> {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(release.page))); }
+                    catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
+                });
+                ViewGroup parent = (ViewGroup) updateStatus.getParent();
+                parent.addView(view, parent.indexOfChild(updateStatus) + 1);
+            } else updateStatus.setText(comparison == 0 ? text.get("up_to_date")
+                : text.get("update_ahead", BuildConfig.VERSION_NAME, latest));
+            updateStatus.setVisibility(View.VISIBLE);
+        });
+    }
+
+    private void showRetry(long generation, long deadline) {
+        runOnUiThread(() -> {
+            if (!currentUpdate(generation)) return;
+            String date = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.MEDIUM,
+                getResources().getConfiguration().getLocales().get(0)).format(new java.util.Date(deadline));
+            updateStatus.setText(text.get("update_retry", date));
+            updateStatus.setVisibility(View.VISIBLE);
+        });
+    }
+
     private void checkForUpdates() {
         cancelUpdateCheck();
         if (!Settings.preferences.getBoolean("check_updates", false) || isDestroyed()) return;
         long generation = updateGeneration;
+        String endpoint = releasesUrl;
         updateStatus.setText(text.get("update_loading"));
         updateStatus.setTextColor(ui.muted);
         updateStatus.setVisibility(View.VISIBLE);
         new Thread(() -> {
             java.net.HttpURLConnection conn = null;
             try {
-                conn = (java.net.HttpURLConnection) new java.net.URL(releasesUrl).openConnection();
+                long now = updateClock.getAsLong();
+                SharedPreferences prefs = Settings.preferences;
+                long retry = ReleaseCheck.retryDeadline(prefs, endpoint);
+                if (now < retry) { showRetry(generation, retry); return; }
+                ReleaseCheck cached = ReleaseCheck.cached(prefs, endpoint, now);
+                if (cached != null && cached.recent(now)) { showRelease(generation, cached); return; }
+                conn = (java.net.HttpURLConnection) new java.net.URL(endpoint).openConnection();
                 synchronized (this) {
-                    if (generation != updateGeneration || !Settings.preferences.getBoolean("check_updates", false)) return;
+                    if (!currentUpdate(generation)) return;
                     updateConnection = conn;
                 }
                 conn.setInstanceFollowRedirects(false);
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                if (cached != null && !cached.etag.isEmpty()) conn.setRequestProperty("If-None-Match", cached.etag);
                 conn.setConnectTimeout(updateTimeoutMillis);
                 conn.setReadTimeout(updateTimeoutMillis);
-                if (conn.getResponseCode() != 200) throw new java.io.IOException("HTTP " + conn.getResponseCode());
-                java.io.ByteArrayOutputStream response = new java.io.ByteArrayOutputStream();
-                try (java.io.InputStream stream = conn.getInputStream()) {
-                    byte[] bytes = new byte[4096];
-                    int read;
-                    while ((read = stream.read(bytes)) != -1) {
-                        if (response.size() + read > 256 * 1024) throw new java.io.IOException("Release response exceeds 256 KiB");
-                        response.write(bytes, 0, read);
+                int code = conn.getResponseCode();
+                if (code == 403 || code == 429) {
+                    int failures = ReleaseCheck.failures(prefs);
+                    long deadline = ReleaseCheck.retryAt(conn, updateClock.getAsLong(), failures);
+                    synchronized (this) {
+                        if (!currentUpdate(generation)) return;
+                        if (!prefs.edit().putLong(ReleaseCheck.RETRY_KEY, deadline).putString(ReleaseCheck.RETRY_ENDPOINT_KEY, endpoint)
+                            .putInt(ReleaseCheck.FAILURES_KEY, Math.min(6, failures + 1)).commit())
+                            android.util.Log.w("HushMessenger", "Couldn't save update retry time");
                     }
+                    showRetry(generation, deadline);
+                    return;
                 }
-                String body = java.nio.charset.StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
-                    .decode(java.nio.ByteBuffer.wrap(response.toByteArray())).toString();
-                String tag = null, htmlUrl = null;
-                try (android.util.JsonReader reader = new android.util.JsonReader(new java.io.StringReader(body))) {
-                    reader.setLenient(false);
-                    reader.beginObject();
-                    while (reader.hasNext()) {
-                        String name = reader.nextName();
-                        if ("tag_name".equals(name) || "html_url".equals(name)) {
-                            if (reader.peek() != android.util.JsonToken.STRING) throw new java.io.IOException("Invalid release field type");
-                            if ("tag_name".equals(name)) {
-                                if (tag != null) throw new java.io.IOException("Duplicate release tag");
-                                tag = reader.nextString();
-                            } else {
-                                if (htmlUrl != null) throw new java.io.IOException("Duplicate release URL");
-                                htmlUrl = reader.nextString();
-                            }
-                        } else reader.skipValue();
-                    }
-                    reader.endObject();
-                    if (reader.peek() != android.util.JsonToken.END_DOCUMENT) throw new java.io.IOException("Trailing release data");
-                }
-                if (tag == null || !tag.matches("v?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?"))
-                    throw new java.io.IOException("Invalid release tag");
-                String[] version = tag.split("\\+", 2)[0].split("-", 2);
-                if (version.length == 2) for (String identifier : version[1].split("\\."))
-                    if (identifier.matches("0[0-9]+")) throw new java.io.IOException("Invalid numeric pre-release identifier");
-                String latest = tag.startsWith("v") ? tag.substring(1) : tag;
-                boolean newer = compareVersions(latest, BuildConfig.VERSION_NAME) > 0;
-                String releaseUrl = htmlUrl == null ? "" : releasePage(htmlUrl);
-                if (releaseUrl.isEmpty()) throw new java.io.IOException("Invalid release URL");
-                runOnUiThread(() -> {
-                    if (generation != updateGeneration || isDestroyed() || !Settings.preferences.getBoolean("check_updates", false)) return;
-                    if (newer) {
-                        updateStatus.setText(text.get("update_available", latest));
-                        updateStatus.setTextColor(ui.accent);
-                        if (!releaseUrl.isEmpty()) {
-                            Button view = ui.button(text.get("update_action"));
-                            view.setTag("update_release");
-                            updateRelease = view;
-                            view.setOnClickListener(v -> {
-                                try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(releaseUrl))); }
-                                catch (android.content.ActivityNotFoundException e) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
-                            });
-                            ViewGroup parent = (ViewGroup) updateStatus.getParent();
-                            int idx = parent.indexOfChild(updateStatus);
-                            parent.addView(view, idx + 1);
+                ReleaseCheck release;
+                if (code == 304) {
+                    if (cached == null || cached.etag.isEmpty()) throw new java.io.IOException("304 without a conditional release cache");
+                    release = cached.revalidated(conn.getHeaderField("ETag"), updateClock.getAsLong());
+                } else {
+                    if (code != 200) throw new java.io.IOException("HTTP " + code);
+                    java.io.ByteArrayOutputStream response = new java.io.ByteArrayOutputStream();
+                    try (java.io.InputStream stream = conn.getInputStream()) {
+                        byte[] bytes = new byte[4096];
+                        int read;
+                        while ((read = stream.read(bytes)) != -1) {
+                            if (response.size() + read > 256 * 1024) throw new java.io.IOException("Release response exceeds 256 KiB");
+                            response.write(bytes, 0, read);
                         }
-                    } else {
-                        updateStatus.setText(text.get("up_to_date"));
                     }
-                    updateStatus.setVisibility(View.VISIBLE);
-                });
+                    String body = java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+                        .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                        .decode(java.nio.ByteBuffer.wrap(response.toByteArray())).toString();
+                    release = ReleaseCheck.parse(body, endpoint, conn.getHeaderField("ETag"), updateClock.getAsLong());
+                }
+                synchronized (this) {
+                    if (!currentUpdate(generation)) return;
+                    if (!prefs.edit().putString(ReleaseCheck.CACHE_KEY, release.encode()).remove(ReleaseCheck.RETRY_KEY)
+                        .remove(ReleaseCheck.RETRY_ENDPOINT_KEY).remove(ReleaseCheck.FAILURES_KEY).commit())
+                        android.util.Log.w("HushMessenger", "Couldn't save checked release");
+                }
+                showRelease(generation, release);
             } catch (java.io.IOException | IllegalArgumentException | IllegalStateException | SecurityException error) {
                 if (generation == updateGeneration) android.util.Log.e("HushMessenger", "Update check failed", error);
                 runOnUiThread(() -> {
-                    if (generation != updateGeneration || isDestroyed() || !Settings.preferences.getBoolean("check_updates", false)) return;
+                    if (!currentUpdate(generation)) return;
                     updateStatus.setText(text.get("update_error"));
                     updateStatus.setVisibility(View.VISIBLE);
                 });

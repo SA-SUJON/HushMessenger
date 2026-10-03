@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Opted-in update checks reuse validated release details for an hour and send their ETag on later checks. GitHub retry times are shown in settings and respected. Release links must match their tags, and development builds ahead of the public release show both versions. Late replies can't save cache data after cancellation.
+
 - Copy setup includes the control descriptions shown in settings and explains what recorded activity proves. Receipt wording keeps the local unread and reply limits explicit. Screenshot access doesn't imply replay or saving. Sign-in and past-call-log documentation now reflect the observed results.
 
 - Original-quality photos enforce the 20 MB limit throughout preparation and delivery. Files that grow during a read or while a callback waits are rejected. Cleanup keeps the source and earlier copies intact. Existing scan bytes, color profiles and orientation handling are preserved.
