@@ -176,6 +176,10 @@ final class SettingsText {
         ENGLISH.put("choices_file_saved", "Choices file saved");
         ENGLISH.put("choices_file_saving", "Saving choices file...");
         ENGLISH.put("choices_file_reading", "Reading choices file...");
+        ENGLISH.put("cancel_choices_file", "Cancel file operation");
+        ENGLISH.put("choices_file_canceled", "File operation canceled. A save may leave an incomplete file.");
+        ENGLISH.put("choices_file_timeout", "The file operation took too long. Try again. A save may leave an incomplete file.");
+        ENGLISH.put("choices_file_busy", "Earlier file operations are still finishing. Try again when the storage app responds.");
         ENGLISH.put("choices_file_changed", "Choices changed while the file was loading. Restore the file again to replace them.");
         ENGLISH.put("check_updates", "Check for updates");
         ENGLISH.put("check_updates_help", "Checks GitHub when enabled or when settings opens. Off by default. GitHub receives your IP address and connection metadata. No account or chat content is uploaded.");

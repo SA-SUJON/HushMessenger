@@ -82,7 +82,11 @@ public final class SettingsActivity extends Activity {
     private boolean documentImport;
     private boolean documentBusy;
     private Button saveChoicesFile, readChoicesFile;
+    private Button cancelChoicesFile;
     private TextView documentStatus;
+    private DocumentJob documentJob;
+    static int documentTimeoutMillis = 30_000;
+    private static final java.util.concurrent.Semaphore documentSlots = new java.util.concurrent.Semaphore(2);
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
     static final String[][] CONTROLS = {
@@ -264,6 +268,7 @@ public final class SettingsActivity extends Activity {
 
     @Override protected void onDestroy() {
         documentGeneration++;
+        cancelDocumentJob(null);
         cancelUpdateCheck();
         super.onDestroy();
     }
@@ -779,6 +784,11 @@ public final class SettingsActivity extends Activity {
         documentStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         documentStatus.setVisibility(View.GONE);
         ui.add(about, documentStatus, 8);
+        cancelChoicesFile = ui.button(text.get("cancel_choices_file"));
+        cancelChoicesFile.setTag("cancel_choices_file");
+        cancelChoicesFile.setVisibility(View.GONE);
+        cancelChoicesFile.setOnClickListener(view -> cancelDocumentJob("choices_file_canceled"));
+        ui.add(about, cancelChoicesFile, 8);
         ui.add(about, ui.text(text.get("choices_file_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
         LinearLayout updates = ui.panel();
@@ -1112,57 +1122,175 @@ public final class SettingsActivity extends Activity {
             feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG);
             return;
         }
-        long generation = documentGeneration;
-        String before = ChoiceCodec.encode(Settings.preferences, Settings.installed);
+        if (!documentSlots.tryAcquire()) {
+            documentStatus.setText(text.get("choices_file_busy"));
+            documentStatus.setVisibility(View.VISIBLE);
+            return;
+        }
+        DocumentJob job = new DocumentJob(this, uri, request, export);
+        documentJob = job;
         documentBusy = true;
         saveChoicesFile.setEnabled(false);
         readChoicesFile.setEnabled(false);
+        cancelChoicesFile.setVisibility(View.VISIBLE);
         documentStatus.setText(text.get(request == SAVE_CHOICES ? "choices_file_saving" : "choices_file_reading"));
         documentStatus.setVisibility(View.VISIBLE);
-        new Thread(() -> {
+        job.handler.postDelayed(job.deadline, Math.max(1, documentTimeoutMillis));
+        job.worker.start();
+    }
+
+    private void cancelDocumentJob(String status) {
+        DocumentJob job = documentJob;
+        if (job == null) return;
+        documentJob = null;
+        documentBusy = false;
+        documentGeneration++;
+        job.owner.clear();
+        job.handler.removeCallbacks(job.deadline);
+        job.cancel();
+        if (status != null) {
+            saveChoicesFile.setEnabled(true);
+            readChoicesFile.setEnabled(true);
+            cancelChoicesFile.setVisibility(View.GONE);
+            documentStatus.setText(text.get(status));
+            documentStatus.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void finishDocumentJob(DocumentJob job, boolean success, Map<String, Boolean> choices) {
+        if (documentJob != job || isDestroyed()) return;
+        documentJob = null;
+        documentBusy = false;
+        saveChoicesFile.setEnabled(true);
+        readChoicesFile.setEnabled(true);
+        cancelChoicesFile.setVisibility(View.GONE);
+        documentStatus.setVisibility(View.GONE);
+        if (!success) feedback(text.get(job.request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG);
+        else if (job.request == SAVE_CHOICES) feedback(text.get("choices_file_saved"), Toast.LENGTH_SHORT);
+        else if (job.generation == documentGeneration && job.before.equals(ChoiceCodec.encode(Settings.preferences, Settings.installed)))
+            restoreChoices(choices);
+        else feedback(text.get("choices_file_changed"), Toast.LENGTH_LONG);
+    }
+
+    /** Provider calls may ignore cancellation. Keep their resources bounded without retaining a screen. */
+    private static final class DocumentJob implements Runnable {
+        final java.lang.ref.WeakReference<SettingsActivity> owner;
+        final Context context;
+        final android.net.Uri uri;
+        final int request;
+        final String export, before;
+        final long generation;
+        final android.os.CancellationSignal cancellation = new android.os.CancellationSignal();
+        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        final Runnable deadline;
+        final Thread worker;
+        volatile boolean canceled;
+        volatile android.content.res.AssetFileDescriptor asset;
+        volatile java.io.Closeable stream;
+        private int users = 1;
+        private boolean finished;
+
+        DocumentJob(SettingsActivity screen, android.net.Uri uri, int request, String export) {
+            owner = new java.lang.ref.WeakReference<>(screen);
+            context = screen.getApplicationContext();
+            this.uri = uri;
+            this.request = request;
+            this.export = export;
+            generation = screen.documentGeneration;
+            before = ChoiceCodec.encode(Settings.preferences, Settings.installed);
+            deadline = () -> {
+                SettingsActivity current = owner.get();
+                if (current != null && current.documentJob == this) current.cancelDocumentJob("choices_file_timeout");
+            };
+            worker = new Thread(this, "HushChoicesDocument");
+            worker.setDaemon(true);
+        }
+
+        void cancel() {
+            synchronized (this) {
+                if (canceled) return;
+                canceled = true;
+                if (finished) return;
+                users++;
+            }
+            worker.interrupt();
+            // Both remote cancellation listeners and close can block, so neither runs on the UI thread.
+            Thread closer = new Thread(() -> {
+                try {
+                    try { cancellation.cancel(); }
+                    finally {
+                        java.io.Closeable currentStream = stream;
+                        android.content.res.AssetFileDescriptor currentAsset = asset;
+                        try { if (currentStream != null) currentStream.close(); }
+                        finally { if (currentAsset != null) currentAsset.close(); }
+                    }
+                } catch (java.io.IOException | RuntimeException error) {
+                    android.util.Log.w("HushMessenger", "Can't close choices document: " + error.getClass().getName());
+                } finally { release(); }
+            }, "HushChoicesCancel");
+            closer.setDaemon(true);
+            closer.start();
+        }
+
+        private synchronized void release() {
+            if (--users == 0) {
+                finished = true;
+                documentSlots.release();
+            }
+        }
+
+        @Override public void run() {
+            Map<String, Boolean> choices = null;
+            boolean success = false;
             try {
+                if (canceled) return;
                 String authority = uri.getAuthority();
                 if (authority == null || authority.isEmpty()) throw new SecurityException("Choices document has no provider");
                 // ContentResolver strips Android's userId@ prefix before resolving a provider.
                 authority = authority.substring(authority.lastIndexOf('@') + 1);
-                android.content.pm.ProviderInfo provider = getPackageManager().resolveContentProvider(authority, 0);
-                if (provider != null && (getPackageName().equals(provider.packageName) ||
+                android.content.pm.ProviderInfo provider = context.getPackageManager().resolveContentProvider(authority, 0);
+                if (provider != null && (context.getPackageName().equals(provider.packageName) ||
                         (provider.applicationInfo != null && provider.applicationInfo.uid == android.os.Process.myUid())))
                     throw new SecurityException("Choices document belongs to this app");
-                if (request == SAVE_CHOICES) {
-                    try (java.io.OutputStream stream = getContentResolver().openOutputStream(uri, "wt")) {
-                        if (stream == null) throw new java.io.IOException("No writable document");
-                        stream.write(export.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    }
-                    runOnUiThread(() -> { if (!isDestroyed()) feedback(text.get("choices_file_saved"), Toast.LENGTH_SHORT); });
-                } else {
-                    Map<String, Boolean> choices;
-                    try (java.io.InputStream stream = getContentResolver().openInputStream(uri)) {
-                        choices = ChoiceCodec.parse(ChoiceCodec.read(stream));
-                    }
-                    runOnUiThread(() -> {
-                        if (!isDestroyed()) {
-                            if (generation == documentGeneration && before.equals(ChoiceCodec.encode(Settings.preferences, Settings.installed)))
-                                restoreChoices(choices);
-                            else feedback(text.get("choices_file_changed"), Toast.LENGTH_LONG);
+                try (android.content.res.AssetFileDescriptor opened = context.getContentResolver()
+                        .openAssetFileDescriptor(uri, request == SAVE_CHOICES ? "wt" : "r", cancellation)) {
+                    if (opened == null) throw new java.io.IOException("No choices document");
+                    asset = opened;
+                    if (canceled) return;
+                    if (request == SAVE_CHOICES) {
+                        byte[] bytes = export.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        if (opened.getDeclaredLength() >= 0 && opened.getDeclaredLength() < bytes.length)
+                            throw new java.io.IOException("Choices document slice is too small");
+                        try (java.io.OutputStream output = opened.createOutputStream()) {
+                            stream = output;
+                            if (canceled) return;
+                            output.write(bytes);
                         }
-                    });
+                    } else {
+                        try (java.io.InputStream input = opened.createInputStream()) {
+                            stream = input;
+                            if (canceled) return;
+                            choices = ChoiceCodec.parse(ChoiceCodec.read(input));
+                        }
+                    }
                 }
+                success = !canceled;
             } catch (java.io.IOException | RuntimeException error) {
                 // Providers run outside this app's trust boundary. Their messages can include private paths or contents.
-                android.util.Log.e("HushMessenger", "Can't use choices document: " + error.getClass().getName());
-                runOnUiThread(() -> { if (!isDestroyed()) feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG); });
+                if (!canceled) android.util.Log.e("HushMessenger", "Can't use choices document: " + error.getClass().getName());
             } finally {
-                runOnUiThread(() -> {
-                    if (!isDestroyed()) {
-                        documentBusy = false;
-                        saveChoicesFile.setEnabled(true);
-                        readChoicesFile.setEnabled(true);
-                        documentStatus.setVisibility(View.GONE);
-                    }
+                asset = null;
+                stream = null;
+                handler.removeCallbacks(deadline);
+                boolean completed = success;
+                Map<String, Boolean> result = choices;
+                handler.post(() -> {
+                    SettingsActivity screen = owner.get();
+                    if (screen != null) screen.finishDocumentJob(this, completed, result);
                 });
+                release();
             }
-        }, "HushChoicesDocument").start();
+        }
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {

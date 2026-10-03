@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- File saves and restores can be canceled. Settings stop waiting after 30 seconds and release the screen when it closes. Late results can't change choices, and a storage app that ignores cancellation can't start unlimited background work. File slices retain their boundaries. A canceled save may leave an incomplete file.
+
 - Hide joined community chats is a new control that starts off. It filters subscribed channels and announcements from the main Chats display while keeping conversation data, delivery and unread state intact. Displayed row counts follow the filtered list. Off or Pause restores the original list on the next render. Search and community folders keep their rows. Folder and membership checks cover all 21 supported builds. Live joined-community checks remain open.
 
 - Repository links now use the HushMessenger artwork as their social preview.
