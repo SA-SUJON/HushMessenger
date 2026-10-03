@@ -1001,7 +1001,7 @@ public final class SettingsActivity extends Activity {
             try {
                 long now = updateClock.getAsLong();
                 SharedPreferences prefs = Settings.preferences;
-                long retry = ReleaseCheck.retryDeadline(prefs, endpoint);
+                long retry = ReleaseCheck.retryDeadline(prefs, endpoint, now);
                 if (now < retry) { showRetry(generation, retry); return; }
                 ReleaseCheck cached = ReleaseCheck.cached(prefs, endpoint, now);
                 if (cached != null && cached.recent(now)) { showRelease(generation, cached); return; }
@@ -1032,6 +1032,15 @@ public final class SettingsActivity extends Activity {
                 if (code == 304) {
                     if (cached == null || cached.etag.isEmpty()) throw new java.io.IOException("304 without a conditional release cache");
                     release = cached.revalidated(conn.getHeaderField("ETag"), updateClock.getAsLong());
+                    if (release == null) {
+                        // A changed ETag can't confirm the cached release. Drop it so the next check asks unconditionally.
+                        synchronized (this) {
+                            if (!currentUpdate(generation)) return;
+                            if (!prefs.edit().remove(ReleaseCheck.CACHE_KEY).commit())
+                                android.util.Log.w("HushMessenger", "Couldn't clear the cached release");
+                        }
+                        throw new java.io.IOException("Changed ETag on 304");
+                    }
                 } else {
                     if (code != 200) throw new java.io.IOException("HTTP " + code);
                     java.io.ByteArrayOutputStream response = new java.io.ByteArrayOutputStream();

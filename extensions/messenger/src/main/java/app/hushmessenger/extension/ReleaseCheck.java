@@ -17,6 +17,7 @@ final class ReleaseCheck {
     static final String RETRY_ENDPOINT_KEY = "update_retry_endpoint";
     static final String FAILURES_KEY = "update_retry_count";
     static final int MAX_CACHE_CHARS = 1024;
+    static final long MAX_RETRY_MS = 24 * 60 * 60 * 1000L;
     final String endpoint, tag, page, etag;
     final long checkedAt;
 
@@ -87,15 +88,21 @@ final class ReleaseCheck {
         return new ReleaseCheck(endpoint, tag, page, etag, checkedAt);
     }
 
+    /** Null when a 304 names a different ETag. The caller drops the cache so the next check is unconditional. */
     ReleaseCheck revalidated(String responseEtag, long time) throws IOException {
-        if (!etag.isEmpty() && responseEtag != null && !etag.equals(responseEtag)) throw new IOException("Changed ETag on 304");
+        if (!etag.isEmpty() && responseEtag != null && !etag.equals(responseEtag)) return null;
         return new ReleaseCheck(endpoint, tag, page, etag, time);
     }
 
-    static long retryDeadline(SharedPreferences prefs, String endpoint) {
-        try { return endpoint.equals(prefs.getString(RETRY_ENDPOINT_KEY, "")) ? Math.max(0, prefs.getLong(RETRY_KEY, 0)) : 0; }
-        catch (ClassCastException invalid) { return 0; }
+    static long retryDeadline(SharedPreferences prefs, String endpoint, long now) {
+        try {
+            long saved = endpoint.equals(prefs.getString(RETRY_ENDPOINT_KEY, "")) ? Math.max(0, prefs.getLong(RETRY_KEY, 0)) : 0;
+            // Nothing saved now is more than a day ahead. A later value is from an unbounded earlier version or a clock set back.
+            return saved > dayAhead(now) ? 0 : saved;
+        } catch (ClassCastException invalid) { return 0; }
     }
+
+    private static long dayAhead(long now) { return now > Long.MAX_VALUE - MAX_RETRY_MS ? Long.MAX_VALUE : now + MAX_RETRY_MS; }
 
     static int failures(SharedPreferences prefs) {
         try { return Math.max(0, Math.min(6, prefs.getInt(FAILURES_KEY, 0))); }
@@ -121,6 +128,8 @@ final class ReleaseCheck {
                 if (seconds >= 0) retry = Math.max(retry, Math.multiplyExact(seconds, 1000));
             } catch (IllegalArgumentException | ArithmeticException invalidReset) { }
         }
-        return retry >= 0 ? Math.max(now, retry) : Math.addExact(now, 60_000L << Math.min(6, previousFailures));
+        long backoff = Math.addExact(now, 60_000L << Math.min(6, previousFailures));
+        // A past reset or Retry-After: 0 can't undercut the backoff, and no header parks checks for more than a day.
+        return retry >= 0 ? Math.min(dayAhead(now), Math.max(backoff, retry)) : backoff;
     }
 }

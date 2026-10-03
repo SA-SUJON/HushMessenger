@@ -301,12 +301,23 @@ public class UpdateCheckTest {
         }
     }
 
-    @Test public void aChangedEtagCannotRevalidateOldData() throws Exception {
+    @Test public void aChangedEtagCannotRevalidateOldDataAndTheNextCheckIsUnconditional() throws Exception {
         String old = cache("\"old\"", now.get() - ReleaseCheck.COOLDOWN_MS);
         Settings.preferences.edit().putString(ReleaseCheck.CACHE_KEY, old).commit();
         reply = json(304, "", "ETag: \"different\"\r\n");
-        assertEquals("Couldn't check for updates.", awaitStatus(openWithCheckOn()).getText().toString());
-        assertEquals(old, Settings.preferences.getString(ReleaseCheck.CACHE_KEY, ""));
+        View root = openWithCheckOn();
+        assertEquals("Couldn't check for updates.", awaitStatus(root).getText().toString());
+        assertNull(root.findViewWithTag("update_release"));
+        assertTrue(requestHeaders.get(0), requestHeaders.get(0).contains("If-None-Match: \"old\"\r\n"));
+        // Keeping the old validator would resend it and fail the same way on every later check.
+        assertEquals("", Settings.preferences.getString(ReleaseCheck.CACHE_KEY, ""));
+        assertEquals(0, Settings.preferences.getLong(ReleaseCheck.RETRY_KEY, 0));
+        reply = json(200, release("v99.0.0", RELEASE_PAGE), "ETag: \"new\"\r\n");
+        root.findViewWithTag("check_now").performClick();
+        assertEquals("Version 99.0.0 is available", awaitStatus(root).getText().toString());
+        assertEquals(2, requests.get());
+        assertFalse(requestHeaders.get(1), requestHeaders.get(1).contains("If-None-Match:"));
+        assertTrue(Settings.preferences.getString(ReleaseCheck.CACHE_KEY, "").contains("\n\"new\"\n"));
     }
 
     @Test public void mismatchedTagAndCorruptCacheCannotOfferAReleaseAction() throws Exception {
@@ -392,6 +403,56 @@ public class UpdateCheckTest {
         root.findViewWithTag("check_now").performClick();
         assertRetryStatus(awaitStatus(root));
         assertEquals(now.get() + 120_000, Settings.preferences.getLong(ReleaseCheck.RETRY_KEY, 0));
+    }
+
+    @Test public void retryTimesStayWithinADayAndNeverUndercutTheBackoff() throws Exception {
+        String farDate = java.time.Instant.ofEpochMilli(now.get() + 365 * ReleaseCheck.MAX_RETRY_MS).atZone(java.time.ZoneOffset.UTC)
+            .format(java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME);
+        for (int variant = 0; variant < 5; variant++) {
+            closeScreens();
+            Settings.preferences.edit().clear().commit();
+            long seconds = now.get() / 1000;
+            String headers = new String[] {"Retry-After: 0\r\n", "X-RateLimit-Remaining: 0\r\nX-RateLimit-Reset: " + (seconds - 3600) + "\r\n",
+                "Retry-After: 999999999\r\n", "X-RateLimit-Remaining: 0\r\nX-RateLimit-Reset: " + (seconds + 30 * 86_400) + "\r\n",
+                "Retry-After: " + farDate + "\r\n"}[variant];
+            reply = json(429, "{}", headers);
+            View root = openWithCheckOn();
+            assertRetryStatus(awaitStatus(root));
+            long deadline = now.get() + (variant < 2 ? 60_000 : ReleaseCheck.MAX_RETRY_MS);
+            assertEquals(headers, deadline, Settings.preferences.getLong(ReleaseCheck.RETRY_KEY, 0));
+            if (variant == 0) {
+                // A second immediate retry still follows the growing backoff.
+                now.set(deadline);
+                root.findViewWithTag("check_now").performClick();
+                assertRetryStatus(awaitStatus(root));
+                assertEquals(now.get() + 120_000, Settings.preferences.getLong(ReleaseCheck.RETRY_KEY, 0));
+            } else if (variant == 2) {
+                int before = requests.get();
+                now.set(deadline - 1);
+                root.findViewWithTag("check_now").performClick();
+                assertRetryStatus(awaitStatus(root));
+                assertEquals(before, requests.get());
+                now.set(deadline);
+                reply = json(200, release("v99.0.0", RELEASE_PAGE));
+                root.findViewWithTag("check_now").performClick();
+                assertEquals("Version 99.0.0 is available", awaitStatus(root).getText().toString());
+                assertEquals(before + 1, requests.get());
+            }
+        }
+    }
+
+    @Test public void aRetryTimeSavedMoreThanADayAheadDoesNotParkChecks() throws Exception {
+        // Earlier versions saved any server time, and a clock set back pushes a saved one further out.
+        Settings.preferences.edit().putLong(ReleaseCheck.RETRY_KEY, now.get() + ReleaseCheck.MAX_RETRY_MS)
+            .putString(ReleaseCheck.RETRY_ENDPOINT_KEY, SettingsActivity.releasesUrl).commit();
+        reply = json(200, release("v99.0.0", RELEASE_PAGE));
+        assertRetryStatus(awaitStatus(openWithCheckOn()));
+        assertEquals(0, requests.get());
+        closeScreens();
+        Settings.preferences.edit().putLong(ReleaseCheck.RETRY_KEY, now.get() + ReleaseCheck.MAX_RETRY_MS + 1).commit();
+        assertEquals("Version 99.0.0 is available", awaitStatus(openWithCheckOn()).getText().toString());
+        assertEquals(1, requests.get());
+        assertEquals(0, Settings.preferences.getLong(ReleaseCheck.RETRY_KEY, 0));
     }
 
     @Test public void installedAheadNamesBothVersionsWithoutAnUpdateAction() throws Exception {
