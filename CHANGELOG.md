@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Original-quality photos enforce the 20 MB limit throughout preparation and delivery. Files that grow during a read or while a callback waits are rejected. Cleanup keeps the source and earlier copies intact. Existing scan bytes, color profiles and orientation handling are preserved.
+
 - Crash records verify replacement contents before committing them. Android 9 and 10 check the backup rename before a write can overwrite the old record, and a completed save won't trigger a rollback. Recovery checks preference saves too. If a save fails, settings keep the controls paused and show a retry message. Existing records remain readable.
 
 - Development bundles can be validated while the public feed remains held. Validation checks both DEX files, including mapped section counts, bounds and referenced item starts, and the exact loaded catalog. Cached catalog comparisons preserve JSON types. Validation freezes the bundle with its checksum outside the build folder. The memory gate uses that snapshot and checks that its bytes stay unchanged. Release validation keeps its publication checks separate.
