@@ -51,34 +51,41 @@ final class CrashGuard {
             countLastStart(context, prefs);
         } catch (RuntimeException failure) {
             persistenceFailure("reading the last start", failure);
+            // Invalid preference types still fail host initialization, without logging their contents.
+            if (failure instanceof ClassCastException) throw new IllegalStateException("Invalid crash guard preference");
         }
     }
 
     static boolean isSafeMode() { return safeModeActive; }
 
-    static synchronized boolean clearSafeMode() {
-        SharedPreferences prefs = Settings.preferences;
-        File dir = filesDir;
-        if (dir == null) {
-            persistenceFailure("clearing safe mode", null);
-            return false;
-        }
-        try {
-            if (prefs == null || !prefs.edit().putBoolean("safe_mode", false).commit()) {
+    static boolean clearSafeMode() {
+        synchronized (CrashGuard.class) {
+            SharedPreferences prefs = Settings.preferences;
+            File dir = filesDir;
+            if (dir == null) {
                 persistenceFailure("clearing safe mode", null);
                 return false;
             }
-        } catch (RuntimeException failure) {
-            persistenceFailure("clearing safe mode", failure);
-            return false;
-        }
-        if (!write(new File(dir, CRASH_STREAK), "0")) {
             try {
-                if (!prefs.edit().putBoolean("safe_mode", true).commit()) persistenceFailure("restoring safe mode", null);
-            } catch (RuntimeException failure) { persistenceFailure("restoring safe mode", failure); }
-            return false;
-        }
-        safeModeActive = false;
+                if (prefs == null || !prefs.edit().putBoolean("safe_mode", false).commit()) {
+                    persistenceFailure("clearing safe mode", null);
+                    return false;
+                }
+            } catch (RuntimeException failure) {
+                persistenceFailure("clearing safe mode", failure);
+                return false;
+            }
+            if (!write(new File(dir, CRASH_STREAK), "0")) {
+                try {
+                    if (!prefs.edit().putBoolean("safe_mode", true).commit()) persistenceFailure("restoring safe mode", null);
+                } catch (RuntimeException failure) { persistenceFailure("restoring safe mode", failure); }
+                return false;
+            }
+            safeModeActive = false;
+            }
+        // Preference listeners ran while the runtime guard was still active. Republish after recovery
+        // commits, outside the record lock so startup and theme initialization can't invert their locks.
+        if (HostScreens.started && !HostScreens.failed && Settings.installed.contains("material_you")) MaterialYouTheme.bind();
         return true;
     }
 
