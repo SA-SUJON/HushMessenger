@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Patch builds now use Morphe Patcher 1.15.0 and the maintained MorpheApp ARSCLib fork. Migration checks applied all 32 patches to all 21 supported APKs at a 1024 MB heap, verified signatures for the five naming groups and retained their native libraries. Two fresh checkouts produced the same bundle bytes. Kotlin and Bouncy Castle security pins remain in place.
+
 - Settings expose each control's full row as one accessible switch. The title, description and activity label share a touch target, and the switch keeps its keyboard focus. Unavailable controls can be read but can't be toggled. Live TalkBack checks on an isolated Android 16 preview read the title and description as one control and changed the saved choice once per double-tap. The enabled-count summary stays readable without announcing after every toggle. Regression checks cover Android 9 and 16.
 
 ## 0.14.0 (2026-10-02)
