@@ -245,7 +245,7 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             val strings = refs.filterIsInstance<StringReference>().map { it.string }.toSet()
             val gate = method.returnType == "Z" && method.parameterTypes.isEmpty()
             fun add(key: String) { found.getValue(key).add(method) }
-            if ((cls.type == EPHEMERAL_VIEWER && method.name in setOf("A1A", "A1C", "onResume")) ||
+            if ((cls.type == EPHEMERAL_VIEWER && (method.name in EPHEMERAL_DIALOGS || method.name == "onResume")) ||
                 (cls.type == QUICKSNAP_VIEWER && method.name == "onCreateView")) {
                 method.screenshotViewerSites()
                 add("screenshot_viewers")
