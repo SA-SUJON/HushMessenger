@@ -674,14 +674,15 @@ internal fun Method.jumpTargets(): Set<Int> {
     return targets
 }
 
-private const val PEOPLE_SERVER_FLAG = 72344235860374863L
+/** The Notifications tab's server flag ID, renumbered by each release: 580's, then 581's. */
+private val PEOPLE_SERVER_FLAGS = setOf(72344235860374863L, 72344231565407716L)
 
 /**
- * Where the Notifications tab loads its server flag: the method's only constant with that value, after the
+ * Where the Notifications tab loads its server flag: the method's only constant with one of those values, after the
  * preference branch at 12. It's at 17 in most builds and at 16 where Redex inlined the list reset into one call.
  */
 private fun List<Instruction>.peopleFlagIndex(): Int =
-    indices.filter { i -> this[i].opcode == Opcode.CONST_WIDE && (this[i] as? WideLiteralInstruction)?.wideLiteral == PEOPLE_SERVER_FLAG }
+    indices.filter { i -> this[i].opcode == Opcode.CONST_WIDE && (this[i] as? WideLiteralInstruction)?.wideLiteral in PEOPLE_SERVER_FLAGS }
         .singleOrNull()?.takeIf { it in 16..17 } ?: -1
 
 /**

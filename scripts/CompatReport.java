@@ -84,7 +84,8 @@ public class CompatReport {
         + "PeopleTabPYMKHandler$fetchPymkSuggestions$$inlined$CoroutineExceptionHandler$1;";
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
     static final String STORY_CARD_DATE_KEY = "last_date_creation_card_shown";
-    static final long PEOPLE_SERVER_FLAG = 72344235860374863L;
+    // The Notifications tab's server flag ID, renumbered by each release: 580's, then 581's
+    static final Set<Long> PEOPLE_SERVER_FLAGS = Set.of(72344235860374863L, 72344231565407716L);
 
     // Material You theme finds its targets by shape when it patches (MaterialYouPatch.kt), so no profile records them
     static final String DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;";
@@ -412,7 +413,7 @@ public class CompatReport {
         var flags = new ArrayList<Integer>();
         for (int i = 0; i < code.size(); i++) {
             if (code.get(i).getOpcode() == Opcode.CONST_WIDE && code.get(i) instanceof WideLiteralInstruction flag &&
-                flag.getWideLiteral() == PEOPLE_SERVER_FLAG) flags.add(i);
+                PEOPLE_SERVER_FLAGS.contains(flag.getWideLiteral())) flags.add(i);
         }
         if (flags.size() != 1 || flags.get(0) < 16 || flags.get(0) > 17) return null;
         int at = flags.get(0);
