@@ -481,6 +481,9 @@ public class CompatReport {
 
     static final String BUBBLE_SESSION = "Lcom/facebook/auth/usersession/FbUserSession;";
     static final long BUBBLE_ROLLOUT = 36312032932401152L;
+    /** 581 renumbered the specifier of the same rollout read. Exactly these two are accepted, as in NativeBubbles.kt. */
+    static final long BUBBLE_ROLLOUT_581 = 36312028637433857L;
+    static final Set<Long> BUBBLE_ROLLOUTS = Set.of(BUBBLE_ROLLOUT, BUBBLE_ROLLOUT_581);
     static final String BUBBLE_ACTIVITY = "com.facebook.messaging.msys.thread.bubbles.activity.StaxThreadViewBubblesActivity";
     static final String SHORTCUT_BUILDER = "Landroid/content/pm/ShortcutInfo$Builder;";
     static final String MESSAGING_STYLE = "Landroidx/core/app/NotificationCompat$MessagingStyle;";
@@ -535,7 +538,7 @@ public class CompatReport {
             register(c.get(10)) == 0 && ((NarrowLiteralInstruction)c.get(10)).getNarrowLiteral() == 28 &&
             capability.equals(ref(c.get(11))) && calls(c.get(11),1,4,0) && register(c.get(12)) == 0 &&
             register(c.get(13)) == 0 && jumpsTo(c,13,24) && register(c.get(18)) == 2 && register(c.get(19)) == 0 &&
-            ((WideLiteralInstruction)c.get(19)).getWideLiteral() == BUBBLE_ROLLOUT && register(c.get(20)) == 2 &&
+            BUBBLE_ROLLOUTS.contains(((WideLiteralInstruction)c.get(19)).getWideLiteral()) && register(c.get(20)) == 2 &&
             "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;".equals(ref(c.get(20))) &&
             rollout.equals(ref(c.get(21))) && calls(c.get(21),2,0,1) && register(c.get(22)) == 0 &&
             register(c.get(23)) == 0 && register(c.get(24)) == 2;
@@ -555,6 +558,24 @@ public class CompatReport {
                 reachesBubbleApi(byType,target,api,depth-1,seen)) return true;
         }
         return false;
+    }
+
+    /** NativeBubbles.kt's bubbleGateHelper: 581 reads the gate through a static (session, lazy holder) helper returning its answer. */
+    static boolean bubbleGateHelper(Method m, String gate) {
+        var c = instructions(m); var p = bubbleParameters(m);
+        var shape = List.of(Opcode.IGET_OBJECT, Opcode.INVOKE_INTERFACE, Opcode.MOVE_RESULT_OBJECT, Opcode.CHECK_CAST,
+            Opcode.INVOKE_VIRTUAL, Opcode.MOVE_RESULT, Opcode.RETURN);
+        if (!AccessFlags.STATIC.isSet(m.getAccessFlags()) || !"Z".equals(m.getReturnType()) || p.size() != 2 ||
+            !BUBBLE_SESSION.equals(p.get(0)) || m.getImplementation() == null || m.getImplementation().getRegisterCount() != 3 ||
+            !m.getImplementation().getTryBlocks().isEmpty() || !c.stream().map(Instruction::getOpcode).toList().equals(shape) ||
+            !(((ReferenceInstruction)c.get(0)).getReference() instanceof FieldReference holder) ||
+            !(((ReferenceInstruction)c.get(1)).getReference() instanceof MethodReference fetch)) return false;
+        var read = (TwoRegisterInstruction)c.get(0);
+        return read.getRegisterA() == 0 && read.getRegisterB() == 2 && holder.getDefiningClass().equals(p.get(1)) &&
+            fetch.getDefiningClass().equals(holder.getType()) && fetch.getName().equals("get") && fetch.getParameterTypes().isEmpty() &&
+            fetch.getReturnType().equals("Ljava/lang/Object;") && calls(c.get(1),0) && register(c.get(2)) == 0 &&
+            register(c.get(3)) == 0 && gate.split("->")[0].equals(ref(c.get(3))) && gate.equals(ref(c.get(4))) &&
+            calls(c.get(4),0,1) && register(c.get(5)) == 0 && register(c.get(6)) == 0;
     }
 
     /** NativeBubbles.kt's immutable connected-route checks. */
@@ -578,7 +599,9 @@ public class CompatReport {
                     if(write>=0 && write<=2 && c.get(write).getOpcode()==Opcode.CONST_4 && ((NarrowLiteralInstruction)c.get(write)).getNarrowLiteral()==1) shortcuts.add(m);
                 }
             }
-            if (refs.contains("shouldAttachBubbleMetadataToNotification") && refs.contains("attach_bubble_metadata") && refs.contains(gate) &&
+            if (refs.contains("shouldAttachBubbleMetadataToNotification") && refs.contains("attach_bubble_metadata") &&
+                (refs.contains(gate) || c.stream().anyMatch(i -> i.getOpcode() == Opcode.INVOKE_STATIC && i instanceof ReferenceInstruction r &&
+                    r.getReference() instanceof MethodReference called && bubbleTarget(byType, called) instanceof Method helper && bubbleGateHelper(helper, gate))) &&
                 c.stream().anyMatch(i -> i.getOpcode()==Opcode.IPUT_OBJECT && i instanceof ReferenceInstruction r && r.getReference() instanceof FieldReference)) attachments.add(m);
             if (refs.contains(MESSAGING_STYLE) && refs.contains("Landroid/content/pm/ShortcutInfo;->getId()Ljava/lang/String;") &&
                 refs.contains("Landroid/content/pm/ShortcutManager;->pushDynamicShortcut(Landroid/content/pm/ShortcutInfo;)V")) conversations.add(m);
@@ -1898,7 +1921,7 @@ public class CompatReport {
                 if (!isStatic && "Z".equals(method.getReturnType()) &&
                     paramTypes.equals(List.of(BUBBLE_SESSION)) && instructions.stream().anyMatch(i ->
                         i.getOpcode() == Opcode.CONST_WIDE && i instanceof WideLiteralInstruction flag &&
-                        flag.getWideLiteral() == BUBBLE_ROLLOUT)) found.get("bubble_mode").add(method);
+                        BUBBLE_ROLLOUTS.contains(flag.getWideLiteral()))) found.get("bubble_mode").add(method);
 
                 // browser
                 if ("Z".equals(method.getReturnType()) &&
