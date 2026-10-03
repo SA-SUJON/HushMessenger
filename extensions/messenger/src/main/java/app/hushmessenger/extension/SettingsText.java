@@ -206,6 +206,7 @@ final class SettingsText {
         ENGLISH.put("resume", "Resume");
         ENGLISH.put("clear_safe_mode", "Clear safe mode");
         ENGLISH.put("safe_mode_cleared", "Safe mode cleared. Changes remain paused.");
+        ENGLISH.put("safe_mode_save_failed", "Couldn't save safe mode. Changes stay paused. Try again.");
         ENGLISH.put("enabled_one", "%d control enabled");
         ENGLISH.put("enabled_many", "%d controls enabled");
         ENGLISH.put("saved_one", "%d saved choice. Turn pause off to resume.");

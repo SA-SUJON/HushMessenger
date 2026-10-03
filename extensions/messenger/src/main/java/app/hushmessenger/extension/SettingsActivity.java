@@ -410,7 +410,11 @@ public final class SettingsActivity extends Activity {
         safeModeAction.setTag("resume_safe_mode");
         safeModeAction.setOnClickListener(view -> {
             boolean paused = Settings.preferences.getBoolean("paused", false);
-            CrashGuard.clearSafeMode();
+            if (!CrashGuard.clearSafeMode()) {
+                refreshChoices();
+                feedback(text.get("safe_mode_save_failed"), Toast.LENGTH_LONG);
+                return;
+            }
             refreshChoices();
             feedback(text.get(paused ? "safe_mode_cleared" : "changes_resumed"), Toast.LENGTH_SHORT);
         });
@@ -616,8 +620,12 @@ public final class SettingsActivity extends Activity {
         control.setOnCheckedChangeListener((button, checked) -> {
             refreshStatus(control);
             if (binding) return;
+            if ("paused".equals(key) && !checked && CrashGuard.isSafeMode() && !CrashGuard.clearSafeMode()) {
+                refreshChoices();
+                feedback(text.get("safe_mode_save_failed"), Toast.LENGTH_LONG);
+                return;
+            }
             Settings.preferences.edit().putBoolean(key, checked).apply();
-            if ("paused".equals(key) && !checked && CrashGuard.isSafeMode()) CrashGuard.clearSafeMode();
             refreshChoices();
             feedback("paused".equals(key) ? text.get(checked ? "changes_paused" : "changes_resumed")
                 : text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT);

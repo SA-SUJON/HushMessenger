@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Crash records retain their previous complete contents if a replacement is interrupted or fails. Recovery checks preference saves too. If a save fails, settings keep the controls paused and show a retry message. Existing records remain readable.
+
 - Development bundles can be validated while the public feed remains held. Validation checks both DEX files and the exact loaded catalog, then freezes the bundle with its checksum outside the build folder. The memory gate uses that snapshot and checks that its bytes stay unchanged. Release validation keeps its publication checks separate.
 
 - File saves and restores can be canceled. Settings stop waiting after 30 seconds and release the screen when it closes. Late results can't change choices, and a storage app that ignores cancellation can't start unlimited background work. File slices retain their boundaries. A canceled save may leave an incomplete file.

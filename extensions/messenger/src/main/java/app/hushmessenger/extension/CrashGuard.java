@@ -10,8 +10,10 @@ import android.os.Looper;
 import android.os.Process;
 import android.os.SystemClock;
 import android.util.Log;
+import android.util.AtomicFile;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +36,7 @@ final class CrashGuard {
     private static volatile long startElapsed;
     private static volatile File filesDir;
     private static volatile boolean safeModeActive;
+    static java.util.function.Function<File, AtomicFile> atomicFiles = AtomicFile::new;
 
     static void onProcessStart(Context context) {
         if (context == null || !STARTED.compareAndSet(false, true)) return;
@@ -41,50 +44,97 @@ final class CrashGuard {
         SharedPreferences prefs = Settings.preferences;
         if (prefs == null) return;
         try {
+            safeModeActive = prefs.getBoolean("safe_mode", false);
             filesDir = context.getFilesDir();
             countLastStart(context, prefs);
         } catch (RuntimeException failure) {
-            Log.e("HushMessenger", "CrashGuard: could not read the last start", failure);
+            persistenceFailure("reading the last start", failure);
         }
-        safeModeActive = prefs.getBoolean("safe_mode", false);
     }
 
     static boolean isSafeMode() { return safeModeActive; }
 
-    static void clearSafeMode() {
-        safeModeActive = false;
+    static synchronized boolean clearSafeMode() {
         SharedPreferences prefs = Settings.preferences;
-        if (prefs != null) prefs.edit().putBoolean("safe_mode", false).apply();
         File dir = filesDir;
-        if (dir != null) write(new File(dir, CRASH_STREAK), "0");
+        if (dir == null) {
+            persistenceFailure("clearing safe mode", null);
+            return false;
+        }
+        try {
+            if (prefs == null || !prefs.edit().putBoolean("safe_mode", false).commit()) {
+                persistenceFailure("clearing safe mode", null);
+                return false;
+            }
+        } catch (RuntimeException failure) {
+            persistenceFailure("clearing safe mode", failure);
+            return false;
+        }
+        if (!write(new File(dir, CRASH_STREAK), "0")) {
+            try {
+                if (!prefs.edit().putBoolean("safe_mode", true).commit()) persistenceFailure("restoring safe mode", null);
+            } catch (RuntimeException failure) { persistenceFailure("restoring safe mode", failure); }
+            return false;
+        }
+        safeModeActive = false;
+        return true;
     }
 
-    private static void countLastStart(Context context, SharedPreferences prefs) {
+    private static synchronized void countLastStart(Context context, SharedPreferences prefs) {
         File dir = filesDir;
         if (dir == null) return;
         File record = new File(dir, START_RECORD);
         File streakFile = new File(dir, CRASH_STREAK);
+        boolean hadRecord = hasRecord(record), hadStreak = hasRecord(streakFile);
         String last = read(record);
+        String savedStreak = read(streakFile);
+        boolean validStreak = savedStreak != null || !hadStreak;
+        if (savedStreak != null) {
+            try {
+                if (Integer.parseInt(savedStreak.trim()) < 0) throw new NumberFormatException();
+            } catch (NumberFormatException corrupt) { validStreak = false; persistenceFailure("reading the crash count", corrupt); }
+        }
+        boolean validRecord = last != null;
         if (last != null) {
-            int streak = diedYoungFromACrash(context, last) ? parseCount(read(streakFile)) + 1 : 0;
+            try {
+                String trimmed = last.trim();
+                if (!trimmed.matches("[0-9]+ [0-9]+(?: crashed)?")) throw new NumberFormatException();
+                String[] parts = trimmed.split(" ");
+                Integer.parseInt(parts[0]);
+                Long.parseLong(parts[1]);
+            } catch (NumberFormatException corrupt) {
+                validRecord = false;
+                persistenceFailure("reading the start record", corrupt);
+            }
+        }
+        if (validRecord && validStreak) {
+            int streak = diedYoungFromACrash(context, last) ? Math.min(THRESHOLD, parseCount(savedStreak)) + 1 : 0;
             if (streak >= THRESHOLD) {
-                prefs.edit().putBoolean("safe_mode", true).commit();
-                streak = 0;
-                Log.w("HushMessenger", "CrashGuard: safe mode activated after " + THRESHOLD + " crashes");
+                safeModeActive = true;
+                try {
+                    if (prefs.edit().putBoolean("safe_mode", true).commit()) {
+                        streak = 0;
+                        Log.w("HushMessenger", "CrashGuard: safe mode activated after " + THRESHOLD + " crashes");
+                    } else persistenceFailure("saving safe mode", null);
+                } catch (RuntimeException failure) { persistenceFailure("saving safe mode", failure); }
             }
             write(streakFile, Integer.toString(streak));
-        }
+        } else if (!hadRecord && !hadStreak) write(streakFile, "0");
         write(record, Process.myPid() + " " + System.currentTimeMillis());
         installCrashMark();
         new Handler(Looper.getMainLooper()).postDelayed(CrashGuard::survivedTheStart, WINDOW_MS);
     }
 
-    static void survivedTheStart() {
+    static synchronized void survivedTheStart() {
         File dir = filesDir;
         if (dir == null) return;
         if (CRASH_MARKED.get()) return;
-        new File(dir, START_RECORD).delete();
-        write(new File(dir, CRASH_STREAK), "0");
+        if (!write(new File(dir, CRASH_STREAK), "0")) return;
+        File record = new File(dir, START_RECORD);
+        try {
+            atomicFiles.apply(record).delete();
+            if (hasRecord(record)) persistenceFailure("clearing the start record", null);
+        } catch (RuntimeException failure) { persistenceFailure("clearing the start record", failure); }
     }
 
     static boolean diedYoungFromACrash(Context context, String record) {
@@ -131,7 +181,7 @@ final class CrashGuard {
         Thread.setDefaultUncaughtExceptionHandler(new CrashMark(current));
     }
 
-    static void markCrash() {
+    static synchronized void markCrash() {
         File dir = filesDir;
         if (dir == null || SystemClock.elapsedRealtime() - startElapsed > WINDOW_MS) return;
         if (!CRASH_MARKED.compareAndSet(false, true)) return;
@@ -155,20 +205,63 @@ final class CrashGuard {
         catch (NumberFormatException unreadable) { return 0; }
     }
 
-    static String read(File file) {
-        if (!file.exists()) return null;
-        try (FileInputStream in = new FileInputStream(file)) {
-            byte[] buffer = new byte[64];
-            int length = in.read(buffer);
-            return length <= 0 ? "" : new String(buffer, 0, length, StandardCharsets.US_ASCII);
-        } catch (IOException | RuntimeException unreadable) { return null; }
+    private static boolean hasRecord(File file) {
+        return file.exists() || new File(file.getPath() + ".bak").exists() || new File(file.getPath() + ".new").exists();
     }
 
-    static void write(File file, String text) {
-        try (FileOutputStream out = new FileOutputStream(file)) {
+    private static void persistenceFailure(String operation, Throwable failure) {
+        Log.e("HushMessenger", "CrashGuard: persistence failed while " + operation +
+            (failure == null ? "" : " (" + failure.getClass().getName() + ")"));
+    }
+
+    static synchronized String read(File file) {
+        boolean existed = hasRecord(file);
+        try (FileInputStream in = atomicFiles.apply(file).openRead()) {
+            byte[] buffer = new byte[65];
+            int length = 0;
+            while (length < buffer.length) {
+                int count = in.read(buffer, length, buffer.length - length);
+                if (count < 0) break;
+                if (count == 0) throw new IOException("No record data");
+                length += count;
+            }
+            if (length == 0 || length > 64) throw new IOException("Invalid record size");
+            for (int index = 0; index < length; index++) {
+                int value = buffer[index] & 255;
+                if (value >= 127 || (value < 32 && value != 9 && value != 10 && value != 13)) throw new IOException("Invalid record text");
+            }
+            return new String(buffer, 0, length, StandardCharsets.US_ASCII);
+        } catch (FileNotFoundException missing) {
+            if (existed) persistenceFailure("reading a record", missing);
+        } catch (IOException | RuntimeException unreadable) { persistenceFailure("reading a record", unreadable); }
+        return null;
+    }
+
+    static synchronized boolean write(File file, String text) {
+        AtomicFile atomic = null;
+        FileOutputStream out = null;
+        boolean completed = false;
+        try {
+            if (text == null || text.isEmpty() || text.length() > 64 || text.chars().anyMatch(value ->
+                    value >= 127 || (value < 32 && value != 9 && value != 10 && value != 13))) throw new IOException("Invalid record text");
+            atomic = atomicFiles.apply(file);
+            out = atomic.startWrite();
             out.write(text.getBytes(StandardCharsets.US_ASCII));
+            out.getFD().sync();
+            atomic.finishWrite(out);
+            // AtomicFile logs some finish failures instead of throwing. Check that no staging file remains.
+            if (new File(file.getPath() + ".bak").exists() || new File(file.getPath() + ".new").exists() || !text.equals(read(file)))
+                throw new IOException("Record replacement did not finish");
+            completed = true;
+            return true;
         } catch (IOException | RuntimeException failure) {
-            Log.e("HushMessenger", "CrashGuard: could not write " + file.getName(), failure);
+            persistenceFailure("writing a record", failure);
+            return false;
+        } finally {
+            if (!completed && atomic != null && out != null) {
+                try { atomic.failWrite(out); }
+                catch (RuntimeException failure) { persistenceFailure("restoring a record", failure); }
+            }
         }
     }
 
@@ -179,6 +272,7 @@ final class CrashGuard {
         CRASH_MARKED.set(false);
         safeModeActive = false;
         filesDir = null;
+        atomicFiles = AtomicFile::new;
     }
 
     private CrashGuard() { }
