@@ -8,12 +8,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-PATCH_COUNT = 32
 RELEASE_SIGNERS = Path("scripts/release_signers")
 RELEASE_SIGNER = "SysAdminDoc"
 SIGNATURE_NAMESPACE = "hushmessenger-release"
@@ -114,8 +114,8 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
     require(public.get("version") == version, "Catalog version differs from source")
     entries = public.get("patches")
     require(
-        isinstance(entries, list) and len(entries) == PATCH_COUNT,
-        f"Expected {PATCH_COUNT} catalog patches",
+        isinstance(entries, list) and bool(entries),
+        "Expected a nonempty patch catalog",
     )
     require(
         all(
@@ -125,7 +125,7 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
         "Invalid catalog patch entry",
     )
     require(
-        len({entry["name"] for entry in entries}) == PATCH_COUNT,
+        len({entry["name"] for entry in entries}) == len(entries),
         "Duplicate catalog patch names",
     )
 
@@ -170,8 +170,189 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
             "Release checksum file differs from built bundle",
         )
     return (
-        f"Release metadata passed: v{version}, {PATCH_COUNT} patches, SHA-256 {digest}"
+        f"Release metadata passed: v{version}, {len(entries)} patches, SHA-256 {digest}"
     )
+
+
+def verify_development(root, bundle, evidence, held_index_sha256, checksums=None):
+    """Check current source metadata while preserving an intentionally older feed."""
+    require(
+        re.fullmatch(r"[a-fA-F0-9]{64}", held_index_sha256 or ""),
+        "A recorded held-index SHA-256 is required",
+    )
+    require(
+        hashlib.sha256((root / "patches-bundle.json").read_bytes()).hexdigest()
+        == held_index_sha256.lower(),
+        "Held public metadata changed",
+    )
+    properties = dict(
+        re.findall(
+            r"^([A-Za-z][A-Za-z0-9.]*)=(.+)$",
+            (root / "gradle.properties").read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+    )
+    version = properties.get("version", "")
+    require(re.fullmatch(r"\d+\.\d+\.\d+", version), "Invalid project version")
+    require(
+        bundle.name == f"patches-{version}.mpp", "Bundle filename differs from source"
+    )
+    digest = hashlib.sha256(bundle.read_bytes()).hexdigest()
+    with zipfile.ZipFile(bundle) as archive:
+        require(archive.testzip() is None, "Corrupt bundle entry")
+        manifest = (
+            archive.read("META-INF/MANIFEST.MF")
+            .decode("utf-8")
+            .replace("\r\n ", "")
+            .replace("\n ", "")
+        )
+        attributes = dict(
+            line.split(": ", 1) for line in manifest.splitlines() if ": " in line
+        )
+    require(attributes.get("Version") == version, "Bundle version differs from source")
+    require(
+        attributes.get("Timestamp") == properties.get("bundleTimestampMillis"),
+        "Bundle timestamp differs from source",
+    )
+    fresh = read_json(evidence)
+    catalog = read_json(root / "patches-list.json")
+    require(
+        fresh.get("bundle") == bundle.name and fresh.get("sha256") == digest,
+        "Catalog evidence is stale for this bundle",
+    )
+    require(fresh.get("dexValidated") is True, "Missing structural DEX validation")
+    require(
+        catalog == fresh.get("catalog"),
+        "Development catalog differs from loaded bundle metadata",
+    )
+    require(catalog.get("version") == version, "Catalog version differs from source")
+    entries = catalog.get("patches")
+    require(
+        isinstance(entries, list)
+        and bool(entries)
+        and all(
+            isinstance(entry, dict) and isinstance(entry.get("name"), str)
+            for entry in entries
+        ),
+        "Invalid development patch entries",
+    )
+    require(
+        len({entry["name"] for entry in entries}) == len(entries),
+        "Duplicate catalog patch names",
+    )
+    index = read_json(root / "patches-bundle.json")
+    public_version = index.get("version", "")
+    require(
+        re.fullmatch(r"\d+\.\d+\.\d+", public_version), "Invalid held public version"
+    )
+    require(
+        tuple(map(int, public_version.split(".")))
+        <= tuple(map(int, version.split("."))),
+        "Public version is ahead of development",
+    )
+    require(
+        index.get("download_url")
+        == f"https://github.com/SysAdminDoc/HushMessenger/releases/download/v{public_version}/patches-{public_version}.mpp",
+        "Invalid held download URL",
+    )
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    require(
+        re.findall(r"shields\.io/badge/development-([^-/\s]+)-", readme) == [version],
+        "README development badge differs from source",
+    )
+    headings = re.findall(
+        r"^## (.+)$", (root / "CHANGELOG.md").read_text(encoding="utf-8"), re.MULTILINE
+    )
+    require(
+        bool(headings) and headings[0] == "Unreleased",
+        "Development changes need an Unreleased changelog entry",
+    )
+    extension = (root / "extensions/messenger/build.gradle.kts").read_text(
+        encoding="utf-8"
+    )
+    require(
+        re.findall(r"versionName\s*=\s*([^\n]+)", extension)
+        == ["project.version.toString()"],
+        "Extension version name must follow the project",
+    )
+    if checksums is not None:
+        require(
+            checksums.read_text(encoding="utf-8").strip() == f"{digest}  {bundle.name}",
+            "Development checksum differs from frozen bundle",
+        )
+    return f"Development metadata passed: v{version}, {len(entries)} patches, held public v{public_version}, SHA-256 {digest}"
+
+
+def validate_catalog(root, bundle, evidence):
+    """Run the same catalog/definition checks without invoking a bundle producer."""
+    evidence.unlink(missing_ok=True)
+    result = subprocess.run(
+        [
+            "rtk",
+            "proxy",
+            str(root / "gradlew.bat" if sys.platform == "win32" else root / "gradlew"),
+            ":patches:checkFrozenPatchCatalog",
+            f"-PvalidationBundle={bundle.resolve()}",
+            f"-PvalidationEvidence={evidence.resolve()}",
+            "--no-daemon",
+            "--no-configuration-cache",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=600,
+        check=False,
+    )
+    require(
+        result.returncode == 0,
+        "Catalog/DEX validation failed\n" + (result.stdout + result.stderr)[-4000:],
+    )
+
+
+def mutable_output(root, path):
+    relative = (
+        path.resolve().relative_to(root.resolve())
+        if path.resolve().is_relative_to(root.resolve())
+        else None
+    )
+    return relative is not None and any(
+        part.lower() in {"build", ".gradle"} for part in relative.parts
+    )
+
+
+def freeze_development(root, bundle, destination, held_index_sha256):
+    require(
+        not mutable_output(root, destination),
+        "Freeze destination must be outside mutable Gradle outputs",
+    )
+    require(not destination.exists(), "Freeze destination already exists")
+    original = bundle.read_bytes()
+    digest = hashlib.sha256(original).hexdigest()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=".hush-freeze-", dir=destination.parent
+    ) as temporary:
+        staging = Path(temporary)
+        frozen = staging / bundle.name
+        frozen.write_bytes(original)
+        evidence = staging / "catalog-evidence.json"
+        validate_catalog(root, frozen, evidence)
+        message = verify_development(root, frozen, evidence, held_index_sha256)
+        require(
+            hashlib.sha256(bundle.read_bytes()).hexdigest() == digest,
+            "Producer bundle changed during validation",
+        )
+        require(
+            hashlib.sha256(frozen.read_bytes()).hexdigest() == digest,
+            "Validated snapshot changed",
+        )
+        (staging / "SHA256SUMS.txt").write_text(
+            f"{digest}  {bundle.name}\n", encoding="utf-8", newline="\n"
+        )
+        staging.rename(destination)
+    return message + f"\nFrozen bundle: {destination / bundle.name}"
 
 
 def signer_fingerprints(path):
@@ -234,14 +415,107 @@ def main(argv=None):
     parser.add_argument("--release-tag")
     parser.add_argument("--checksums", type=Path)
     parser.add_argument(
+        "--development",
+        action="store_true",
+        help="validate development while keeping the public feed held",
+    )
+    parser.add_argument(
+        "--held-index-sha256", help="recorded SHA-256 of the unchanged public feed"
+    )
+    parser.add_argument(
+        "--freeze",
+        type=Path,
+        help="new directory for the validated bundle, catalog evidence and checksum",
+    )
+    parser.add_argument(
+        "--bundle-sha256",
+        help="expected frozen bundle hash when rechecking development",
+    )
+    parser.add_argument(
         "--verify-signature",
         action="store_true",
         help="also check <checksums>.sig against scripts/release_signers",
     )
     args = parser.parse_args(argv)
+    args.root = args.root.resolve()
     if args.verify_signature and args.checksums is None:
         parser.error("--verify-signature needs --checksums")
+    if args.development:
+        if args.evidence:
+            parser.error(
+                "development validation reloads the bundle instead of accepting supplied evidence"
+            )
+        if not args.held_index_sha256 or args.release_tag:
+            parser.error(
+                "--development needs --held-index-sha256 and cannot propose a release tag"
+            )
+        if not args.freeze and (args.bundle is None or args.bundle_sha256 is None):
+            parser.error("development rechecks need --bundle and --bundle-sha256")
+        if args.freeze and (
+            args.checksums or args.bundle_sha256 or args.verify_signature
+        ):
+            parser.error("freeze first, then sign and recheck the frozen checksum")
+    elif args.freeze or args.held_index_sha256 or args.bundle_sha256:
+        parser.error("development options need --development")
     try:
+        if args.development:
+            bundle = args.bundle
+            if bundle is None:
+                version = re.search(
+                    r"^version=(.+)$",
+                    (args.root / "gradle.properties").read_text(encoding="utf-8"),
+                    re.MULTILINE,
+                )
+                require(version is not None, "Missing project version")
+                bundle = args.root / "patches/build/libs" / f"patches-{version[1]}.mpp"
+            if args.freeze:
+                print(
+                    freeze_development(
+                        args.root, bundle, args.freeze, args.held_index_sha256
+                    )
+                )
+            else:
+                require(
+                    not mutable_output(args.root, bundle),
+                    "Recheck requires a frozen bundle outside Gradle outputs",
+                )
+                require(
+                    hashlib.sha256(bundle.read_bytes()).hexdigest()
+                    == args.bundle_sha256,
+                    "Frozen bundle checksum changed",
+                )
+                with tempfile.TemporaryDirectory(prefix="hush-catalog-") as temporary:
+                    evidence = Path(temporary) / "catalog-evidence.json"
+                    validate_catalog(args.root, bundle, evidence)
+                    print(
+                        verify_development(
+                            args.root,
+                            bundle,
+                            evidence,
+                            args.held_index_sha256,
+                            args.checksums,
+                        )
+                    )
+                require(
+                    hashlib.sha256(bundle.read_bytes()).hexdigest()
+                    == args.bundle_sha256,
+                    "Frozen bundle changed during validation",
+                )
+            if args.verify_signature:
+                print(verify_signature(args.root, args.checksums))
+                require(
+                    hashlib.sha256(bundle.read_bytes()).hexdigest()
+                    == args.bundle_sha256,
+                    "Frozen bundle changed during signature verification",
+                )
+            require(
+                hashlib.sha256(
+                    (args.root / "patches-bundle.json").read_bytes()
+                ).hexdigest()
+                == args.held_index_sha256.lower(),
+                "Held public metadata changed during validation",
+            )
+            return 0
         print(
             verify(
                 args.root, args.bundle, args.evidence, args.release_tag, args.checksums

@@ -8,18 +8,19 @@ import re
 import subprocess
 import sys
 import tempfile
+import zlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
 if __package__:
+    from .check_release import mutable_output, verify_development
     from .verify_changed_apk_failure import recorded_builds
 else:
+    from check_release import mutable_output, verify_development
     from verify_changed_apk_failure import recorded_builds
 
 ROOT = Path(__file__).resolve().parent.parent
-# The complete gate needs every patch in the catalog, Material You included.
-PATCH_COUNT = 33
 
 
 def check_build(args, code, expected_hash, names):
@@ -27,6 +28,8 @@ def check_build(args, code, expected_hash, names):
     with stock.open("rb") as source:
         if hashlib.file_digest(source, "sha256").hexdigest() != expected_hash:
             raise ValueError(f"{code}: stock APK does not match its recorded hash")
+    if hashlib.sha256(args.bundle.read_bytes()).hexdigest() != args.bundle_sha256:
+        raise ValueError(f"{code}: frozen bundle checksum changed")
     discovery = subprocess.run(
         [
             str(args.java),
@@ -129,6 +132,8 @@ def check_build(args, code, expected_hash, names):
                 extension |= b"Lapp/hushmessenger/extension/Settings;" in data
             if not extension:
                 raise RuntimeError(f"{code}: output has no settings extension")
+        if hashlib.sha256(args.bundle.read_bytes()).hexdigest() != args.bundle_sha256:
+            raise RuntimeError(f"{code}: patcher input bundle changed")
         return f"PASS {code}: {len(applied)} patches, 1024 MB, theme {stats.group(0)}"
 
 
@@ -136,6 +141,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stock-dir", required=True, type=Path)
     parser.add_argument("--bundle", required=True, type=Path)
+    parser.add_argument(
+        "--bundle-sha256", required=True, help="recorded checksum of the frozen input"
+    )
+    parser.add_argument(
+        "--held-index-sha256",
+        required=True,
+        help="recorded checksum of the held public feed",
+    )
     parser.add_argument("--desktop-jar", required=True, type=Path)
     parser.add_argument(
         "--compat-classpath",
@@ -152,15 +165,29 @@ def main():
         codes = args.codes or sorted(builds)
         if len(codes) != len(set(codes)) or not set(codes) <= builds.keys():
             raise ValueError("codes must be distinct recorded version codes")
+        if mutable_output(ROOT, args.bundle):
+            raise ValueError(
+                "heap checks require a frozen bundle outside Gradle outputs"
+            )
+        if hashlib.sha256(args.bundle.read_bytes()).hexdigest() != args.bundle_sha256:
+            raise ValueError("frozen bundle checksum changed")
+        print(
+            verify_development(
+                ROOT,
+                args.bundle,
+                args.bundle.parent / "catalog-evidence.json",
+                args.held_index_sha256,
+            )
+        )
         catalog = json.loads((ROOT / "patches-list.json").read_text(encoding="utf-8"))
         names = {patch["name"] for patch in catalog["patches"]}
         if (
-            len(catalog["patches"]) != PATCH_COUNT
-            or len(names) != PATCH_COUNT
+            not names
+            or len(names) != len(catalog["patches"])
             or "Material You theme" not in names
         ):
             raise ValueError(
-                f"the complete gate requires {PATCH_COUNT} distinct patches including the theme"
+                "the complete gate requires every distinct catalog patch including the theme"
             )
         # Each process owns its output and temporary root. Inputs remain read-only.
         failures = []
@@ -185,12 +212,27 @@ def main():
                     print(f"CHECK FAILED: {error}", file=sys.stderr, flush=True)
         if failures:
             return 2
+        if hashlib.sha256(args.bundle.read_bytes()).hexdigest() != args.bundle_sha256:
+            raise ValueError("frozen bundle checksum changed during heap checks")
+        if (
+            hashlib.sha256((ROOT / "patches-bundle.json").read_bytes()).hexdigest()
+            != args.held_index_sha256.lower()
+        ):
+            raise ValueError("held public metadata changed during heap checks")
         scope = "selected" if args.codes else "all"
         print(
             f"PASS: {scope} {len(codes)} builds applied {len(names)} patches at 1024 MB"
         )
         return 0
-    except (OSError, ValueError, TypeError, KeyError) as error:
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        BadZipFile,
+        zlib.error,
+    ) as error:
         print(f"CHECK FAILED: {error}", file=sys.stderr)
         return 2
 

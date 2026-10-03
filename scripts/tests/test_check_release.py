@@ -12,6 +12,7 @@ import unittest
 import zipfile
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     "check_release", Path(__file__).parents[1] / "check_release.py"
@@ -61,7 +62,7 @@ class ReleaseChecks(unittest.TestCase):
             "version": "1.2.3",
             "patches": [
                 {"name": f"Control {n}", "default": True, "dependencies": []}
-                for n in range(release.PATCH_COUNT)
+                for n in range(32)
             ],
         }
         self.index = {
@@ -110,6 +111,204 @@ class ReleaseChecks(unittest.TestCase):
         self.write("SHA256SUMS.txt", f"{'0' * 64}  {self.bundle.name}\n")
         with self.assertRaisesRegex(ValueError, "checksum file"):
             release.verify(self.root, checksums=self.root / "SHA256SUMS.txt")
+
+    def test_development_freezes_current_catalog_and_preserves_held_feed(self):
+        self.write("README.md", "https://img.shields.io/badge/development-1.2.3-blue\n")
+        self.write("CHANGELOG.md", "## Unreleased\n")
+        self.write(
+            "patches-bundle.json",
+            json.dumps(
+                {
+                    **self.index,
+                    "version": "1.2.2",
+                    "download_url": self.index["download_url"].replace(
+                        "1.2.3", "1.2.2"
+                    ),
+                }
+            ),
+        )
+        # Public releases used 32; this development fixture intentionally contains 33.
+        self.catalog["patches"].append({"name": "New control"})
+        self.write("patches-list.json", json.dumps(self.catalog))
+        held = hashlib.sha256(
+            (self.root / "patches-bundle.json").read_bytes()
+        ).hexdigest()
+        destination = self.root / "frozen"
+
+        def validate(root, bundle, evidence):
+            self.assertFalse(release.mutable_output(root, bundle))
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "bundle": bundle.name,
+                        "sha256": hashlib.sha256(bundle.read_bytes()).hexdigest(),
+                        "dexValidated": True,
+                        "catalog": self.catalog,
+                    }
+                )
+            )
+
+        with patch.object(release, "validate_catalog", side_effect=validate):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(
+                    0,
+                    release.main(
+                        [
+                            "--root",
+                            str(self.root),
+                            "--development",
+                            "--held-index-sha256",
+                            held,
+                            "--freeze",
+                            str(destination),
+                        ]
+                    ),
+                )
+            self.assertIn("33 patches, held public v1.2.2", output.getvalue())
+            frozen = destination / self.bundle.name
+            sums = destination / "SHA256SUMS.txt"
+            cli = [
+                "--root",
+                str(self.root),
+                "--development",
+                "--held-index-sha256",
+                held,
+                "--bundle",
+                str(frozen),
+                "--bundle-sha256",
+                self.digest,
+                "--checksums",
+                str(sums),
+            ]
+            # A later producer write doesn't touch the validated snapshot.
+            self.bundle.write_bytes(b"later Java-only producer")
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(0, release.main(cli))
+            self.assertEqual(
+                self.digest, hashlib.sha256(frozen.read_bytes()).hexdigest()
+            )
+            frozen_data = frozen.read_bytes()
+
+            def changed_during_signature(root, checksum):
+                frozen.write_bytes(b"changed while verifying signature")
+                return "Good signature"
+
+            with (
+                patch.object(
+                    release, "verify_signature", side_effect=changed_during_signature
+                ),
+                redirect_stdout(io.StringIO()),
+                redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(1, release.main([*cli, "--verify-signature"]))
+            frozen.write_bytes(frozen_data)
+            for path, data in [
+                (frozen, b"changed"),
+                (self.root / "patches-bundle.json", b"changed held feed"),
+            ]:
+                original = path.read_bytes()
+                path.write_bytes(data)
+                error = io.StringIO()
+                with redirect_stderr(error):
+                    self.assertEqual(1, release.main(cli))
+                self.assertIn("changed", error.getvalue().lower())
+                path.write_bytes(original)
+
+    def test_release_count_follows_current_exact_catalog_without_relaxing_metadata(
+        self,
+    ):
+        self.catalog["patches"].append({"name": "New control"})
+        self.write("patches-list.json", json.dumps(self.catalog))
+        self.write(
+            "patches/build/reports/catalog-evidence.json",
+            json.dumps(
+                {
+                    "bundle": self.bundle.name,
+                    "sha256": self.digest,
+                    "catalog": self.catalog,
+                }
+            ),
+        )
+        self.assertIn("33 patches", release.verify(self.root))
+        self.catalog["patches"][-1]["name"] = "Control 0"
+        self.write("patches-list.json", json.dumps(self.catalog))
+        self.write(
+            "patches/build/reports/catalog-evidence.json",
+            json.dumps(
+                {
+                    "bundle": self.bundle.name,
+                    "sha256": self.digest,
+                    "catalog": self.catalog,
+                }
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            release.verify(self.root)
+
+    def test_freeze_rejects_mutable_destination_changed_producer_and_catalog_drift(
+        self,
+    ):
+        self.write("README.md", "https://img.shields.io/badge/development-1.2.3-blue\n")
+        self.write("CHANGELOG.md", "## Unreleased\n")
+        held = hashlib.sha256(
+            (self.root / "patches-bundle.json").read_bytes()
+        ).hexdigest()
+        with self.assertRaisesRegex(ValueError, "mutable Gradle"):
+            release.freeze_development(
+                self.root, self.bundle, self.bundle.parent / "frozen", held
+            )
+        destination = self.root / "frozen"
+        original = self.bundle.read_bytes()
+        for case in ["producer", "catalog", "version", "hash", "dex"]:
+
+            def validate(root, bundle, evidence, case=case):
+                catalog = copy.deepcopy(self.catalog)
+                if case == "catalog":
+                    catalog["patches"][0]["default"] = False
+                if case == "version":
+                    self.write(
+                        "gradle.properties",
+                        "version=1.2.4\nbundleTimestampMillis=1790552148000\n",
+                    )
+                if case == "producer":
+                    self.bundle.write_bytes(b"producer changed during validation")
+                evidence.write_text(
+                    json.dumps(
+                        {
+                            "bundle": bundle.name,
+                            "sha256": self.digest if case != "hash" else "0" * 64,
+                            "dexValidated": case != "dex",
+                            "catalog": catalog,
+                        }
+                    )
+                )
+
+            with (
+                patch.object(release, "validate_catalog", side_effect=validate),
+                self.assertRaises(ValueError),
+            ):
+                release.freeze_development(self.root, self.bundle, destination, held)
+            self.assertFalse(destination.exists())
+            self.bundle.write_bytes(original)
+            self.write(
+                "gradle.properties",
+                "version=1.2.3\nbundleTimestampMillis=1790552148000\n",
+            )
+
+    def test_catalog_validation_failure_does_not_reuse_old_evidence(self):
+        evidence = self.root / "evidence.json"
+        evidence.write_text("old evidence")
+        with (
+            patch.object(
+                release.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess([], 1, "invalid DEX", ""),
+            ),
+            self.assertRaisesRegex(ValueError, "invalid DEX"),
+        ):
+            release.validate_catalog(self.root, self.bundle, evidence)
+        self.assertFalse(evidence.exists())
 
     @unittest.skipIf(SSH_KEYGEN is None, "ssh-keygen isn't installed")
     def test_signed_checksums_pass_and_an_edit_another_key_or_namespace_fails(self):

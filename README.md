@@ -268,15 +268,28 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The native-media replay test uses private APK inputs. Set `HUSH_NATIVE_FIXTURES` to the folder of exact stock APKs before testing, with the file names described below. Without those inputs, that replay test is skipped. Keep `:patches:buildAndroid` after the tests. A later Gradle test run can rebuild the intermediate archive, so run `:patches:buildAndroid` again before importing or validating the `.mpp`.
+The native-media replay test uses private APK inputs. Set `HUSH_NATIVE_FIXTURES` to the folder of exact stock APKs before testing, with the file names described below. Without those inputs, that replay test is skipped. Finish the tests before the final `:patches:buildAndroid` invocation. A later Gradle task can replace the intermediate archive with a Java-only bundle.
+
+While the public source is held, validate development separately and freeze its Android-ready bytes in a new folder outside Gradle's outputs. Record the feed hash before making changes. The command below reloads the actual bundle, checks its exact catalog and control definitions, and walks both DEX files. It checks DEX checksums and section bounds, then reads and rebuilds the class data in memory. This is a structural check. Running inside Android remains a separate check.
+
+```powershell
+$heldHash = (Get-FileHash .\patches-bundle.json -Algorithm SHA256).Hash.ToLowerInvariant()
+$freeze = Join-Path $env:TEMP "hushmessenger-0.18.0"
+.\gradlew.bat :patches:buildAndroid --no-daemon
+python scripts/check_release.py --development --held-index-sha256 $heldHash --freeze $freeze
+$bundle = Join-Path $freeze "patches-0.18.0.mpp"
+$bundleHash = (Get-FileHash $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
+```
+
+The destination must be new. It contains the bundle, exact catalog evidence and `SHA256SUMS.txt`. Later Gradle tasks can't rewrite that snapshot. Sign that checksum file with the existing release key, then recheck the frozen input with `--development --held-index-sha256 $heldHash --bundle $bundle --bundle-sha256 $bundleHash --checksums "$freeze\SHA256SUMS.txt" --verify-signature`. The default release mode still requires the public source, release links and changelog to agree with the built version. Development validation doesn't publish anything.
 
 To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
 
 ```powershell
-python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.18.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
+python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle --bundle-sha256 $bundleHash --held-index-sha256 $heldHash --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
 ```
 
-Each build runs in its own temporary folder with all patches selected and a 1024 MB heap. The check verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
+Each build runs in its own temporary folder with all patches selected and a 1024 MB heap. The check rechecks the frozen bundle's checksum, verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
 The output from main is `patches/build/libs/patches-0.18.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 

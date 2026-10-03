@@ -4,11 +4,40 @@ import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.hushmessenger.patches.controls.fixtureClass
+import app.hushmessenger.patches.controls.fixtureMethod
+import com.android.tools.smali.dexlib2.Opcodes
+import com.android.tools.smali.dexlib2.immutable.ImmutableDexFile
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore
+import com.android.tools.smali.dexlib2.writer.pool.DexPool
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
+import java.util.zip.Adler32
 import kotlinx.serialization.json.*
 import kotlin.test.*
 
 class CatalogToolTest {
+    @Test fun malformedDexFailsEvenWhenItsChecksumsAreRecomputed() {
+        val store = MemoryDataStore()
+        val definition = fixtureClass("Lfixture/Example;", listOf(fixtureMethod(
+            "Lfixture/Example;->run()V", "const-string v0, \"example\"\nreturn-void", 1)))
+        DexPool.writeTo(store, ImmutableDexFile(Opcodes.getDefault(), listOf(definition)))
+        val original = store.data
+        store.close()
+        CatalogTool.validateDex(original)
+        val header = ByteBuffer.wrap(original).order(ByteOrder.LITTLE_ENDIAN)
+        for (offset in listOf(56, header.getInt(60), header.getInt(100), header.getInt(52))) {
+            val changed = original.copyOf()
+            val bytes = ByteBuffer.wrap(changed).order(ByteOrder.LITTLE_ENDIAN)
+            bytes.putInt(offset, Int.MAX_VALUE)
+            MessageDigest.getInstance("SHA-1").digest(changed.copyOfRange(32, changed.size)).copyInto(changed, 12)
+            bytes.putInt(8, Adler32().apply { update(changed, 12, changed.size - 12) }.value.toInt())
+            assertFails("Corrupt DEX structure at $offset") { CatalogTool.validateDex(changed) }
+        }
+    }
+
     @Test fun metadataPreservesEscapingDefaultsDependenciesAndExactTargetDescription() {
         val dependency = resourcePatch(description = "Fixture dependency") { }
         val patch = bytecodePatch("Quoted \"patch\"", "Line one\nLine two", default = false) {

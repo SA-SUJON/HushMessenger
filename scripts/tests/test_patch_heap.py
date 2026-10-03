@@ -2,10 +2,12 @@
 
 import argparse
 import hashlib
+import io
 import json
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 from zipfile import BadZipFile, ZipFile
@@ -29,6 +31,7 @@ class PatchHeapChecks(unittest.TestCase):
             "incomplete-apk",
             "missing-extension",
             "changed-stock",
+            "changed-bundle",
             "wrong-classes",
         ):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
@@ -36,11 +39,14 @@ class PatchHeapChecks(unittest.TestCase):
                 stock = root / "messenger-580-123.apk"
                 stock.write_bytes(b"unchanged stock APK")
                 original = stock.read_bytes()
+                bundle = root / "patches.mpp"
+                bundle.write_bytes(b"frozen bundle")
                 args = argparse.Namespace(
                     stock_dir=root,
                     java=Path("java"),
                     compat_classpath="dexlib;guava",
-                    bundle=Path("patches.mpp"),
+                    bundle=bundle,
+                    bundle_sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
                     desktop_jar=Path("desktop.jar"),
                 )
                 temporary = []
@@ -51,6 +57,7 @@ class PatchHeapChecks(unittest.TestCase):
                     temporary=temporary,
                     original=original,
                     stock=stock,
+                    args=args,
                     **kwargs,
                 ):
                     self.assertIn("-Xmx1024m", command)
@@ -102,6 +109,8 @@ class PatchHeapChecks(unittest.TestCase):
                                 )
                     if case == "changed-stock":
                         stock.write_bytes(b"patcher changed input")
+                    if case == "changed-bundle":
+                        args.bundle.write_bytes(b"changed frozen input")
                     report.write_text(
                         json.dumps(
                             {
@@ -174,8 +183,43 @@ class PatchHeapChecks(unittest.TestCase):
                     )
                 run.assert_not_called()
 
+    def test_corrupt_frozen_zip_has_a_controlled_failure_before_patching(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "patches-1.2.3.mpp"
+            bundle.write_bytes(b"invalid archive")
+            index = root / "patches-bundle.json"
+            index.write_text("{}")
+            (root / "gradle.properties").write_text("version=1.2.3\n")
+            args = argparse.Namespace(
+                codes=None,
+                bundle=bundle,
+                bundle_sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
+                held_index_sha256=hashlib.sha256(index.read_bytes()).hexdigest(),
+            )
+            error = io.StringIO()
+            with (
+                patch.object(checker, "ROOT", root),
+                patch.object(
+                    checker,
+                    "recorded_builds",
+                    return_value=dict.fromkeys(range(21), "hash"),
+                ),
+                patch.object(
+                    checker.argparse.ArgumentParser, "parse_args", return_value=args
+                ),
+                patch.object(checker, "ThreadPoolExecutor") as pool,
+                redirect_stderr(error),
+            ):
+                self.assertEqual(2, checker.main())
+                pool.assert_not_called()
+            self.assertIn("CHECK FAILED:", error.getvalue())
+            self.assertNotIn("Traceback", error.getvalue())
+
     def test_complete_gate_rejects_reduced_builds_or_catalog(self):
-        total = checker.PATCH_COUNT
+        total = (
+            33  # This fixture's validated catalog, independent of the implementation.
+        )
         for count, patches in ((20, total), (21, total - 1), (21, total + 1)):
             with (
                 self.subTest(builds=count, patches=patches),
@@ -183,12 +227,56 @@ class PatchHeapChecks(unittest.TestCase):
             ):
                 root = Path(directory)
                 names = ["Material You theme"] + [
-                    f"Patch {index}" for index in range(patches - 1)
+                    f"Patch {index}" for index in range(total - 1)
                 ]
+                catalog = {
+                    "version": "1.2.3",
+                    "patches": [{"name": name} for name in names],
+                }
                 (root / "patches-list.json").write_text(
-                    json.dumps({"patches": [{"name": name} for name in names]})
+                    json.dumps(
+                        {
+                            **catalog,
+                            "patches": catalog["patches"][:patches]
+                            + ([{"name": "Extra patch"}] if patches > total else []),
+                        }
+                    )
                 )
-                args = argparse.Namespace(codes=None)
+                bundle = root / "frozen/patches-1.2.3.mpp"
+                bundle.parent.mkdir()
+                with ZipFile(bundle, "w") as archive:
+                    archive.writestr(
+                        "META-INF/MANIFEST.MF", "Version: 1.2.3\nTimestamp: 123\n"
+                    )
+                digest = hashlib.sha256(bundle.read_bytes()).hexdigest()
+                (bundle.parent / "catalog-evidence.json").write_text(
+                    json.dumps(
+                        {
+                            "bundle": bundle.name,
+                            "sha256": digest,
+                            "dexValidated": True,
+                            "catalog": catalog,
+                        }
+                    )
+                )
+                (root / "gradle.properties").write_text(
+                    "version=1.2.3\nbundleTimestampMillis=123\n"
+                )
+                index = root / "patches-bundle.json"
+                index.write_text(
+                    json.dumps(
+                        {
+                            "version": "1.2.2",
+                            "download_url": "https://github.com/SysAdminDoc/HushMessenger/releases/download/v1.2.2/patches-1.2.2.mpp",
+                        }
+                    )
+                )
+                args = argparse.Namespace(
+                    codes=None,
+                    bundle=bundle,
+                    bundle_sha256=digest,
+                    held_index_sha256=hashlib.sha256(index.read_bytes()).hexdigest(),
+                )
                 with (
                     patch.object(
                         checker.argparse.ArgumentParser, "parse_args", return_value=args
