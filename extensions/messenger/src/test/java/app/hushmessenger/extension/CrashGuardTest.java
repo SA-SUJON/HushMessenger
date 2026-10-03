@@ -368,6 +368,39 @@ public class CrashGuardTest {
         }
     }
 
+    @Test public void unreadableCrashCountStillReachesSafeModeAtTheCleanThreshold() throws Exception {
+        File streak = new File(dir, CrashGuard.CRASH_STREAK), staging = new File(streak.getPath() + ".new");
+        assertEquals(CrashGuard.THRESHOLD + 1, crashingStartsUntilSafeMode());
+        // An interrupted legacy write leaves an empty file; API 30+ can leave only an orphaned staging file.
+        var leftovers = new java.util.ArrayList<java.util.Map.Entry<File, byte[]>>(java.util.List.of(
+            java.util.Map.entry(streak, new byte[0]), java.util.Map.entry(streak, "garbage".getBytes(StandardCharsets.US_ASCII)),
+            java.util.Map.entry(streak, "-1".getBytes(StandardCharsets.US_ASCII))));
+        if (android.os.Build.VERSION.SDK_INT >= 30) leftovers.add(java.util.Map.entry(staging, "2".getBytes(StandardCharsets.US_ASCII)));
+        try {
+            for (var leftover : leftovers) {
+                prefs.edit().clear().commit();
+                cleanFiles();
+                staging.delete();
+                java.nio.file.Files.write(leftover.getKey().toPath(), leftover.getValue());
+                assertEquals(leftover.getKey().getName() + " " + leftover.getValue().length,
+                    CrashGuard.THRESHOLD + 1, crashingStartsUntilSafeMode());
+                assertTrue(prefs.getBoolean("safe_mode", false));
+                assertFalse(staging.exists());
+            }
+        } finally { staging.delete(); }
+    }
+
+    /** Starts that crash inside the window, counted until safe mode engages, or -1 if it never does. */
+    private int crashingStartsUntilSafeMode() {
+        for (int start = 1; start <= 3 * CrashGuard.THRESHOLD; start++) {
+            CrashGuard.resetForTests();
+            CrashGuard.onProcessStart(RuntimeEnvironment.getApplication());
+            if (CrashGuard.isSafeMode()) return start;
+            CrashGuard.markCrash();
+        }
+        return -1;
+    }
+
     @Test public void recoveryCannotSucceedWhenTheRecordDirectoryIsUnavailable() {
         prefs.edit().putBoolean("safe_mode", true).commit();
         CrashGuard.onProcessStart(new android.content.ContextWrapper(RuntimeEnvironment.getApplication()) {

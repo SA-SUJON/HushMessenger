@@ -97,11 +97,17 @@ final class CrashGuard {
         boolean hadRecord = hasRecord(record), hadStreak = hasRecord(streakFile);
         String last = read(record);
         String savedStreak = read(streakFile);
-        boolean validStreak = savedStreak != null || !hadStreak;
+        // An unreadable count (empty after an interrupted legacy write, garbage, or an orphaned staging
+        // file) starts a fresh streak at 0 and is rewritten, so crash counting never stalls on it.
+        boolean freshStreak = savedStreak == null && hadStreak;
         if (savedStreak != null) {
             try {
                 if (Integer.parseInt(savedStreak.trim()) < 0) throw new NumberFormatException();
-            } catch (NumberFormatException corrupt) { validStreak = false; persistenceFailure("reading the crash count", corrupt); }
+            } catch (NumberFormatException corrupt) {
+                savedStreak = null;
+                freshStreak = true;
+                persistenceFailure("reading the crash count", corrupt);
+            }
         }
         boolean validRecord = last != null;
         if (last != null) {
@@ -116,7 +122,7 @@ final class CrashGuard {
                 persistenceFailure("reading the start record", corrupt);
             }
         }
-        if (validRecord && validStreak) {
+        if (validRecord) {
             int streak = diedYoungFromACrash(context, last) ? Math.min(THRESHOLD, parseCount(savedStreak)) + 1 : 0;
             if (streak >= THRESHOLD) {
                 safeModeActive = true;
@@ -128,7 +134,7 @@ final class CrashGuard {
                 } catch (RuntimeException failure) { persistenceFailure("saving safe mode", failure); }
             }
             write(streakFile, Integer.toString(streak));
-        } else if (!hadRecord && !hadStreak) write(streakFile, "0");
+        } else if (freshStreak || (!hadRecord && !hadStreak)) write(streakFile, "0");
         write(record, Process.myPid() + " " + System.currentTimeMillis());
         installCrashMark();
         new Handler(Looper.getMainLooper()).postDelayed(CrashGuard::survivedTheStart, WINDOW_MS);
@@ -263,6 +269,8 @@ final class CrashGuard {
             out = atomic.startWrite();
             byte[] encoded = text.getBytes(StandardCharsets.US_ASCII);
             out.write(encoded);
+            // finishWrite syncs again but ignores a failed sync and commits anyway (API 28-36).
+            // Syncing here turns that failure into failWrite, which keeps the previous record.
             out.getFD().sync();
             // Verify while AtomicFile can still restore the previous record. openRead on the
             // original would restore its backup on older Android, so read the candidate directly.
