@@ -7,8 +7,9 @@ import json
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from threading import Event, Lock
 from unittest.mock import patch
 from zipfile import BadZipFile, ZipFile
 
@@ -16,6 +17,91 @@ from scripts import verify_patch_heap as checker
 
 
 class PatchHeapChecks(unittest.TestCase):
+    def test_full_gate_bounds_concurrent_builds_without_dropping_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "frozen.mpp"
+            bundle.write_bytes(b"unchanged frozen bundle")
+            index = root / "patches-bundle.json"
+            index.write_text("{}")
+            (root / "patches-list.json").write_text(
+                json.dumps(
+                    {"patches": [{"name": "Material You theme"}, {"name": "Other"}]}
+                )
+            )
+            args = argparse.Namespace(
+                codes=None,
+                bundle=bundle,
+                bundle_sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
+                held_index_sha256=hashlib.sha256(index.read_bytes()).hexdigest(),
+            )
+            builds = dict.fromkeys(range(100, 121), "recorded hash")
+            guard = Lock()
+            delay = Event()
+            active = peak = 0
+            checked = []
+
+            def check_build(_args, code, expected, names):
+                nonlocal active, peak
+                self.assertEqual("recorded hash", expected)
+                self.assertEqual({"Material You theme", "Other"}, names)
+                with guard:
+                    active += 1
+                    peak = max(peak, active)
+                    checked.append(code)
+                delay.wait(0.05)
+                with guard:
+                    active -= 1
+                return f"PASS {code}"
+
+            with (
+                patch.object(checker, "ROOT", root),
+                patch.object(checker, "recorded_builds", return_value=builds),
+                patch.object(checker, "verify_development", return_value="metadata OK"),
+                patch.object(checker, "check_build", side_effect=check_build),
+                patch.object(
+                    checker.argparse.ArgumentParser, "parse_args", return_value=args
+                ),
+                redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(0, checker.main())
+            self.assertEqual(set(builds), set(checked))
+            self.assertEqual(len(builds), len(checked))
+            self.assertLessEqual(peak, 2, "the gate started too many JVM jobs at once")
+
+    def test_failed_discovery_reports_exit_code_before_starting_patcher(self):
+        for code in (137, -1073741819, 0):
+            with self.subTest(exit=code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                stock = root / "messenger-580-123.apk"
+                stock.write_bytes(b"unchanged stock APK")
+                bundle = root / "frozen.mpp"
+                bundle.write_bytes(b"unchanged frozen bundle")
+                args = argparse.Namespace(
+                    stock_dir=root,
+                    java=Path("java"),
+                    compat_classpath="dexlib;guava",
+                    bundle=bundle,
+                    bundle_sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
+                )
+                with patch.object(
+                    checker.subprocess,
+                    "run",
+                    return_value=subprocess.CompletedProcess(
+                        [], code, "Loaded DEX classes\n", ""
+                    ),
+                ) as run:
+                    with self.assertRaisesRegex(RuntimeError, f"exit {code}"):
+                        checker.check_build(
+                            args,
+                            123,
+                            hashlib.sha256(stock.read_bytes()).hexdigest(),
+                            {"Material You theme"},
+                        )
+                    run.assert_called_once()
+                self.assertEqual(b"unchanged stock APK", stock.read_bytes())
+                self.assertEqual(b"unchanged frozen bundle", bundle.read_bytes())
+
     def test_complete_and_failed_runs_keep_stock_and_remove_temporary_outputs(self):
         for case in (
             "valid",

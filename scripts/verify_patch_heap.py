@@ -34,6 +34,7 @@ def check_build(args, code, expected_hash, names):
         [
             str(args.java),
             "-Xmx1024m",
+            "-XX:ActiveProcessorCount=2",
             "-cp",
             args.compat_classpath,
             str(ROOT / "scripts" / "CompatReport.java"),
@@ -53,7 +54,8 @@ def check_build(args, code, expected_hash, names):
     classes = re.search(r"(\d+) Material You editable classes", found)
     if discovery.returncode or surfaces is None or colors is None or classes is None:
         raise RuntimeError(
-            f"{code}: stock compatibility discovery failed\n{found[-4000:]}"
+            f"{code}: stock compatibility discovery failed (exit {discovery.returncode})\n"
+            f"{found[-4000:]}"
         )
     with tempfile.TemporaryDirectory(prefix=f"hush-heap-{code}-") as scratch:
         root = Path(scratch)
@@ -62,6 +64,7 @@ def check_build(args, code, expected_hash, names):
         command = [
             str(args.java),
             "-Xmx1024m",
+            "-XX:ActiveProcessorCount=2",
             "-jar",
             str(args.desktop_jar),
             "patch",
@@ -84,7 +87,10 @@ def check_build(args, code, expected_hash, names):
         )
         log = run.stdout + run.stderr
         if run.returncode or not report_path.is_file() or not output.is_file():
-            raise RuntimeError(f"{code}: Desktop failed at 1024 MB\n{log[-4000:]}")
+            raise RuntimeError(
+                f"{code}: Desktop failed at 1024 MB (exit {run.returncode})\n"
+                f"{log[-4000:]}"
+            )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         applied = [patch["name"] for patch in report["appliedPatches"]]
         steps = report["patchingSteps"]
@@ -189,9 +195,9 @@ def main():
             raise ValueError(
                 "the complete gate requires every distinct catalog patch including the theme"
             )
-        # Each process owns its output and temporary root. Inputs remain read-only.
+        # Limit simultaneous JVMs while keeping each output and temporary root separate.
         failures = []
-        with ThreadPoolExecutor(max_workers=len(codes)) as pool:
+        with ThreadPoolExecutor(max_workers=min(2, len(codes))) as pool:
             futures = {
                 pool.submit(check_build, args, code, builds[code], names): code
                 for code in codes

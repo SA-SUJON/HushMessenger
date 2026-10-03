@@ -6,6 +6,8 @@ Development build 0.19.0. The public release remains 0.14.0.
 
 The memory check passed 18 of 21 inputs. Three compatibility discoveries failed, with the cause still unconfirmed. A fresh checkout rebuild and final signed metadata verification remain pending.
 
+- The memory gate runs at most two builds at once, with two processors per Java process. Compatibility and patching failures include their subprocess exit codes. Regression tests check that all inputs run without exceeding the concurrency limit.
+
 - Focused dependency tests run five partial patch selections through compilation. A failed sibling keeps the successful patch, advertises no failed control and leaves its own native target unchanged. A later selection starts with no stale keys. Each run checks a single settings and extension injection.
 
 - Opted-in update checks reuse validated release details for an hour and send their ETag on later checks. GitHub retry times are shown in settings and respected. Quota reset times apply only to an exhausted quota, so secondary limits keep their own retry wait. Release links must match their tags, and development builds ahead of the public release show both versions. Late replies can't save cache data after cancellation.
