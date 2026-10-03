@@ -283,6 +283,8 @@ $bundleHash = (Get-FileHash $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
 
 The destination must be new. It contains the bundle, exact catalog evidence and `SHA256SUMS.txt`. Later Gradle tasks can't rewrite that snapshot. Sign that checksum file with the existing release key, then recheck the frozen input with `--development --held-index-sha256 $heldHash --bundle $bundle --bundle-sha256 $bundleHash --checksums "$freeze\SHA256SUMS.txt" --verify-signature`. The default release mode still requires the public source, release links and changelog to agree with the built version. Development validation doesn't publish anything.
 
+Validation parses the mapped data in both DEX files and checks section counts against their bounds. Cached catalog checks preserve JSON types, so a number can't stand in for a switch default.
+
 To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
 
 ```powershell

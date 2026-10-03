@@ -310,6 +310,47 @@ class ReleaseChecks(unittest.TestCase):
             release.validate_catalog(self.root, self.bundle, evidence)
         self.assertFalse(evidence.exists())
 
+    def test_saved_catalog_comparison_preserves_json_types_and_object_order(self):
+        evidence = self.root / "patches/build/reports/catalog-evidence.json"
+        held = hashlib.sha256(
+            (self.root / "patches-bundle.json").read_bytes()
+        ).hexdigest()
+        for development in (False, True):
+            with self.subTest(development=development):
+                if development:
+                    self.write(
+                        "README.md",
+                        "https://img.shields.io/badge/development-1.2.3-blue\n",
+                    )
+                    self.write("CHANGELOG.md", "## Unreleased\n")
+
+                def check(development=development):
+                    if development:
+                        return release.verify_development(
+                            self.root, self.bundle, evidence, held
+                        )
+                    return release.verify(self.root)
+
+                # Object member order has no meaning, but booleans aren't numbers.
+                reordered = {"patches": self.catalog["patches"], "version": "1.2.3"}
+                payload = {
+                    "bundle": self.bundle.name,
+                    "sha256": self.digest,
+                    "dexValidated": True,
+                    "catalog": reordered,
+                }
+                evidence.write_text(json.dumps(payload))
+                check()
+                for number in (1, 1.0):
+                    changed = copy.deepcopy(payload)
+                    changed["catalog"]["patches"][0]["default"] = number
+                    evidence.write_text(json.dumps(changed))
+                    with (
+                        self.subTest(number=number),
+                        self.assertRaisesRegex(ValueError, "catalog|Catalog"),
+                    ):
+                        check()
+
     @unittest.skipIf(SSH_KEYGEN is None, "ssh-keygen isn't installed")
     def test_signed_checksums_pass_and_an_edit_another_key_or_namespace_fails(self):
         key, other = self.root / "release_key", self.root / "other_key"

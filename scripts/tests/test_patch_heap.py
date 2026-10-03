@@ -220,9 +220,15 @@ class PatchHeapChecks(unittest.TestCase):
         total = (
             33  # This fixture's validated catalog, independent of the implementation.
         )
-        for count, patches in ((20, total), (21, total - 1), (21, total + 1)):
+        for count, patches, changed_default in (
+            (20, total, None),
+            (21, total - 1, None),
+            (21, total + 1, None),
+            (21, total, 1),
+            (21, total, 1.0),
+        ):
             with (
-                self.subTest(builds=count, patches=patches),
+                self.subTest(builds=count, patches=patches, default=changed_default),
                 tempfile.TemporaryDirectory() as directory,
             ):
                 root = Path(directory)
@@ -233,11 +239,15 @@ class PatchHeapChecks(unittest.TestCase):
                     "version": "1.2.3",
                     "patches": [{"name": name} for name in names],
                 }
+                catalog["patches"][0]["default"] = True
+                published = json.loads(json.dumps(catalog))
+                if changed_default is not None:
+                    published["patches"][0]["default"] = changed_default
                 (root / "patches-list.json").write_text(
                     json.dumps(
                         {
-                            **catalog,
-                            "patches": catalog["patches"][:patches]
+                            **published,
+                            "patches": published["patches"][:patches]
                             + ([{"name": "Extra patch"}] if patches > total else []),
                         }
                     )
@@ -277,6 +287,7 @@ class PatchHeapChecks(unittest.TestCase):
                     bundle_sha256=digest,
                     held_index_sha256=hashlib.sha256(index.read_bytes()).hexdigest(),
                 )
+                error = io.StringIO()
                 with (
                     patch.object(
                         checker.argparse.ArgumentParser, "parse_args", return_value=args
@@ -288,6 +299,9 @@ class PatchHeapChecks(unittest.TestCase):
                         return_value=dict.fromkeys(range(count), "hash"),
                     ),
                     patch.object(checker, "ThreadPoolExecutor") as pool,
+                    redirect_stderr(error),
                 ):
                     self.assertEqual(2, checker.main())
                     pool.assert_not_called()
+                if changed_default is not None:
+                    self.assertIn("Development catalog differs", error.getvalue())

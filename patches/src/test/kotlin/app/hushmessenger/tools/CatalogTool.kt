@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.loadPatchesFromJar
 import com.android.tools.smali.dexlib2.ReferenceType
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile
+import com.android.tools.smali.dexlib2.dexbacked.raw.util.DexAnnotator
 import com.android.tools.smali.dexlib2.iface.instruction.DualReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.formats.UnknownInstruction
@@ -121,6 +122,7 @@ object CatalogTool {
         val count = uint(map.toInt())
         require(count > 0 && map + 4 + count * 12 <= data.size) { "Invalid DEX map bounds" }
         val seenSections = mutableSetOf<Int>()
+        val mapped = mutableListOf<Triple<Int, Long, Long>>()
         var previous = -1L
         for (index in 0 until count.toInt()) {
             val at = map.toInt() + 4 + index * 12
@@ -137,6 +139,7 @@ object CatalogTool {
                 require(size == uint(header) && offset == uint(header + 4)) { "DEX map differs from header" }
             }
             previous = offset
+            mapped += Triple(type, size, offset)
         }
         require(0 in seenSections && 0x1000 in seenSections) { "Incomplete DEX map" }
         var end = 112L
@@ -148,6 +151,44 @@ object CatalogTool {
             }
         }
         val dex = DexBackedDexFile.fromInputStream(null, data.inputStream())
+        // Lazy class traversal doesn't check unreferenced map data or its claimed counts.
+        // Parse each complete section with the pinned library, bounded by the next section.
+        for ((index, entry) in mapped.withIndex()) {
+            val (type, size, offset) = entry
+            val limit = mapped.getOrNull(index + 1)?.third ?: data.size.toLong()
+            val alignment = if (type in 0x2000..0x2005 && type != 0x2001) 1 else 4
+            val minimum = when (type) {
+                0 -> 112L
+                1, 2, 7, 0x1001, 0x1002, 0x1003, 0x2000, 0xf000 -> 4L
+                3 -> 12L
+                4, 5, 8 -> 8L
+                6 -> 32L
+                0x1000 -> 4 + count * 12
+                0x2001, 0x2006 -> 16L
+                0x2002 -> 2L
+                0x2003, 0x2004 -> 3L
+                else -> 1L
+            }
+            require(offset % alignment == 0L && size * minimum <= limit - offset &&
+                (type < 0x1000 || offset >= uint(108))) { "Invalid DEX mapped section extent" }
+            if (type == 0x2002) require(size == uint(56)) { "DEX string data count differs from identifiers" }
+        }
+        val annotator = DexAnnotator(dex, 120)
+        for ((index, entry) in mapped.withIndex()) {
+            val (type, _, offset) = entry
+            val limit = mapped.getOrNull(index + 1)?.third ?: data.size.toLong()
+            annotator.setLimit(offset.toInt(), limit.toInt())
+            // writeAnnotations catches parser errors for a diagnostic dump. Call the parser directly.
+            requireNotNull(annotator.getAnnotator(type)).annotateSection(annotator)
+            val parsedEnd = annotator.cursor.toLong()
+            val nextType = mapped.getOrNull(index + 1)?.first
+            val nextAlignment = if (nextType in 0x2000..0x2005 && nextType != 0x2001) 1 else 4
+            require(parsedEnd <= limit && limit - parsedEnd < nextAlignment &&
+                (parsedEnd.toInt() until limit.toInt()).all { data[it] == 0.toByte() }) {
+                "DEX map count leaves unparsed section bytes"
+            }
+            annotator.clearLimit()
+        }
         // Dexlib uses lazy views. Force every identifier and the complete class/body data to be read.
         for (type in ReferenceType.STRING..ReferenceType.METHOD_PROTO) for (reference in dex.getReferences(type)) {
             reference.validateReference()

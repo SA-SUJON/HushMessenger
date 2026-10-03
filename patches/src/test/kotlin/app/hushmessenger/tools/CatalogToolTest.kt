@@ -19,6 +19,32 @@ import kotlinx.serialization.json.*
 import kotlin.test.*
 
 class CatalogToolTest {
+    @Test fun mapDataCountsAndExtentsMustDescribeTheActualBytes() {
+        val store = MemoryDataStore()
+        val definition = fixtureClass("Lfixture/MapCounts;", listOf(fixtureMethod(
+            "Lfixture/MapCounts;->run(I)V", "const-string v0, \"map data\"\nreturn-void", 2)))
+        DexPool.writeTo(store, ImmutableDexFile(Opcodes.getDefault(), listOf(definition)))
+        val original = store.data
+        store.close()
+        CatalogTool.validateDex(original)
+        val header = ByteBuffer.wrap(original).order(ByteOrder.LITTLE_ENDIAN)
+        val map = header.getInt(52)
+        for (index in 0 until header.getInt(map)) {
+            val at = map + 4 + index * 12
+            val type = header.getShort(at).toInt() and 0xffff
+            if (type < 0x1001) continue
+            val count = header.getInt(at + 4)
+            for (size in listOf(-1, count + 1, count - 1)) {
+                val changed = original.copyOf()
+                val bytes = ByteBuffer.wrap(changed).order(ByteOrder.LITTLE_ENDIAN)
+                bytes.putInt(at + 4, size)
+                MessageDigest.getInstance("SHA-1").digest(changed.copyOfRange(32, changed.size)).copyInto(changed, 12)
+                bytes.putInt(8, Adler32().apply { update(changed, 12, changed.size - 12) }.value.toInt())
+                assertFails("Map type $type has false count $size") { CatalogTool.validateDex(changed) }
+            }
+        }
+    }
+
     @Test fun malformedDexFailsEvenWhenItsChecksumsAreRecomputed() {
         val store = MemoryDataStore()
         val definition = fixtureClass("Lfixture/Example;", listOf(fixtureMethod(

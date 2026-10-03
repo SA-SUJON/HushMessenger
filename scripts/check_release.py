@@ -108,7 +108,8 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
         "Catalog evidence is stale for this bundle; run :patches:checkPatchCatalog",
     )
     require(
-        public == fresh.get("catalog"),
+        json.dumps(public, sort_keys=True, allow_nan=False)
+        == json.dumps(fresh.get("catalog"), sort_keys=True, allow_nan=False),
         "Public catalog differs from loaded bundle metadata",
     )
     require(public.get("version") == version, "Catalog version differs from source")
@@ -222,7 +223,8 @@ def verify_development(root, bundle, evidence, held_index_sha256, checksums=None
     )
     require(fresh.get("dexValidated") is True, "Missing structural DEX validation")
     require(
-        catalog == fresh.get("catalog"),
+        json.dumps(catalog, sort_keys=True, allow_nan=False)
+        == json.dumps(fresh.get("catalog"), sort_keys=True, allow_nan=False),
         "Development catalog differs from loaded bundle metadata",
     )
     require(catalog.get("version") == version, "Catalog version differs from source")
