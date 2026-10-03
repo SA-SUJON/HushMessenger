@@ -18,6 +18,8 @@ import android.view.DisplayCutout;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -395,7 +397,6 @@ public final class SettingsActivity extends Activity {
         ui.add(setup, ui.heading(text.get("setup")), 0);
         enabledCount = ui.text("", 22, ui.text, true);
         enabledCount.setTag("enabled_count");
-        enabledCount.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         ui.add(setup, enabledCount, 8);
         setupNote = ui.text("", 13, ui.muted, false);
         ui.add(setup, setupNote, 6);
@@ -620,7 +621,34 @@ public final class SettingsActivity extends Activity {
         row.setOnClickListener(view -> { if (control.isEnabled()) control.toggle(); });
         row.setEnabled(available);
         row.setFocusable(false);
-        row.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        control.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        row.setScreenReaderFocusable(true);
+        row.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setClassName(Switch.class.getName());
+                info.setCheckable(true);
+                info.setChecked(control.isChecked());
+                info.setEnabled(control.isEnabled());
+                info.setContentDescription(control.getContentDescription());
+                if (Build.VERSION.SDK_INT >= 30) {
+                    AccessibilityNodeInfo switchInfo = control.createAccessibilityNodeInfo();
+                    info.setStateDescription(switchInfo.getStateDescription());
+                    switchInfo.recycle();
+                }
+            }
+            @Override public void onInitializeAccessibilityEvent(View host, AccessibilityEvent event) {
+                super.onInitializeAccessibilityEvent(host, event);
+                event.setClassName(Switch.class.getName());
+                event.setChecked(control.isChecked());
+                event.setContentDescription(control.getContentDescription());
+            }
+            @Override public boolean performAccessibilityAction(View host, int action, Bundle arguments) {
+                if (action == AccessibilityNodeInfo.ACTION_CLICK && !control.isEnabled()) return false;
+                return super.performAccessibilityAction(host, action, arguments);
+            }
+        });
         row.setBackground(ui.interactive(ui.background, 0, 0));
         if (divided) {
             row.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[] {
@@ -643,7 +671,7 @@ public final class SettingsActivity extends Activity {
         if (!status.contentEquals(label.getText())) label.setText(status);
         label.setTextColor(!paused && failed ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
         label.setVisibility(control.isChecked() ? View.VISIBLE : View.GONE);
-        // The labels' parent hides its descendants from accessibility. The existing switch speaks the status once.
+        // Hidden labels share the description exposed by the row's switch node.
         String description = switchDescriptions.get(control).toString() + (control.isChecked() ? " " + status : "");
         if (!description.contentEquals(control.getContentDescription())) control.setContentDescription(description);
     }

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Settings expose each control's full row as one accessible switch. The title, description and activity label share a touch target, and the switch keeps its keyboard focus. Unavailable controls can be read but can't be toggled. Live TalkBack checks on an isolated Android 16 preview read the title and description as one control and changed the saved choice once per double-tap. The enabled-count summary stays readable without announcing after every toggle. Regression checks cover Android 9 and 16.
+
 ## 0.14.0 (2026-10-02)
 
 This release has 32 patches, 29 of them switches, for all 21 arm64 builds of Messenger 580.0.0.49.91. It adds Native Bubbles and an optional slide animation for chats. Settings now open from Messenger's side menu too, and Use system emoji draws your phone's own emoji instead of Google's. Root Mount installs also get their long-press shortcuts back.
