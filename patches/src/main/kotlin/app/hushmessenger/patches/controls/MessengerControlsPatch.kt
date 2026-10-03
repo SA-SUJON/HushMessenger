@@ -212,14 +212,19 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
             }
             if (key == COMMUNITY_INBOX) {
                 val contract = communityInboxContract ?: throw PatchException("Messenger controls: the native community inbox route is missing")
-                val helpers = mutableClassDefBy(HOST_SCREENS).methods
+                val host = mutableClassDefBy(HOST_SCREENS)
+                val helpers = host.methods
                 val joined = helpers.singleOrNull { it.hookId() == JOINED_COMMUNITY_ROW }
                     ?: throw PatchException("Messenger controls: the joined-community helper is missing")
                 val scope = helpers.singleOrNull { it.hookId() == MAIN_INBOX_SCOPE }
                     ?: throw PatchException("Messenger controls: the Main inbox helper is missing")
                 val replacements = injectCommunityInbox(contract, methods.getValue(COMMUNITY_INBOX).single(), joined, scope)
+                // MutableMethod.implementation has no setter. Keep both method indexes in sync when replacing it.
+                val direct = host.directMethods
                 helpers.removeAll(listOf(joined, scope))
+                direct.removeAll(listOf(joined, scope))
                 helpers.addAll(replacements)
+                direct.addAll(replacements)
             } else if (key == "bubbles") {
                 val capability = mutableClassDefBy(HOST_SCREENS).methods.singleOrNull { it.hookId() == NATIVE_BUBBLE_ROUTES }
                     ?: throw PatchException("Messenger controls: the extension has no native bubble capability")
