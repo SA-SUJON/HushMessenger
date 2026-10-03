@@ -57,8 +57,31 @@ class CommunityInboxTest {
         }
     }
 
+    @Test fun theSessionFirstCaptureOrderAndGatedSecondReadKeepTheSameContract() {
+        for (profile in controlProfiles.values.toSet()) {
+            activeProfile = profile
+            val classes = communityInboxFixture(sessionFirst = true)
+            val contract = assertNotNull(findCommunityInbox(classes))
+            assertEquals(profile.nativeCommunityInbox, contract.identity)
+            validateControls(findControls(classes), setOf(COMMUNITY_INBOX))
+            val render = contract.render as MutableMethod
+            val at = render.communityReadSite(contract.capturedScope)
+            assertEquals(66, at)
+            val before = body(render).map(::structural)
+            injectCommunityInbox(contract, render, communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
+            assertEquals(before, body(render).filterIndexed { index, _ -> index !in at + 1..at + 8 }.map(::structural))
+            assertEquals(at + 9, body(render).branchTarget(at + 6))
+            exerciseNativeListProjection(render, at)
+        }
+        // The shifted order needs the session store in slot 2; without it slot 4 holds no scope capture.
+        val classes = communityInboxFixture(sessionFirst = true)
+        val ctorId = activeProfile.nativeCommunityInbox.split('|')[1]
+        classes.flatMap { it.methods }.single { it.hookId() == ctorId }.replaceInstruction(2, "nop")
+        assertNull(findCommunityInbox(classes))
+    }
+
     @Test fun changedSnapshotScopePredicateAndForeignSearchCallerFailBeforeMutation() {
-        for (change in listOf("snapshot", "scope", "first_read", "second_alias", "predicate", "null_key", "foreign_search", "captured_write", "branch", "folder_path", "folder_getter", "scratch3", "scratch_one", "scratch_wide")) {
+        for (change in listOf("snapshot", "scope", "first_read", "second_alias", "predicate", "null_key", "foreign_search", "captured_write", "branch", "folder_path", "folder_getter", "scratch3", "scratch_one", "scratch_wide", "session_slot")) {
             val classes = communityInboxFixture().toMutableList()
             val valid = assertNotNull(findCommunityInbox(classes))
             val ids = valid.identity.split('|')
@@ -78,6 +101,9 @@ class CommunityInboxTest {
                 "scratch3" -> renderer.replaceInstruction(at + 1, "invoke-static {v3}, LX/ScratchConsumer;->accept(Ljava/lang/Object;)V")
                 "scratch_one" -> renderer.replaceInstruction(at + 1, "check-cast v3, Ljava/lang/Object;")
                 "scratch_wide" -> renderer.replaceInstruction(at + 1, "long-to-int v5, v2")
+                // A session store in slot 2 without the later captures moving down is neither known order.
+                "session_slot" -> classes.flatMap { it.methods }.single { it.hookId() == ids[1] }.replaceInstruction(2,
+                    "iput-object v2, v1, ${renderer.definingClass}->\$fbUserSession:$FB_USER_SESSION")
                 "foreign_search" -> classes.add(fixtureClass("LX/ForeignSearch;", listOf(fixtureMethod("LX/ForeignSearch;->query()V",
                     "invoke-direct/range {v0 .. v14}, ${ids[1]}\nreturn-void", 15)), "MessagingTabbedSearchFragment"))
                 "captured_write" -> classes.add(fixtureClass("LX/CacheMutation;", listOf(fixtureMethod("LX/CacheMutation;->put()V",

@@ -20,8 +20,11 @@ private fun sparse(size: Int, entries: Map<Int, String>) = (0 until size).joinTo
 internal fun communityStub(id: String, body: String = "const/4 v0, 0x0\nreturn v0") =
     fixtureMethod(id, body, if (id == MAIN_INBOX_SCOPE) 2 else 1, AccessFlags.STATIC.value)
 
-/** Synthetic wiring uses every profile's real hook/helper IDs; it contains no messages or account data. */
-internal fun communityInboxFixture(): List<MutableClass> {
+/**
+ * Synthetic wiring uses every profile's real hook/helper IDs; it contains no messages or account data.
+ * [sessionFirst] builds the 581 closure: the session capture moves to slot 2 and a gated block precedes the second read.
+ */
+internal fun communityInboxFixture(sessionFirst: Boolean = false): List<MutableClass> {
     val ids = activeProfile.nativeCommunityInbox.split('|')
     val (updateId, ctorId, scopeGetterId, switchId, summaryField) = ids
     val joinedId = ids[5]; val nullableId = ids[6]; val anyId = ids[7]; val channelId = ids[8]; val requests = ids[9]
@@ -61,9 +64,11 @@ internal fun communityInboxFixture(): List<MutableClass> {
         15 to ":config\nnop", 25 to "iput-object v5, v1, $BUILDER->scope:$scope",
         28 to "iput-object v4, v1, $BUILDER->folder:$FOLDER", 29 to "const-string v0, \"folderName\"", 37 to "return-void")), 6,
         AccessFlags.PUBLIC.value or AccessFlags.STATIC.value)
+    val shift = if (sessionFirst) 1 else 0
     val ctor = fixtureMethod(ctorId, sparse(17, mapOf(0 to "iput-object v13, v1, $closure->\$inboxUnitItems:$IMMUTABLE_LIST",
-        4 to "iput-object v10, v1, $closure->\$threadTypeFilter:$scope", 7 to "iput-object v8, v1, $prefix", 16 to "return-void")), 16)
-    val second = if (activeProfile in listOf(PROFILE_346013370, PROFILE_346013374)) 55 else 56
+        4 + shift to "iput-object v10, v1, $closure->\$threadTypeFilter:$scope", 7 + shift to "iput-object v8, v1, $prefix", 16 to "return-void") +
+        (if (sessionFirst) mapOf(2 to "iput-object v2, v1, $closure->\$fbUserSession:$FB_USER_SESSION") else emptyMap())), 16)
+    val second = if (sessionFirst) 66 else if (activeProfile in listOf(PROFILE_346013370, PROFILE_346013374)) 55 else 56
     val invokeId = activeProfile.hooks.getValue(COMMUNITY_INBOX).single()
     val invoke = fixtureMethod(invokeId, sparse(second + 19, mapOf(
         5 to "iget-object v0, v4, $closure->\$inboxUnitItems:$IMMUTABLE_LIST",
