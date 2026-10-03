@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.17.0-0084FF" alt="Development 0.17.0"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.17.1-0084FF" alt="Development 0.17.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -12,7 +12,7 @@
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 32 patches. 29 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-The source builds v0.17.0. The public download and Morphe source still serve v0.14.0 while development checks continue. Settings give each control's full row one accessible touch target. Development also extends AI sticker hiding to Generate buttons and screenshot access to view-once media and Quicksnap. Those new media routes still need checks inside a signed-in Messenger account.
+The source builds v0.17.1. The public download and Morphe source still serve v0.14.0 while development checks continue. Settings give each control's full row one accessible touch target. Development also extends AI sticker hiding to Generate buttons and screenshot access to view-once media and Quicksnap. Those new media routes still need checks inside a signed-in Messenger account.
 
 v0.14.0 adds **Native Bubbles** to **Allow chat bubbles** ([#19](https://github.com/SysAdminDoc/HushMessenger/issues/19)) and **Slide chats in and out**, an optional slide for chats you open from the chat list or search ([#28](https://github.com/SysAdminDoc/HushMessenger/issues/28)). Settings now open from Messenger's side menu as well as its Menu tab ([#26](https://github.com/SysAdminDoc/HushMessenger/issues/26)), and **Use system emoji** draws your phone's own emoji on Android 12 and newer ([#25](https://github.com/SysAdminDoc/HushMessenger/issues/25)). On Root Mount installs, HushMessenger adds the **Patch controls** and **Restart Messenger** shortcuts itself, because Android never reads the patched ones there ([#27](https://github.com/SysAdminDoc/HushMessenger/issues/27)). The [changelog](CHANGELOG.md) has the rest.
 
@@ -242,7 +242,9 @@ For v0.14.0, Morphe Desktop 1.18.0 applied all 32 patches, Material You included
 
 The v0.10.0 development bundle also applied all 31 patches to all 21 supported builds at 1024 MB. Each compiled output had its native-route capability checked, so falling back to unsupported couldn't count as native validation. The stock APK checksums stayed unchanged.
 
-The Patcher 1.15.0 migration passed all 21 supported inputs at 1024 MB and reproduced its bundle from two fresh checkouts. Development v0.17.0 also passed the complete local suite, all 21 inputs at 1024 MB and signed patching for all five naming groups. Those outputs retained every stock class and all 13 native libraries, with no duplicate classes. Exact native-media replay passed every input too. Manager 1.33.0 loaded the v0.16.0 local source and applied all 32 patches at its default 640 MB, with Material You selected. Its final output is being checked separately.
+The Patcher 1.15.0 migration passed all 21 supported inputs at 1024 MB and reproduced its bundle from two fresh checkouts. Development v0.17.0 and v0.17.1 also passed the complete local suite, all 21 inputs at 1024 MB and signed patching for all five naming groups. Those outputs retained every stock class and all 13 native libraries, with no duplicate classes. Exact native-media replay passed every input too. A fresh checkout produced the same Android-ready v0.17.0 bundle bytes. Manager 1.33.0 loaded the v0.16.0 local source and applied all 32 patches at its default 640 MB, with Material You selected. Its output passed signature and archive checks, included the settings screen and retained all 13 native libraries unchanged. Peak heap use was 290 MB. The original Manager data, signing key and temporary permissions were restored afterward.
+
+The v0.17.0 development build also updated an existing Galaxy S25 installation in place with its original signing key. The original install date, signed-in inbox and known encrypted-chat history remained. Live Generate-button and protected-viewer checks are still pending.
 
 The current screenshots show v0.10.0 inside patched Messenger on a Galaxy S22. Both pages and themes were checked there at 200% text, including the bubble mode buttons. The v0.15.0 standalone UI preview passed live TalkBack title/description exploration and single double-tap activation on Android 16. An emulated external keyboard also exercised Tab, directional focus, scrolling and Space/Enter activation in both themes at normal and 200% text. A physical keyboard still needs a check. Preview checks don't verify Messenger's menu routes or inbox speech. Earlier preview checks preserved multi-digit counts in the mirrored test language. Automated tests cover API 28, 30 and 36, short windows at 200% text, state restoration and accessible actions. Crash-recovery fixtures also cover API 37.
 
@@ -270,16 +272,16 @@ The native-media replay test uses private APK inputs. Set `HUSH_NATIVE_FIXTURES`
 To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
 
 ```powershell
-python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.17.0.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
+python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle .\patches\build\libs\patches-0.17.1.mpp --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
 ```
 
 Each build runs in its own temporary folder with all patches selected and a 1024 MB heap. The check verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
-The output from main is `patches/build/libs/patches-0.17.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output from main is `patches/build/libs/patches-0.17.1.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 29 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 
-Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.17.0 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash. Then sign the checksum file with `ssh-keygen -Y sign -f <release key> -n hushmessenger-release SHA256SUMS.txt`, attach `SHA256SUMS.txt.sig` next to it, and run the same command with `--verify-signature` added. That checks the signature against `scripts/release_signers`.
+Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.17.1 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash. Then sign the checksum file with `ssh-keygen -Y sign -f <release key> -n hushmessenger-release SHA256SUMS.txt`, attach `SHA256SUMS.txt.sig` next to it, and run the same command with `--verify-signature` added. That checks the signature against `scripts/release_signers`.
 
 ### Check the bundle
 

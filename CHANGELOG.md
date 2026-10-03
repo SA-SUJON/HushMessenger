@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Repository links now use the HushMessenger artwork as their social preview.
+
+- Manager 1.33.0 applied all 32 patches at its existing 640 MB process limit, with a peak heap of 290 MB. The signed result passed archive checks and kept every native library unchanged. Fresh-checkout reproduction and non-English setup diagnostics also passed. The development build updated an existing signed-in installation without replacing its key or losing its chat history.
+
 - **Hide AI sticker tools** also hides the Generate buttons in Messenger's newer sticker keyboard. The guard matches the verified AI label and leaves other cells alone. **Allow screenshots** also covers the secure-window calls in view-once media and Quicksnap. It preserves unrelated flags, lifecycle code and the original calls while off or paused. All 21 supported builds have records for these routes. Live keyboard and protected-media checks remain open.
 
 - Patch builds now use Morphe Patcher 1.15.0 and the maintained MorpheApp ARSCLib fork. Migration checks applied all 32 patches to all 21 supported APKs at a 1024 MB heap, verified signatures for the five naming groups and retained their native libraries. Two fresh checkouts produced the same bundle bytes. Kotlin and Bouncy Castle security pins remain in place.
