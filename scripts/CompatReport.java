@@ -1485,6 +1485,11 @@ public class CompatReport {
         } address+=i.getCodeUnits(); } return out;
     }
     Method singleMethod(String type, String name) { return single(methods(classes.get(type)).stream().filter(m->m.getName().equals(name)).toList(),type+"->"+name); }
+    boolean sessionFirst(List<Instruction> ctorCode) {
+        var store=ctorCode.get(2);
+        return store.getOpcode()==Opcode.IPUT_OBJECT && ref(store) instanceof FieldReference f && f.getName().equals("$fbUserSession") && f.getType().equals("Lcom/facebook/auth/usersession/FbUserSession;") &&
+            ((TwoRegisterInstruction)store).getRegisterA()==2 && ((TwoRegisterInstruction)store).getRegisterB()==1;
+    }
         CommunityInbox prove() {
         var immutable=classes.get(LIST);
         var copy=single(methods(immutable).stream().filter(m->id(m).equals(LIST+"->copyOf(Ljava/util/Collection;)"+LIST)).toList(),"native immutable projection");
@@ -1530,8 +1535,10 @@ public class CompatReport {
         require(ctorCode.get(0).getOpcode()==Opcode.IPUT_OBJECT && ctorCode.get(0) instanceof TwoRegisterInstruction && ref(ctorCode.get(0)) instanceof FieldReference,"captured presentation store absent");
         var store=(TwoRegisterInstruction)ctorCode.get(0); var captured=(FieldReference)ref(ctorCode.get(0));
         require(store.getRegisterA()==13 && store.getRegisterB()==1 && captured.getName().equals("$inboxUnitItems") && captured.getType().equals(LIST),"captured parameter disconnected");
-        var scopeField=(FieldReference)ref(ctorCode.get(4));
-        require(scopeField.getName().equals("$threadTypeFilter") && scopeField.getType().equals(scopeType) && ((TwoRegisterInstruction)ctorCode.get(4)).getRegisterA()==10,"captured native scope disconnected");
+        // 581 moves the session capture from slot 8 to slot 2, so the captures in slots 2 to 7 move one slot later.
+        int scopeAt=sessionFirst(ctorCode)?5:4;
+        var scopeField=(FieldReference)ref(ctorCode.get(scopeAt));
+        require(ctorCode.get(scopeAt).getOpcode()==Opcode.IPUT_OBJECT && scopeField.getName().equals("$threadTypeFilter") && scopeField.getType().equals(scopeType) && ((TwoRegisterInstruction)ctorCode.get(scopeAt)).getRegisterA()==10,"captured native scope disconnected");
         var ctorCallers=new ArrayList<String>(); var allocations=new ArrayList<String>(); var fieldWrites=new ArrayList<String>();
         for(var cls:classes.values()) for(var method:cls.getMethods()) { var code=instructions(method); for(int at=0;at<code.size();at++) {
             var i=code.get(at); Object r=ref(i);
@@ -1549,8 +1556,8 @@ public class CompatReport {
         require(scopeResult>=1 && renderCode.get(scopeResult).getOpcode()==Opcode.MOVE_RESULT_OBJECT && ref(renderCode.get(scopeResult-1)) instanceof MethodReference,"captured scope result disconnected");
         var scopeGetter=definition((MethodReference)ref(renderCode.get(scopeResult-1)));
         require(scopeGetter.getDefiningClass().equals(loaderCtor.getDefiningClass()) && scopeGetter.getReturnType().equals(scopeType) && instructions(scopeGetter).size()==13 && calls(scopeGetter).stream().anyMatch(m->m.getDefiningClass().equals(folderGetter.getDefiningClass()) && m.getReturnType().equals(scopeType)),"scope does not read current native config");
-        var prefix=(FieldReference)ref(ctorCode.get(7));
-        require(prefix.getName().equals("$prefixOffsetCallback") && ctorCode.get(7).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)ctorCode.get(7)).getRegisterA()==8,"Main callback capture disconnected");
+        var prefix=(FieldReference)ref(ctorCode.get(scopeAt+3));
+        require(prefix.getName().equals("$prefixOffsetCallback") && ctorCode.get(scopeAt+3).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)ctorCode.get(scopeAt+3)).getRegisterA()==8,"Main callback capture disconnected");
         int prefixArg=args(renderCode.get(callAt)).get(7), prefixMove=-1;
         for(int at=callAt-1;at>=0;at--) if(writes(renderCode.get(at),prefixArg)) { prefixMove=at; break; }
         require(prefixMove>=0 && renderCode.get(prefixMove).getOpcode()==Opcode.MOVE_OBJECT_FROM16,"Main callback alias absent");
@@ -1602,7 +1609,7 @@ public class CompatReport {
         Method invoke=single(methods(closure).stream().filter(m->m.getName().equals("invoke") && m.getParameterTypes().equals(List.of("Ljava/lang/Object;"))).toList(),"section closure invoke");
         var code=instructions(invoke);
         var listReads=new ArrayList<Integer>(); for(int at=0;at<code.size();at++) if(reads(code.get(at),captured.toString())) listReads.add(at);
-        require(listReads.size()==2 && listReads.get(0)==5 && Set.of(55,56).contains(listReads.get(1)),"presentation read shape changed: "+listReads);
+        require(listReads.size()==2 && listReads.get(0)==5 && Set.of(55,56,66).contains(listReads.get(1)),"presentation read shape changed: "+listReads);
         int secondRead=listReads.get(1), aliasAt=secondRead+10, sinkAt=secondRead+11;
         require(code.size()==secondRead+19 && invoke.getImplementation().getRegisterCount()==20 && invoke.getImplementation().getTryBlocks().isEmpty(),"presentation body shape changed");
         require(code.get(6).getOpcode()==Opcode.INVOKE_VIRTUAL && Objects.toString(ref(code.get(6))).equals("Ljava/util/AbstractCollection;->isEmpty()Z") && args(code.get(6)).equals(List.of(0)),"original empty/header gate changed");

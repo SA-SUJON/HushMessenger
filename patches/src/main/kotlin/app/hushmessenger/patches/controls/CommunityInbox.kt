@@ -102,10 +102,13 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
         communityRequire(ctor.parameterTypes.size == 14 && ctor.parameterTypes[11].toString() == IMMUTABLE_LIST && c.size == 17 &&
             ctor.implementation!!.registerCount == 16 && ctor.implementation!!.tryBlocks.isEmpty())
         val captured = c[0].communityRef() as? FieldReference ?: throw CommunityChanged()
-        val scope = c[4].communityRef() as? FieldReference ?: throw CommunityChanged()
+        // 581 moves the session capture from slot 8 to slot 2, so the captures in slots 2 to 7 move one slot later.
+        val scopeAt = if (c[2].opcode == Opcode.IPUT_OBJECT && (c[2].communityRef() as? FieldReference)?.let { it.name == "\$fbUserSession" && it.type == FB_USER_SESSION } == true &&
+            (c[2] as? TwoRegisterInstruction)?.let { it.registerA == 2 && it.registerB == 1 } == true) 5 else 4
+        val scope = c[scopeAt].communityRef() as? FieldReference ?: throw CommunityChanged()
         communityRequire(c[0].opcode == Opcode.IPUT_OBJECT && (c[0] as? TwoRegisterInstruction)?.let { it.registerA == 13 && it.registerB == 1 } == true &&
-            captured.name == "\$inboxUnitItems" && captured.type == IMMUTABLE_LIST && c[4].opcode == Opcode.IPUT_OBJECT &&
-            (c[4] as? TwoRegisterInstruction)?.let { it.registerA == 10 && it.registerB == 1 } == true && scope.name == "\$threadTypeFilter")
+            captured.name == "\$inboxUnitItems" && captured.type == IMMUTABLE_LIST && c[scopeAt].opcode == Opcode.IPUT_OBJECT &&
+            (c[scopeAt] as? TwoRegisterInstruction)?.let { it.registerA == 10 && it.registerB == 1 } == true && scope.name == "\$threadTypeFilter")
         val ctorCall = u.indices.filter { u[it].communityRef().toString() == ctor.hookId() }.communitySingle()
         val ctorArgs = u[ctorCall].communityArgs()
         fun previousWrite(register: Int) = (ctorCall - 1 downTo 0).firstOrNull { u[it].communityWrites(register) } ?: throw CommunityChanged()
@@ -141,9 +144,9 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
         val defaultBuilder = builder.methods.filter { it.name == "<init>" && it.parameterTypes.isEmpty() }.communitySingle()
         communityRequire(coordinator.communityString("threadTypeFilter") && !coordinator.communityString("folderName") &&
             defaultBuilder.communityCode().size == 5 && calls(defaultBuilder).any { it.definingClass == "Ljava/util/HashSet;" && it.name == "<init>" && it.parameterTypes.isEmpty() })
-        val prefix = c[7].communityRef() as? FieldReference ?: throw CommunityChanged()
-        communityRequire(prefix.name == "\$prefixOffsetCallback" && c[7].opcode == Opcode.IPUT_OBJECT &&
-            (c[7] as TwoRegisterInstruction).registerA == 8)
+        val prefix = c[scopeAt + 3].communityRef() as? FieldReference ?: throw CommunityChanged()
+        communityRequire(prefix.name == "\$prefixOffsetCallback" && c[scopeAt + 3].opcode == Opcode.IPUT_OBJECT &&
+            (c[scopeAt + 3] as TwoRegisterInstruction).registerA == 8)
         val prefixMove = previousWrite(ctorArgs[7])
         communityRequire(u[prefixMove].opcode == Opcode.MOVE_OBJECT_FROM16)
         val prefixRegister = (u[prefixMove] as TwoRegisterInstruction).registerB
@@ -201,7 +204,7 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
             if (ref == ctor.hookId()) { communityRequire(m.hookId() == update.hookId()); callers++ }
             if (i.opcode == Opcode.NEW_INSTANCE && ref == closure.type) { communityRequire(m.hookId() == update.hookId()); allocations++ }
             if (i.opcode.toString().startsWith("IPUT") && ref in setOf(captured.toString(), scope.toString())) {
-                communityRequire(m.hookId() == ctor.hookId() && at in setOf(0, 4)); writes++
+                communityRequire(m.hookId() == ctor.hookId() && at in setOf(0, scopeAt)); writes++
             }
         }
         communityRequire(callers == 1 && allocations == 1 && writes == 2)
@@ -254,7 +257,8 @@ internal fun Method.communityReadSite(scope: String): Int {
     val c = communityCode()
     val listField = "$definingClass->\$inboxUnitItems:$IMMUTABLE_LIST"
     val reads = c.indices.filter { c[it].opcode == Opcode.IGET_OBJECT && c[it].communityRef().toString() == listField }
-    communityRequire(reads.size == 2 && reads.first() == 5 && reads.last() in setOf(55, 56))
+    // 580 reads at 55 or 56; 581 adds a ten-instruction session-gated block before the search bar.
+    communityRequire(reads.size == 2 && reads.first() == 5 && reads.last() in setOf(55, 56, 66))
     val at = reads.last()
     communityRequire(!AccessFlags.STATIC.isSet(accessFlags) && implementation!!.registerCount == 20 && implementation!!.tryBlocks.isEmpty() && c.size == at + 19 &&
         c[6].opcode == Opcode.INVOKE_VIRTUAL && c[6].communityRef().toString() == "Ljava/util/AbstractCollection;->isEmpty()Z" && c[6].communityArgs() == listOf(0) &&
