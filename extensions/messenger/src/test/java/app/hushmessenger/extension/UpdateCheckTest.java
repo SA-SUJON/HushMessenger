@@ -355,6 +355,31 @@ public class UpdateCheckTest {
         }
     }
 
+    @Test public void secondaryLimitsUseRetryAfterOrBackoffInsteadOfThePrimaryReset() throws Exception {
+        for (int variant = 0; variant < 3; variant++) {
+            closeScreens();
+            Settings.preferences.edit().clear().commit();
+            int before = requests.get();
+            long reset = now.get() / 1000 + (variant == 1 ? -3600 : 3600);
+            String headers = (variant == 0 ? "Retry-After: 60\r\n" : "")
+                + (variant < 2 ? "X-RateLimit-Remaining: 100\r\n" : "")
+                + "X-RateLimit-Reset: " + reset + "\r\n";
+            reply = json(403, "{}", headers);
+            View root = openWithCheckOn();
+            assertRetryStatus(awaitStatus(root));
+            assertEquals(now.get() + 60_000, Settings.preferences.getLong(ReleaseCheck.RETRY_KEY, 0));
+            now.addAndGet(59_000);
+            root.findViewWithTag("check_now").performClick();
+            assertRetryStatus(awaitStatus(root));
+            assertEquals(before + 1, requests.get());
+            now.addAndGet(1001);
+            reply = json(200, release("v99.0.0", RELEASE_PAGE));
+            root.findViewWithTag("check_now").performClick();
+            assertEquals("Version 99.0.0 is available", awaitStatus(root).getText().toString());
+            assertEquals(before + 2, requests.get());
+        }
+    }
+
     @Test public void retryDatesAndMalformedHeadersUseBoundedBackoff() throws Exception {
         String date = java.time.Instant.ofEpochMilli(now.get() + 80_000).atZone(java.time.ZoneOffset.UTC)
             .format(java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME);

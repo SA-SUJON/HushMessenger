@@ -115,7 +115,7 @@ final class ReleaseCheck {
             }
         }
         String reset = conn.getHeaderField("X-RateLimit-Reset");
-        if (reset != null && reset.length() <= 20) {
+        if ("0".equals(conn.getHeaderField("X-RateLimit-Remaining")) && reset != null && reset.length() <= 20) {
             try {
                 long seconds = Long.parseLong(reset);
                 if (seconds >= 0) retry = Math.max(retry, Math.multiplyExact(seconds, 1000));

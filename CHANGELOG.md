@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Opted-in update checks reuse validated release details for an hour and send their ETag on later checks. GitHub retry times are shown in settings and respected. Release links must match their tags, and development builds ahead of the public release show both versions. Late replies can't save cache data after cancellation.
+- Opted-in update checks reuse validated release details for an hour and send their ETag on later checks. GitHub retry times are shown in settings and respected. Quota reset times apply only to an exhausted quota, so secondary limits keep their own retry wait. Release links must match their tags, and development builds ahead of the public release show both versions. Late replies can't save cache data after cancellation.
 
 - Copy setup includes the control descriptions shown in settings and explains what recorded activity proves. Receipt wording keeps the local unread and reply limits explicit. Screenshot access doesn't imply replay or saving. Sign-in and past-call-log documentation now reflect the observed results.
 
