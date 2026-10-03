@@ -2,9 +2,11 @@
 
 ## Unreleased
 
-Development build 0.19.1. The public release remains 0.14.0.
+Development build 0.19.2. The public release remains 0.14.0.
 
-The frozen 0.19.1 development bundle is SHA-256 `29a00d56bfb7e3e5df4a0c6b6a552d576fc5dc7d934b643971f3c6b293cfb2ae`. It passes the 1024 MB patching gate across all 21 supported inputs with all 33 patches selected. The five signed mapping-family checks pass with v3 signatures, unchanged native libraries and no duplicate classes. A fresh checkout reproduces the same bundle checksum, and the signed checksum verifies with the release key. The retained 0.19.0 bundle also reproduced from a fresh checkout. The three earlier discovery failures pass now, but their original termination cause remains unconfirmed because those logs omitted exit codes.
+The frozen 0.19.2 development bundle is SHA-256 `e7c978962d3ace5d52915ad1059f421df1a95119bd900de1b3400a221f8a1897`. It rebuilds the same patch code that passed the 1024 MB patching gate across all 21 supported inputs in v0.19.1 with all 33 patches selected. The five signed mapping-family checks pass with v3 signatures, unchanged native libraries and no duplicate classes. The signed checksum verifies with the release key. The retained 0.19.0 bundle also reproduced from a fresh checkout. The three earlier discovery failures pass now, but their original termination cause remains unconfirmed because those logs omitted exit codes.
+
+The issue tracker drain triaged the remaining open reports. View-once media saving and replay, local read state without sending receipts, and Messenger 581 support with the reported heat and scroll lag all need native fixtures or exact 581 inputs before a safe code change.
 
 - The memory gate runs at most two builds at once, with two processors per Java process. Compatibility and patching failures include their subprocess exit codes. Regression tests check that all inputs run without exceeding the concurrency limit.
 

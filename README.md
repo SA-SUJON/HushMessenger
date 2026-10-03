@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.19.1-0084FF" alt="Development 0.19.1"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.19.2-0084FF" alt="Development 0.19.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
@@ -12,7 +12,7 @@
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 33 patches. 30 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-The source builds v0.19.1. The public download and Morphe source still serve v0.14.0 under the release hold. Settings give each control's full row one accessible touch target. Development also extends AI sticker hiding to Generate buttons and screenshot access to view-once media and Quicksnap. Hide joined community chats now removes joined channels and announcements from the main Chats display. It starts off and keeps the original list for Off or Pause. Changes apply on the next inbox render. The community and media routes still need checks inside an eligible signed-in Messenger account.
+The source builds v0.19.2. The public download and Morphe source still serve v0.14.0 under the release hold. Settings give each control's full row one accessible touch target. Development also extends AI sticker hiding to Generate buttons and screenshot access to view-once media and Quicksnap. Hide joined community chats now removes joined channels and announcements from the main Chats display. It starts off and keeps the original list for Off or Pause. Changes apply on the next inbox render. The community and media routes still need checks inside an eligible signed-in Messenger account.
 
 v0.14.0 adds **Native Bubbles** to **Allow chat bubbles** ([#19](https://github.com/SysAdminDoc/HushMessenger/issues/19)) and **Slide chats in and out**, an optional slide for chats you open from the chat list or search ([#28](https://github.com/SysAdminDoc/HushMessenger/issues/28)). Settings now open from Messenger's side menu as well as its Menu tab ([#26](https://github.com/SysAdminDoc/HushMessenger/issues/26)), and **Use system emoji** draws your phone's own emoji on Android 12 and newer ([#25](https://github.com/SysAdminDoc/HushMessenger/issues/25)). On Root Mount installs, HushMessenger adds the **Patch controls** and **Restart Messenger** shortcuts itself, because Android never reads the patched ones there ([#27](https://github.com/SysAdminDoc/HushMessenger/issues/27)). The [changelog](CHANGELOG.md) has the rest.
 
@@ -249,7 +249,7 @@ The Patcher 1.15.0 migration passed all 21 supported inputs at 1024 MB and repro
 
 The v0.17.0 development build also updated an existing Galaxy S25 installation in place with its original signing key. The original install date, signed-in inbox and known encrypted-chat history remained. Live Generate-button and protected-viewer checks are still pending.
 
-The v0.19.1 frozen development bundle has SHA-256 `29a00d56bfb7e3e5df4a0c6b6a552d576fc5dc7d934b643971f3c6b293cfb2ae`. It passed all 21 supported builds at 1024 MB with all 33 patches selected, and all three builds that had failed earlier discovery now pass. One build from each of the five mapping groups also patched and signed with v3 signatures, kept every native library unchanged and had no duplicate classes. A fresh checkout reproduced the same bundle checksum. Its checksum file is signed and verifies with the release key. The public release stays at v0.14.0.
+The v0.19.2 frozen development bundle has SHA-256 `e7c978962d3ace5d52915ad1059f421df1a95119bd900de1b3400a221f8a1897`. It rebuilds the same patch code that passed all 21 supported builds at 1024 MB in v0.19.1 with all 33 patches selected. All three builds that had failed earlier discovery pass, and one build from each of the five mapping groups patched and signed with v3 signatures, kept every native library unchanged and had no duplicate classes. Its checksum file is signed and verifies with the release key. The public release stays at v0.14.0.
 
 Focused dependency checks compile five partial selections, including deliberate sibling failures and a following selection with different controls. They check finalized capabilities and single settings and extension injection. These synthetic fixtures don't prove every switch combination or native UI behavior.
 
@@ -280,10 +280,10 @@ While the public source is held, validate development separately and freeze its 
 
 ```powershell
 $heldHash = (Get-FileHash .\patches-bundle.json -Algorithm SHA256).Hash.ToLowerInvariant()
-$freeze = Join-Path $env:TEMP "hushmessenger-0.19.1"
+$freeze = Join-Path $env:TEMP "hushmessenger-0.19.2"
 .\gradlew.bat :patches:buildAndroid --no-daemon
 python scripts/check_release.py --development --held-index-sha256 $heldHash --freeze $freeze
-$bundle = Join-Path $freeze "patches-0.19.1.mpp"
+$bundle = Join-Path $freeze "patches-0.19.2.mpp"
 $bundleHash = (Get-FileHash $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
 ```
 
@@ -299,11 +299,11 @@ python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle 
 
 The check runs at most two builds at once. Each Java process has a 1024 MB heap and uses two processors. Each build runs in its own temporary folder with all patches selected. The check rechecks the frozen bundle's checksum, verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. Failures include the subprocess exit code. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
-The output from main is `patches/build/libs/patches-0.19.1.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output from main is `patches/build/libs/patches-0.19.2.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 30 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 
-Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.19.1 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash. Then sign the checksum file with `ssh-keygen -Y sign -f <release key> -n hushmessenger-release SHA256SUMS.txt`, attach `SHA256SUMS.txt.sig` next to it, and run the same command with `--verify-signature` added. That checks the signature against `scripts/release_signers`.
+Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.19.2 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash. Then sign the checksum file with `ssh-keygen -Y sign -f <release key> -n hushmessenger-release SHA256SUMS.txt`, attach `SHA256SUMS.txt.sig` next to it, and run the same command with `--verify-signature` added. That checks the signature against `scripts/release_signers`.
 
 ### Check the bundle
 
