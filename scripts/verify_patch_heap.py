@@ -209,9 +209,11 @@ def main():
                     OSError,
                     ValueError,
                     TypeError,
+                    AttributeError,
                     KeyError,
                     RuntimeError,
                     BadZipFile,
+                    zlib.error,
                     subprocess.TimeoutExpired,
                 ) as error:
                     failures.append(futures[future])

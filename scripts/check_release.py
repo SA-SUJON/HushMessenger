@@ -2,13 +2,17 @@
 
 import argparse
 import base64
+import contextlib
 import hashlib
 import json
+import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 import zlib
 from datetime import datetime, timezone
@@ -18,6 +22,8 @@ RELEASE_SIGNERS = Path("scripts/release_signers")
 RELEASE_SIGNER = "SysAdminDoc"
 SIGNATURE_NAMESPACE = "hushmessenger-release"
 KEY_TYPES = ("ssh-ed25519", "ssh-rsa", "ecdsa-sha2-")
+CATALOG_TIMEOUT = 600
+STAGING_REMOVAL_DELAYS = (0.25, 0.5, 1.0, 2.0)
 
 
 def require(condition, message):
@@ -107,6 +113,7 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
         fresh.get("bundle") == filename and fresh.get("sha256") == digest,
         "Catalog evidence is stale for this bundle; run :patches:checkPatchCatalog",
     )
+    require(fresh.get("dexValidated") is True, "Missing structural DEX validation")
     require(
         json.dumps(public, sort_keys=True, allow_nan=False)
         == json.dumps(fresh.get("catalog"), sort_keys=True, allow_nan=False),
@@ -173,6 +180,28 @@ def verify(root, bundle=None, evidence=None, release_tag=None, checksums=None):
     return (
         f"Release metadata passed: v{version}, {len(entries)} patches, SHA-256 {digest}"
     )
+
+
+def tagged_public_feed(root, version):
+    """Return patches-bundle.json exactly as committed at the public release tag."""
+    try:
+        result = subprocess.run(
+            ["git", "cat-file", "blob", f"refs/tags/v{version}:patches-bundle.json"],
+            cwd=root,
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ValueError(
+            f"Couldn't read the v{version} public feed with git: {error}"
+        ) from error
+    require(
+        result.returncode == 0,
+        f"Release tag v{version} or its patches-bundle.json is missing: "
+        + result.stderr.decode("utf-8", "replace").strip(),
+    )
+    return result.stdout
 
 
 def verify_development(root, bundle, evidence, held_index_sha256, checksums=None):
@@ -249,13 +278,21 @@ def verify_development(root, bundle, evidence, held_index_sha256, checksums=None
     )
     require(
         tuple(map(int, public_version.split(".")))
-        <= tuple(map(int, version.split("."))),
-        "Public version is ahead of development",
+        < tuple(map(int, version.split("."))),
+        "Held public version must be older than development",
     )
     require(
         index.get("download_url")
         == f"https://github.com/SysAdminDoc/HushMessenger/releases/download/v{public_version}/patches-{public_version}.mpp",
         "Invalid held download URL",
+    )
+    # The operator's hash only pins the file it was taken from; the tag pins what was published.
+    # Git stores this text file with LF endings, so a CRLF checkout of the same feed matches.
+    feed = (root / "patches-bundle.json").read_bytes()
+    tagged = tagged_public_feed(root, public_version)
+    require(
+        feed == tagged or feed.replace(b"\r\n", b"\n") == tagged,
+        f"Held public feed differs from patches-bundle.json at tag v{public_version}",
     )
     readme = (root / "README.md").read_text(encoding="utf-8")
     require(
@@ -285,13 +322,26 @@ def verify_development(root, bundle, evidence, held_index_sha256, checksums=None
     return f"Development metadata passed: v{version}, {len(entries)} patches, held public v{public_version}, SHA-256 {digest}"
 
 
+def stop_process_tree(process):
+    """Kill a validation run together with the Gradle JVMs it started."""
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/T", "/F", "/PID", str(process.pid)],
+                capture_output=True,
+                timeout=60,
+                check=False,
+            )
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+    process.kill()
+
+
 def validate_catalog(root, bundle, evidence):
     """Run the same catalog/definition checks without invoking a bundle producer."""
     evidence.unlink(missing_ok=True)
-    result = subprocess.run(
+    process = subprocess.Popen(
         [
-            "rtk",
-            "proxy",
             str(root / "gradlew.bat" if sys.platform == "win32" else root / "gradlew"),
             ":patches:checkFrozenPatchCatalog",
             f"-PvalidationBundle={bundle.resolve()}",
@@ -300,16 +350,29 @@ def validate_catalog(root, bundle, evidence):
             "--no-configuration-cache",
         ],
         cwd=root,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
-        timeout=600,
-        check=False,
+        start_new_session=sys.platform != "win32",
     )
+    try:
+        stdout, stderr = process.communicate(timeout=CATALOG_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        # Killing only the wrapper leaves the Gradle JVM holding the output pipes.
+        stop_process_tree(process)
+        try:
+            stdout, stderr = process.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            stdout, stderr = "", "A leftover process still holds the output pipes."
+        raise ValueError(
+            f"Catalog/DEX validation timed out after {CATALOG_TIMEOUT} s\n"
+            + (stdout + stderr)[-4000:]
+        ) from None
     require(
-        result.returncode == 0,
-        "Catalog/DEX validation failed\n" + (result.stdout + result.stderr)[-4000:],
+        process.returncode == 0,
+        "Catalog/DEX validation failed\n" + (stdout + stderr)[-4000:],
     )
 
 
@@ -333,10 +396,8 @@ def freeze_development(root, bundle, destination, held_index_sha256):
     original = bundle.read_bytes()
     digest = hashlib.sha256(original).hexdigest()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix=".hush-freeze-", dir=destination.parent
-    ) as temporary:
-        staging = Path(temporary)
+    staging = Path(tempfile.mkdtemp(prefix=".hush-freeze-", dir=destination.parent))
+    try:
         frozen = staging / bundle.name
         frozen.write_bytes(original)
         evidence = staging / "catalog-evidence.json"
@@ -354,7 +415,28 @@ def freeze_development(root, bundle, destination, held_index_sha256):
             f"{digest}  {bundle.name}\n", encoding="utf-8", newline="\n"
         )
         staging.rename(destination)
+    except Exception as error:
+        if not remove_staging(staging):
+            raise ValueError(f"{error}\nLeftover staging folder: {staging}") from error
+        raise
+    except BaseException:
+        remove_staging(staging)
+        raise
     return message + f"\nFrozen bundle: {destination / bundle.name}"
+
+
+def remove_staging(path):
+    """Delete a freeze staging folder, allowing Windows time to release files a JVM held."""
+    for delay in (*STAGING_REMOVAL_DELAYS, None):
+        try:
+            shutil.rmtree(path)
+            return True
+        except FileNotFoundError:
+            return True
+        except PermissionError:
+            if delay is None:
+                return False
+            time.sleep(delay)
 
 
 def signer_fingerprints(path):

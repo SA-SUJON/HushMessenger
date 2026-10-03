@@ -7,6 +7,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+import zlib
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from threading import Event, Lock
@@ -68,6 +69,60 @@ class PatchHeapChecks(unittest.TestCase):
             self.assertEqual(set(builds), set(checked))
             self.assertEqual(len(builds), len(checked))
             self.assertLessEqual(peak, 2, "the gate started too many JVM jobs at once")
+
+    def test_corrupt_output_entry_fails_that_build_and_keeps_the_others(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "frozen.mpp"
+            bundle.write_bytes(b"unchanged frozen bundle")
+            index = root / "patches-bundle.json"
+            index.write_text("{}")
+            (root / "patches-list.json").write_text(
+                json.dumps({"patches": [{"name": "Material You theme"}]})
+            )
+            args = argparse.Namespace(
+                codes=None,
+                bundle=bundle,
+                bundle_sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
+                held_index_sha256=hashlib.sha256(index.read_bytes()).hexdigest(),
+            )
+            builds = dict.fromkeys(range(100, 121), "recorded hash")
+            broken = {
+                103: zlib.error(
+                    "Error -3 while decompressing data: invalid block type"
+                ),
+                111: AttributeError("'NoneType' object has no attribute 'decompress'"),
+            }
+            checked = []
+            guard = Lock()
+
+            def check_build(_args, code, _expected, _names):
+                with guard:
+                    checked.append(code)
+                if code in broken:
+                    raise broken[code]
+                return f"PASS {code}"
+
+            output, error = io.StringIO(), io.StringIO()
+            with (
+                patch.object(checker, "ROOT", root),
+                patch.object(checker, "recorded_builds", return_value=builds),
+                patch.object(checker, "verify_development", return_value="metadata OK"),
+                patch.object(checker, "check_build", side_effect=check_build),
+                patch.object(
+                    checker.argparse.ArgumentParser, "parse_args", return_value=args
+                ),
+                redirect_stdout(output),
+                redirect_stderr(error),
+            ):
+                self.assertEqual(2, checker.main())
+            self.assertEqual(sorted(builds), sorted(checked))
+            passed = [code for code in builds if f"PASS {code}\n" in output.getvalue()]
+            self.assertEqual(sorted(set(builds) - set(broken)), sorted(passed))
+            self.assertEqual(2, error.getvalue().count("CHECK FAILED:"))
+            self.assertIn("invalid block type", error.getvalue())
+            self.assertIn("no attribute 'decompress'", error.getvalue())
+            self.assertNotIn("Traceback", error.getvalue())
 
     def test_failed_discovery_reports_exit_code_before_starting_patcher(self):
         for code in (137, -1073741819, 0):

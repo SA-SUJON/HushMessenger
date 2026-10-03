@@ -1375,7 +1375,7 @@ public class CompatReport {
     record CommunityInbox(Method render, String identity) {}
     static CommunityInbox communityInbox(List<ClassDef> input) {
         if (input.stream().noneMatch(c->new CommunityDiscovery(List.of(c)).original(c).equals("InboxFragment"))) return null;
-        try { return new CommunityDiscovery(input).prove(); } catch (IllegalStateException changed) { return null; }
+        try { return new CommunityDiscovery(input).prove(); } catch (RuntimeException changed) { return null; }
     }
     /** The same connected Main-only route and native subscribed predicate used by the injector. */
     static final class CommunityDiscovery {
@@ -2806,11 +2806,11 @@ public class CompatReport {
 
         System.out.println();
         if (anyFail) {
-            System.out.println("RESULT: FAIL â€” one or more patches are incompatible with this APK.");
+            System.out.println("RESULT: FAIL - one or more patches are incompatible with this APK.");
             if (!builds.isEmpty()) System.out.println("Use an unmodified arm64 Messenger " + supported(builds) + ".");
             System.exit(1);
         } else {
-            System.out.println("RESULT: PASS â€” all " + (PATCHES.size() + 3) + " patches are compatible.");
+            System.out.println("RESULT: PASS - all " + (PATCHES.size() + 3) + " patches are compatible.");
             System.exit(0);
         }
     }

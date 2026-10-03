@@ -3,10 +3,12 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import re
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -21,7 +23,35 @@ release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
 
 SSH_KEYGEN = shutil.which("ssh-keygen")
+GIT = shutil.which("git")
 REPO = Path(__file__).parents[2]
+# Fixtures replace the git lookup; keep the real one for the test that builds a repository.
+TAGGED_PUBLIC_FEED = release.tagged_public_feed
+
+
+class FakeGradle:
+    """Popen stand-in whose output pipes stay open for a set number of waits."""
+
+    pid = 4321
+
+    def __init__(self, returncode=0, output="", timeouts=0):
+        self.returncode = None
+        self.result = returncode
+        self.output = output
+        self.timeouts = timeouts
+        self.waits = []
+        self.killed = False
+
+    def communicate(self, timeout=None):
+        self.waits.append(timeout)
+        if self.timeouts:
+            self.timeouts -= 1
+            raise subprocess.TimeoutExpired("gradlew", timeout)
+        self.returncode = self.result
+        return self.output, ""
+
+    def kill(self):
+        self.killed = True
 
 
 def new_key(path):
@@ -81,6 +111,7 @@ class ReleaseChecks(unittest.TestCase):
                 {
                     "bundle": self.bundle.name,
                     "sha256": self.digest,
+                    "dexValidated": True,
                     "catalog": self.catalog,
                 }
             ),
@@ -94,6 +125,38 @@ class ReleaseChecks(unittest.TestCase):
             "extensions/messenger/build.gradle.kts",
             "versionName = project.version.toString()\n",
         )
+        # Feed bytes committed at each fixture release tag, keyed by version.
+        self.tags = {}
+        tagged = patch.object(release, "tagged_public_feed", self.tagged_feed)
+        tagged.start()
+        self.addCleanup(tagged.stop)
+
+    def tagged_feed(self, root, version):
+        self.assertEqual(self.root, root)
+        release.require(version in self.tags, f"Release tag v{version} is missing")
+        return self.tags[version]
+
+    def hold(self, version="1.2.2"):
+        """Switch to development metadata with an older public feed recorded at its tag."""
+        self.write("README.md", "https://img.shields.io/badge/development-1.2.3-blue\n")
+        self.write("CHANGELOG.md", "## Unreleased\n")
+        self.write(
+            "patches-bundle.json",
+            json.dumps(
+                {
+                    **self.index,
+                    "version": version,
+                    "download_url": self.index["download_url"].replace(
+                        "1.2.3", version
+                    ),
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+        feed = (self.root / "patches-bundle.json").read_bytes()
+        self.tags[version] = feed
+        return hashlib.sha256(feed).hexdigest()
 
     def write(self, path, text):
         target = self.root / path
@@ -113,26 +176,10 @@ class ReleaseChecks(unittest.TestCase):
             release.verify(self.root, checksums=self.root / "SHA256SUMS.txt")
 
     def test_development_freezes_current_catalog_and_preserves_held_feed(self):
-        self.write("README.md", "https://img.shields.io/badge/development-1.2.3-blue\n")
-        self.write("CHANGELOG.md", "## Unreleased\n")
-        self.write(
-            "patches-bundle.json",
-            json.dumps(
-                {
-                    **self.index,
-                    "version": "1.2.2",
-                    "download_url": self.index["download_url"].replace(
-                        "1.2.3", "1.2.2"
-                    ),
-                }
-            ),
-        )
+        held = self.hold()
         # Public releases used 32; this development fixture intentionally contains 33.
         self.catalog["patches"].append({"name": "New control"})
         self.write("patches-list.json", json.dumps(self.catalog))
-        held = hashlib.sha256(
-            (self.root / "patches-bundle.json").read_bytes()
-        ).hexdigest()
         destination = self.root / "frozen"
 
         def validate(root, bundle, evidence):
@@ -226,6 +273,7 @@ class ReleaseChecks(unittest.TestCase):
                 {
                     "bundle": self.bundle.name,
                     "sha256": self.digest,
+                    "dexValidated": True,
                     "catalog": self.catalog,
                 }
             ),
@@ -239,6 +287,7 @@ class ReleaseChecks(unittest.TestCase):
                 {
                     "bundle": self.bundle.name,
                     "sha256": self.digest,
+                    "dexValidated": True,
                     "catalog": self.catalog,
                 }
             ),
@@ -246,21 +295,120 @@ class ReleaseChecks(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             release.verify(self.root)
 
+    def test_release_requires_structural_dex_evidence(self):
+        evidence = self.root / "patches/build/reports/catalog-evidence.json"
+        payload = json.loads(evidence.read_text(encoding="utf-8"))
+        # Evidence from the older catalog tool had no DEX walk; a truthy string isn't true.
+        for value in (None, False, "true", 1):
+            changed = dict(payload)
+            if value is None:
+                del changed["dexValidated"]
+            else:
+                changed["dexValidated"] = value
+            evidence.write_text(json.dumps(changed), encoding="utf-8")
+            with (
+                self.subTest(dexValidated=value),
+                self.assertRaisesRegex(ValueError, "structural DEX validation"),
+            ):
+                release.verify(self.root)
+
+    def test_development_feed_must_be_an_older_release_matching_its_tag(self):
+        evidence = self.root / "patches/build/reports/catalog-evidence.json"
+
+        def check(held):
+            return release.verify_development(self.root, self.bundle, evidence, held)
+
+        held = self.hold()
+        self.assertIn("held public v1.2.2", check(held))
+        # Git stores the feed with LF endings, so a CRLF checkout of it still matches.
+        tagged = self.tags["1.2.2"].replace(b"\r\n", b"\n")
+        self.tags["1.2.2"] = tagged
+        crlf = tagged.replace(b"\n", b"\r\n")
+        (self.root / "patches-bundle.json").write_bytes(crlf)
+        self.assertIn("held public v1.2.2", check(hashlib.sha256(crlf).hexdigest()))
+
+        # A premature edit hashed after the fact still differs from the tagged feed.
+        index = json.loads(tagged)
+        index["created_at"] = "2026-09-28T00:00:00"
+        premature = json.dumps(index, indent=2).encode() + b"\n"
+        (self.root / "patches-bundle.json").write_bytes(premature)
+        with self.assertRaisesRegex(
+            ValueError, "differs from patches-bundle.json at tag v1.2.2"
+        ):
+            check(hashlib.sha256(premature).hexdigest())
+
+        # So does a feed bumped to the development version, even with that tag present.
+        held = self.hold("1.2.3")
+        with self.assertRaisesRegex(ValueError, "must be older than development"):
+            check(held)
+
+        held = self.hold()
+        del self.tags["1.2.2"]
+        with self.assertRaisesRegex(ValueError, "v1.2.2 is missing"):
+            check(held)
+
+    @unittest.skipIf(GIT is None, "git isn't installed")
+    def test_tagged_feed_is_read_from_the_release_tag_with_git(self):
+        repository = self.root / "repository"
+        repository.mkdir()
+        # Ignore any outer repository a caller's environment points git at.
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("GIT_")
+        }
+
+        def git(*args, data=None):
+            return (
+                subprocess.run(
+                    [GIT, *args],
+                    cwd=repository,
+                    env=environment,
+                    input=data,
+                    capture_output=True,
+                    check=True,
+                )
+                .stdout.decode()
+                .strip()
+            )
+
+        git("init", "-q")
+        feed = b'{\r\n  "version": "1.2.2"\r\n}\r\n'
+        blob = git("hash-object", "-w", "--stdin", data=feed)
+        # A tag on a bare tree needs no commit, so no hooks or signing run here.
+        tree = git("mktree", data=f"100644 blob {blob}\tpatches-bundle.json\n".encode())
+        git("update-ref", "refs/tags/v1.2.2", tree)
+        with patch.dict(os.environ, environment, clear=True):
+            self.assertEqual(feed, TAGGED_PUBLIC_FEED(repository, "1.2.2"))
+            with self.assertRaisesRegex(
+                ValueError, "v1.2.3 or its patches-bundle.json is missing"
+            ):
+                TAGGED_PUBLIC_FEED(repository, "1.2.3")
+        with (
+            patch.object(
+                release.subprocess, "run", side_effect=FileNotFoundError("git")
+            ),
+            self.assertRaisesRegex(ValueError, "Couldn't read the v1.2.2 public feed"),
+        ):
+            TAGGED_PUBLIC_FEED(repository, "1.2.2")
+
     def test_freeze_rejects_mutable_destination_changed_producer_and_catalog_drift(
         self,
     ):
-        self.write("README.md", "https://img.shields.io/badge/development-1.2.3-blue\n")
-        self.write("CHANGELOG.md", "## Unreleased\n")
-        held = hashlib.sha256(
-            (self.root / "patches-bundle.json").read_bytes()
-        ).hexdigest()
+        held = self.hold()
         with self.assertRaisesRegex(ValueError, "mutable Gradle"):
             release.freeze_development(
                 self.root, self.bundle, self.bundle.parent / "frozen", held
             )
         destination = self.root / "frozen"
         original = self.bundle.read_bytes()
-        for case in ["producer", "catalog", "version", "hash", "dex"]:
+        for case, reason in [
+            ("producer", "Producer bundle changed"),
+            ("catalog", "catalog differs"),
+            ("version", "Bundle filename differs"),
+            ("hash", "evidence is stale"),
+            ("dex", "structural DEX validation"),
+        ]:
 
             def validate(root, bundle, evidence, case=case):
                 catalog = copy.deepcopy(self.catalog)
@@ -285,46 +433,118 @@ class ReleaseChecks(unittest.TestCase):
                 )
 
             with (
+                self.subTest(case=case),
                 patch.object(release, "validate_catalog", side_effect=validate),
-                self.assertRaises(ValueError),
+                self.assertRaisesRegex(ValueError, reason),
             ):
                 release.freeze_development(self.root, self.bundle, destination, held)
             self.assertFalse(destination.exists())
+            self.assertEqual([], list(self.root.glob(".hush-freeze-*")))
             self.bundle.write_bytes(original)
             self.write(
                 "gradle.properties",
                 "version=1.2.3\nbundleTimestampMillis=1790552148000\n",
             )
 
-    def test_catalog_validation_failure_does_not_reuse_old_evidence(self):
+    def test_freeze_cleanup_retries_and_reports_a_locked_staging_folder(self):
+        held = self.hold()
+        destination = self.root / "frozen"
+        remove = shutil.rmtree
+        for locked in (1, len(release.STAGING_REMOVAL_DELAYS) + 1):
+            attempts = []
+
+            def rmtree(path, *args, locked=locked, attempts=attempts, **kwargs):
+                attempts.append(Path(path))
+                if len(attempts) <= locked:
+                    raise PermissionError(13, "The file is in use", str(path))
+                remove(path, *args, **kwargs)
+
+            with (
+                self.subTest(locked=locked),
+                patch.object(
+                    release, "validate_catalog", side_effect=ValueError("invalid DEX")
+                ),
+                patch.object(release.shutil, "rmtree", side_effect=rmtree),
+                patch.object(release.time, "sleep") as sleep,
+                self.assertRaisesRegex(ValueError, "invalid DEX") as raised,
+            ):
+                release.freeze_development(self.root, self.bundle, destination, held)
+            staging = attempts[0]
+            self.assertTrue(staging.name.startswith(".hush-freeze-"))
+            self.assertEqual({staging}, set(attempts))
+            self.assertFalse(destination.exists())
+            if locked == 1:
+                self.assertEqual(2, len(attempts))
+                self.assertEqual(1, sleep.call_count)
+                self.assertFalse(staging.exists())
+                self.assertNotIn("Leftover", str(raised.exception))
+            else:
+                self.assertEqual(locked, len(attempts))
+                self.assertTrue(staging.exists())
+                self.assertIn(
+                    f"invalid DEX\nLeftover staging folder: {staging}",
+                    str(raised.exception),
+                )
+                remove(staging)
+
+    def test_catalog_validation_runs_gradlew_directly_and_does_not_reuse_old_evidence(
+        self,
+    ):
         evidence = self.root / "evidence.json"
         evidence.write_text("old evidence")
+        gradle = FakeGradle(1, "invalid DEX")
         with (
-            patch.object(
-                release.subprocess,
-                "run",
-                return_value=subprocess.CompletedProcess([], 1, "invalid DEX", ""),
-            ),
-            self.assertRaisesRegex(ValueError, "invalid DEX"),
+            patch.object(release.subprocess, "Popen", return_value=gradle) as popen,
+            self.assertRaisesRegex(ValueError, "validation failed\ninvalid DEX"),
         ):
             release.validate_catalog(self.root, self.bundle, evidence)
         self.assertFalse(evidence.exists())
+        command = popen.call_args.args[0]
+        wrapper = "gradlew.bat" if sys.platform == "win32" else "gradlew"
+        self.assertEqual(str(self.root / wrapper), command[0])
+        self.assertEqual(":patches:checkFrozenPatchCatalog", command[1])
+        self.assertEqual([release.CATALOG_TIMEOUT], gradle.waits)
+        self.assertFalse(gradle.killed)
+
+    def test_catalog_timeout_stops_the_gradle_tree_without_an_unbounded_wait(self):
+        for stuck in (False, True):
+            gradle = FakeGradle(0, "partial Gradle output", 2 if stuck else 1)
+            with (
+                self.subTest(stuck=stuck),
+                patch.object(release.subprocess, "Popen", return_value=gradle) as popen,
+                patch.object(release.subprocess, "run") as run,
+                patch.object(release.os, "killpg", create=True) as killpg,
+                self.assertRaisesRegex(ValueError, "timed out after 600 s") as raised,
+            ):
+                release.validate_catalog(
+                    self.root, self.bundle, self.root / "evidence.json"
+                )
+            self.assertEqual([release.CATALOG_TIMEOUT, 30], gradle.waits)
+            self.assertTrue(gradle.killed)
+            self.assertEqual(
+                sys.platform != "win32", popen.call_args.kwargs["start_new_session"]
+            )
+            if sys.platform == "win32":
+                run.assert_called_once()
+                self.assertEqual(
+                    ["taskkill", "/T", "/F", "/PID", "4321"], run.call_args.args[0]
+                )
+                killpg.assert_not_called()
+            else:
+                killpg.assert_called_once_with(4321, release.signal.SIGKILL)
+                run.assert_not_called()
+            self.assertIn(
+                "holds the output pipes" if stuck else "partial Gradle output",
+                str(raised.exception),
+            )
 
     def test_saved_catalog_comparison_preserves_json_types_and_object_order(self):
         evidence = self.root / "patches/build/reports/catalog-evidence.json"
-        held = hashlib.sha256(
-            (self.root / "patches-bundle.json").read_bytes()
-        ).hexdigest()
         for development in (False, True):
             with self.subTest(development=development):
-                if development:
-                    self.write(
-                        "README.md",
-                        "https://img.shields.io/badge/development-1.2.3-blue\n",
-                    )
-                    self.write("CHANGELOG.md", "## Unreleased\n")
+                held = self.hold() if development else None
 
-                def check(development=development):
+                def check(development=development, held=held):
                     if development:
                         return release.verify_development(
                             self.root, self.bundle, evidence, held
