@@ -142,6 +142,7 @@ final class SettingsText {
         ENGLISH.put("installed", "Installed controls");
         ENGLISH.put("copy", "Copy setup");
         ENGLISH.put("copy_help", "Copies app versions and control choices. No account or chat details. Nothing is sent.");
+        ENGLISH.put("setup_activity_help", "Activity records show a control ran. They don't verify its visible effect or privacy protection.");
         ENGLISH.put("usage", "USING YOUR CONTROLS");
         ENGLISH.put("save_help", "Changes save as you go. Use Restart Messenger after changing inbox controls. Your account stays signed in.");
         ENGLISH.put("pause_help", "Pause keeps your choices and temporarily restores stock behavior.");

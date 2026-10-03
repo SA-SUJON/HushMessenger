@@ -114,7 +114,7 @@ public final class SettingsActivity extends Activity {
         {"original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of Messenger's re-encoded copy. Its metadata, such as location and camera details, is left out, as it is from Messenger's copy, except the tag that turns a sideways photo upright. Photos over 20 MB and videos still get Messenger's compression.", "conversations"},
         {"external_browser", "Open web links externally", "Uses your default browser for HTTP and HTTPS links. Other link types keep their original behavior.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Choose Stock, Chat Heads or Native Bubbles below. Native Bubbles needs Android 11, account support and notification permissions. Restart Messenger after changing modes.", "links_bubbles"},
-        {"allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices.", "privacy"},
+        {"allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. This doesn't add replay or saving.", "privacy"},
         {"hide_read_receipts", "Hide read receipts", "Stops sending read receipts. Opened encrypted chats can stay unread on this phone. Replying or switching this off may notify the sender. Group coverage isn't verified.", "privacy"},
         {"keep_unsent", "Keep unsent messages", "Keeps messages on verified legacy unsend routes. End-to-end encrypted chats aren't supported, and group coverage isn't verified. Activity records intercepted legacy unsends, not whether a chat is supported. Your own unsend may be limited.", "privacy"},
         {"anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. Stories you open this way are still marked as seen on your side.", "privacy"},
@@ -845,7 +845,7 @@ public final class SettingsActivity extends Activity {
                 .append("\nPaused: ").append(paused)
                 .append("\nSafe mode: ").append(safeMode).append('\n');
             if (Settings.preview) summary.append("Mode: UI preview. Does not change Messenger.\n");
-            summary.append("Controls:\n");
+            summary.append(text.get("setup_activity_help")).append("\nControls:\n");
             for (String[] spec : CONTROLS) {
                 String key = spec[0];
                 boolean installed = Settings.installed.contains(key);
@@ -855,6 +855,7 @@ public final class SettingsActivity extends Activity {
                     .append(", selected=").append(selected)
                     .append(", active=").append(!Settings.preview && installed && selected && !paused && !safeMode && Settings.available(key))
                     .append(", last_active=").append(lastActive == 0 ? "none" : ((System.currentTimeMillis() - lastActive) / 1000) + "s ago")
+                    .append(", scope=").append(text.control(spec, 2))
                     .append('\n');
             }
             summary.append("Facebook caller checks: ").append(MessengerSignature.callerSummary()).append('\n');

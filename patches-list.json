@@ -61,7 +61,7 @@
         },
         {
             "name": "Allow screenshots",
-            "description": "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. This doesn't add replay or saving. Long-press Messenger's home screen icon > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -1087,7 +1087,7 @@
         },
         {
             "name": "Hide read receipts",
-            "description": "Suppresses your outgoing read receipt. In end-to-end encrypted chats, chats you open stay unread until you reply. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Stops sending read receipts. Opened encrypted chats can stay unread on this phone. Replying or switching this off may notify the sender. Group coverage isn't verified. Long-press Messenger's home screen icon > Patch controls. Starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [

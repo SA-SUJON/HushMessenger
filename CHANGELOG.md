@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Copy setup includes the control descriptions shown in settings and explains what recorded activity proves. Receipt wording keeps the local unread and reply limits explicit. Screenshot access doesn't imply replay or saving. Sign-in and past-call-log documentation now reflect the observed results.
+
 - Original-quality photos enforce the 20 MB limit throughout preparation and delivery. Files that grow during a read or while a callback waits are rejected. Cleanup keeps the source and earlier copies intact. Existing scan bytes, color profiles and orientation handling are preserved.
 
 - Crash records verify replacement contents before committing them. Android 9 and 10 check the backup rename before a write can overwrite the old record, and a completed save won't trigger a rollback. Recovery checks preference saves too. If a save fails, settings keep the controls paused and show a retry message. A successful recovery restores the saved theme immediately. Invalid preference types keep host startup disabled. Existing records remain readable.
