@@ -379,6 +379,30 @@ public final class Settings {
         return filtered;
     }
 
+    /** Only the section renderer receives a copy. The captured native snapshot is never changed. */
+    public static List<?> filterJoinedCommunityInboxRows(List<?> items, Object callback, Object filter) {
+        return filterJoinedCommunityInboxRows(items, () -> HostScreens.isMainInboxScope(callback, filter), HostScreens::isJoinedCommunityRow);
+    }
+
+    static List<?> filterJoinedCommunityInboxRows(List<?> items, java.util.function.BooleanSupplier mainInbox,
+            java.util.function.Predicate<Object> joined) {
+        if (items == null || items.isEmpty() || !enabled("community_inbox")) return items;
+        try {
+            if (!mainInbox.getAsBoolean()) return items;
+            List<Object> kept = null;
+            for (int at = 0; at < items.size(); at++) {
+                Object item = items.get(at);
+                boolean hide = item != null && joined.test(item);
+                if (hide && kept == null) kept = new ArrayList<>(items.subList(0, at));
+                if (!hide && kept != null) kept.add(item);
+            }
+            return kept == null ? items : Collections.unmodifiableList(kept);
+        } catch (RuntimeException | LinkageError error) {
+            hookFailedPrivately("community_inbox", "Can't filter joined community chats", error);
+            return items;
+        }
+    }
+
     private static final String AVATAR_TAB_EVENT = "com.facebook.xapp.messaging.composer.avatar.composertab.event.ActivateAvatarSticker";
 
     /** Null means keep Messenger's sticker keyboard tabs; otherwise the tabs without the avatar tab. */

@@ -34,6 +34,7 @@ import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction;
@@ -42,6 +43,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstructio
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.ThreeRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
@@ -148,6 +150,7 @@ public class CompatReport {
         PATCHES.put("Hide inbox ads", List.of("ads"));
         PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story"));
         PATCHES.put("Hide friend request cards", List.of("friend_requests"));
+        PATCHES.put("Hide joined community chats", List.of("community_inbox"));
         PATCHES.put("Hide growth prompts", List.of("growth", "growth_notes", "growth_story_card"));
         PATCHES.put("Hide inbox promotions", List.of("inbox_promotions"));
         PATCHES.put("Hide stories and notes", List.of("stories"));
@@ -204,6 +207,7 @@ public class CompatReport {
         FIELD_CONTROLS.put("bubbleCapabilityGetter", Set.of("bubble_mode"));
         FIELD_CONTROLS.put("bubbleRolloutGetter", Set.of("bubble_mode"));
         FIELD_CONTROLS.put("nativeBubbleRoutes", Set.of("bubbles", "bubble_mode"));
+        FIELD_CONTROLS.put("nativeCommunityInbox", Set.of("community_inbox"));
     }
     static final Set<String> NUMBER_FIELDS = Set.of("browserPreferenceIndex", "adFilterSize");
     static final String PERMISSION_LOADS = "Install beside Meta apps";
@@ -458,6 +462,8 @@ public class CompatReport {
             var routes = nativeBubbleRoutes(classes, hookId(modes.get(0)));
             if (routes != null) found.fields.put("nativeBubbleRoutes", routes);
         }
+        var community = communityInbox(classes);
+        if (community != null) found.fields.put("nativeCommunityInbox", community.identity());
         var ads = controls.get("ads");
         if (ads.size() == 1) {
             var code = instructions(ads.get(0));
@@ -1366,10 +1372,295 @@ public class CompatReport {
         return result;
     }
 
+    record CommunityInbox(Method render, String identity) {}
+    static CommunityInbox communityInbox(List<ClassDef> input) {
+        if (input.stream().noneMatch(c->new CommunityDiscovery(List.of(c)).original(c).equals("InboxFragment"))) return null;
+        try { return new CommunityDiscovery(input).prove(); } catch (IllegalStateException changed) { return null; }
+    }
+    /** The same connected Main-only route and native subscribed predicate used by the injector. */
+    static final class CommunityDiscovery {
+        final Map<String,ClassDef> classes=new HashMap<>();
+        static final String ROOT="Lcom/facebook/messaging/msys/threadlist/plugins/core/itemsupplier/ThreadListItemSupplierImplementation;";
+        static final String SUMMARY="Lcom/facebook/messaging/model/threads/ThreadSummary;";
+        static final String KEY="Lcom/facebook/messaging/model/threadkey/ThreadKey;";
+        static final String LIST="Lcom/google/common/collect/ImmutableList;";
+        CommunityDiscovery(List<ClassDef> input) { input.forEach(c->classes.put(c.getType(),c)); }
+        boolean literal(Instruction i,int register,int value) { return i.getOpcode()==Opcode.CONST_4 && i instanceof OneRegisterInstruction r && r.getRegisterA()==register && i instanceof NarrowLiteralInstruction l && l.getNarrowLiteral()==value; }
+        List<Field> methodFields(ClassDef cls,String name) { var out=new ArrayList<Field>(); for(var f:cls.getFields()) if(f.getName().equals(name)) out.add(f); return out; }
+        int branch(Method m,int at) {
+            var c=instructions(m); int address=0;
+            for(int i=0;i<at;i++) address+=c.get(i).getCodeUnits();
+            int target=address+((OffsetInstruction)c.get(at)).getCodeOffset(); address=0;
+            for(int i=0;i<c.size();i++) { if(address==target) return i; address+=c.get(i).getCodeUnits(); }
+            throw new IllegalStateException("Disconnected community branch");
+        }
+    String id(MethodReference m) { return m.getDefiningClass() + "->" + m.getName() + "(" + String.join("", m.getParameterTypes()) + ")" + m.getReturnType(); }
+    void require(boolean condition, String reason) { if (!condition) throw new IllegalStateException(reason); }
+    <T> T single(List<T> values, String what) { require(values.size() == 1, what + " count=" + values.size()); return values.getFirst(); }
+    List<MethodReference> calls(Method method) {
+        var out = new ArrayList<MethodReference>();
+        for (var i : instructions(method)) if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof MethodReference mr) out.add(mr);
+        return out;
+    }
+    boolean hasString(Method method, String value) {
+        return instructions(method).stream().anyMatch(i -> i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference s && s.getString().equals(value));
+    }
+    Method definition(MethodReference ref) {
+        var out = new ArrayList<Method>();
+        for (var m : classes.get(ref.getDefiningClass()).getMethods()) if (id(m).equals(id(ref))) out.add(m);
+        return single(out, "definition " + id(ref));
+    }
+    Map<String, FieldReference> enumMembers(String type) {
+        var out = new LinkedHashMap<String, FieldReference>();
+        var cls = classes.get(type); if (cls == null) return out;
+        for (var m : cls.getMethods()) if (m.getName().equals("<clinit>")) {
+            var code = instructions(m);
+            for (int at = 0; at < code.size(); at++) {
+                var i = code.get(at);
+                if (!(i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference s)) continue;
+                String name = s.getString();
+                if (!Set.of("INBOX", "PENDING", "COMMUNITY_FOLDER", "COMMUNITY_CHANNELS", "COMMUNITY_CHANNEL", "COMMUNITY_ANNOUNCEMENT_CHANNEL", "GROUP", "SOCIAL_CHANNEL", "BROADCAST_CHANNEL").contains(name)) continue;
+                for (int after = at + 1; after < Math.min(code.size(), at + 14); after++) {
+                    var next = code.get(after);
+                    if (next.getOpcode().name().startsWith("SPUT") && next instanceof ReferenceInstruction fr && fr.getReference() instanceof FieldReference f && f.getType().equals(type)) { out.put(name, f); break; }
+                }
+            }
+        }
+        return out;
+    }
+    List<Field> fieldsOf(String type, String fieldType) {
+        var out = new ArrayList<Field>();
+        var cls = classes.get(type);
+        if (cls != null) for (var f : cls.getInstanceFields()) if (f.getType().equals(fieldType)) out.add(f);
+        return out;
+    }
+    void publicStatic(FieldReference field) {
+        var cls=classes.get(field.getDefiningClass());
+        var nativeField=single(methodFields(cls,field.getName()).stream().filter(f->f.getType().equals(field.getType())).toList(),"native enum member");
+        require(AccessFlags.PUBLIC.isSet(cls.getAccessFlags()) && AccessFlags.PUBLIC.isSet(nativeField.getAccessFlags()) && AccessFlags.STATIC.isSet(nativeField.getAccessFlags()),"native enum member inaccessible");
+    }
+    Map<String, String> enumFieldNames(String type) {
+        var out = new LinkedHashMap<String, String>();
+        for (var m : classes.get(type).getMethods()) if (m.getName().equals("<clinit>")) {
+            String label = null;
+            for (var i : instructions(m)) {
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference s) label = s.getString();
+                if (i.getOpcode().name().equals("SPUT_OBJECT") && i instanceof ReferenceInstruction ri && ri.getReference() instanceof FieldReference f && f.getType().equals(type)) {
+                    require(label != null, "missing enum label for " + f); out.put(f.getName(), label); label = null;
+                }
+            }
+        }
+        return out;
+    }
+    String original(ClassDef cls) {
+        for (var f : cls.getFields()) if (f.getName().equals("__redex_internal_original_name") && f.getInitialValue() instanceof StringEncodedValue s) return s.getValue();
+        return "";
+    }
+    Object ref(Instruction i) { return i instanceof ReferenceInstruction r ? r.getReference() : null; }
+    List<Integer> args(Instruction i) {
+        if (i instanceof FiveRegisterInstruction f) return List.of(f.getRegisterC(), f.getRegisterD(), f.getRegisterE(), f.getRegisterF(), f.getRegisterG()).subList(0, f.getRegisterCount());
+        if (i instanceof RegisterRangeInstruction r) { var out = new ArrayList<Integer>(); for(int at=0;at<r.getRegisterCount();at++) out.add(r.getStartRegister()+at); return out; }
+        return List.of();
+    }
+    List<Method> methods(ClassDef cls) { var out=new ArrayList<Method>(); cls.getMethods().forEach(out::add); return out; }
+    boolean reads(Instruction i, String field) { return i.getOpcode() == Opcode.IGET_OBJECT && Objects.toString(ref(i)).equals(field); }
+    boolean writes(Instruction i, int register) { return i.getOpcode().setsRegister() && i instanceof OneRegisterInstruction r && r.getRegisterA() == register; }
+    boolean source(Instruction i,int value,int register) {
+        String name=i.getOpcode().toString();
+        return value==register || ((name.contains("WIDE") || name.contains("LONG") || name.contains("DOUBLE")) && value+1==register);
+    }
+    boolean operandReads(Instruction i,int register) {
+        if(i instanceof FiveRegisterInstruction || i instanceof RegisterRangeInstruction) return args(i).stream().anyMatch(v->source(i,v,register));
+        if(i instanceof ThreeRegisterInstruction r) return source(i,r.getRegisterB(),register) || source(i,r.getRegisterC(),register) || (!i.getOpcode().setsRegister() && source(i,r.getRegisterA(),register));
+        if(i instanceof TwoRegisterInstruction r) return source(i,r.getRegisterB(),register) || ((!i.getOpcode().setsRegister() || i.getOpcode().toString().contains("2ADDR")) && source(i,r.getRegisterA(),register));
+        return i instanceof OneRegisterInstruction r && (!i.getOpcode().setsRegister() || i.getOpcode()==Opcode.CHECK_CAST) && source(i,r.getRegisterA(),register);
+    }
+    Set<Integer> targets(Method method) {
+        var code=instructions(method); var addresses=new HashMap<Integer,Integer>(); int address=0;
+        for(int at=0;at<code.size();at++) { addresses.put(address,at); address+=code.get(at).getCodeUnits(); }
+        var out=new HashSet<Integer>(); address=0;
+        for(var i:code) { if(i instanceof OffsetInstruction j) {
+            Integer target=addresses.get(address+j.getCodeOffset()); require(target!=null,"bad native branch"); out.add(target);
+            if(code.get(target) instanceof SwitchPayload s) for(var e:s.getSwitchElements()) { Integer t=addresses.get(address+e.getOffset()); require(t!=null,"bad switch branch"); out.add(t); }
+        } address+=i.getCodeUnits(); } return out;
+    }
+    Method singleMethod(String type, String name) { return single(methods(classes.get(type)).stream().filter(m->m.getName().equals(name)).toList(),type+"->"+name); }
+        CommunityInbox prove() {
+        var immutable=classes.get(LIST);
+        var copy=single(methods(immutable).stream().filter(m->id(m).equals(LIST+"->copyOf(Ljava/util/Collection;)"+LIST)).toList(),"native immutable projection");
+        require(AccessFlags.PUBLIC.isSet(immutable.getAccessFlags()) && AccessFlags.PUBLIC.isSet(copy.getAccessFlags()) && AccessFlags.STATIC.isSet(copy.getAccessFlags()),"native immutable projection inaccessible");
+        ClassDef main=single(classes.values().stream().filter(c->original(c).equals("InboxFragment")).toList(),"main InboxFragment");
+        Method render=single(methods(main).stream().filter(m->hasString(m,"InboxFragment_updateSectionTree")).toList(),"main section tree render");
+        require(render.getReturnType().equals("V") && render.getParameterTypes().size()==4 && render.getParameterTypes().get(0).toString().equals(main.getType()),"main void renderer changed");
+        var renderCode=instructions(render);
+        var folderConfigs=new ArrayList<Method>();
+        for(var f:classes.get(ROOT).getInstanceFields()) if(classes.containsKey(f.getType())) for(var m:classes.get(f.getType()).getMethods()) if(hasString(m,"folderName") && enumMembers(m.getReturnType()).containsKey("INBOX")) folderConfigs.add(m);
+        var folderGetter=single(folderConfigs,"typed folder getter"); String folderType=folderGetter.getReturnType();
+        var mainLoaderCalls=new ArrayList<MethodReference>();
+        for(var m:main.getMethods()) for(var c:calls(m)) if(c.getName().equals("<init>") && c.getParameterTypes().size()==6 && c.getParameterTypes().get(0).toString().equals("Landroid/content/Context;") && c.getParameterTypes().get(1).toString().equals("Lcom/facebook/auth/usersession/FbUserSession;") && c.getParameterTypes().get(2).toString().equals(main.getSuperclass()) && c.getParameterTypes().get(5).toString().equals("Ljava/util/List;")) mainLoaderCalls.add(c);
+        var loaderCtor=definition(single(mainLoaderCalls,"main loader creation"));
+        var coordinatorCtors=calls(loaderCtor).stream().filter(c->c.getName().equals("<init>") && classes.containsKey(c.getDefiningClass()) && original(classes.get(c.getDefiningClass())).equals("InboxLoaderCoordinator")).toList();
+        var coordinatorCtor=definition(single(coordinatorCtors,"main inbox coordinator"));
+        var configCtor=definition(single(calls(coordinatorCtor).stream().filter(c->c.getName().equals("<init>") && c.getDefiningClass().equals(folderGetter.getDefiningClass())).toList(),"default main list config"));
+        String builder=configCtor.getParameterTypes().get(0).toString();
+        var defaultBuilder=single(methods(classes.get(builder)).stream().filter(m->m.getName().equals("<init>") && m.getParameterTypes().isEmpty()).toList(),"default inbox config builder");
+        require(instructions(defaultBuilder).size()==5 && calls(defaultBuilder).stream().anyMatch(c->c.getDefiningClass().equals("Ljava/util/HashSet;") && c.getParameterTypes().isEmpty()),"default config keys not empty");
+        require(hasString(coordinatorCtor,"threadTypeFilter") && !hasString(coordinatorCtor,"folderName"),"main initializer overrides folder");
+        var folders=enumMembers(folderType);
+        require(instructions(folderGetter).stream().anyMatch(i->i.getOpcode()==Opcode.SGET_OBJECT && Objects.toString(ref(i)).equals(folders.get("INBOX").toString())),"default folder is not INBOX");
+        var folderOverride=single(methods(main).stream().filter(m->hasString(m,"folderName")).toList(),"main typed folder override");
+        var overrideCode=instructions(folderOverride);
+        require(hasString(folderOverride,"InboxLoaderCoordinator.setFolderAndFilter") && overrideCode.size()==45 && folderOverride.getParameterTypes().size()==2,"main folder switch changed");
+        String scopeType=folderOverride.getParameterTypes().get(1).toString();
+        var scopeLabels=enumFieldNames(scopeType); var folderLabels=enumFieldNames(folderType);
+        var pending=(FieldReference)ref(overrideCode.get(4)); var requests=(FieldReference)ref(overrideCode.get(2));
+        require(scopeLabels.get(requests.getName()).equals("MESSAGE_REQUESTS") && folderLabels.get(pending.getName()).equals("PENDING"),"pending scope label changed");
+        require(overrideCode.get(3).getOpcode()==Opcode.IF_NE && branch(folderOverride,3)==13 && Objects.toString(ref(overrideCode.get(7))).equals(pending.toString()) && Objects.toString(ref(overrideCode.get(13))).equals(folders.get("INBOX").toString()),"main folder branches changed");
+        require(overrideCode.get(25).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)overrideCode.get(25)).getRegisterA()==5 && overrideCode.get(28).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)overrideCode.get(28)).getRegisterA()==4,"folder/filter config connection changed");
+        for(var m:main.getMethods()) {
+            require(m.equals(folderOverride) || !hasString(m,"folderName"),"other main config folder override");
+            require(calls(m).stream().noneMatch(c->c.getDefiningClass().equals(loaderCtor.getDefiningClass()) && c.getParameterTypes().contains(folderType)),"main renderer selects another folder");
+        }
+        var ctorCalls=calls(render).stream().filter(m->m.getName().equals("<init>") && m.getParameterTypes().contains(LIST)).toList();
+        Method ctor=definition(single(ctorCalls,"dedicated immutable-list closure ctor"));
+        var closure=classes.get(ctor.getDefiningClass());
+        require(ctor.getParameterTypes().size()==14 && ctor.getParameterTypes().get(11).toString().equals(LIST) && ctor.getReturnType().equals("V"),"captured list argument changed");
+        var ctorCode=instructions(ctor);
+        require(ctor.getImplementation().getRegisterCount()==16 && ctorCode.size()==17 && ctor.getImplementation().getTryBlocks().isEmpty(),"closure ctor shape changed");
+        require(ctorCode.get(0).getOpcode()==Opcode.IPUT_OBJECT && ctorCode.get(0) instanceof TwoRegisterInstruction && ref(ctorCode.get(0)) instanceof FieldReference,"captured presentation store absent");
+        var store=(TwoRegisterInstruction)ctorCode.get(0); var captured=(FieldReference)ref(ctorCode.get(0));
+        require(store.getRegisterA()==13 && store.getRegisterB()==1 && captured.getName().equals("$inboxUnitItems") && captured.getType().equals(LIST),"captured parameter disconnected");
+        var scopeField=(FieldReference)ref(ctorCode.get(4));
+        require(scopeField.getName().equals("$threadTypeFilter") && scopeField.getType().equals(scopeType) && ((TwoRegisterInstruction)ctorCode.get(4)).getRegisterA()==10,"captured native scope disconnected");
+        var ctorCallers=new ArrayList<String>(); var allocations=new ArrayList<String>(); var fieldWrites=new ArrayList<String>();
+        for(var cls:classes.values()) for(var method:cls.getMethods()) { var code=instructions(method); for(int at=0;at<code.size();at++) {
+            var i=code.get(at); Object r=ref(i);
+            if(r instanceof MethodReference m && id(m).equals(id(ctor))) ctorCallers.add(id(method)+" @"+at);
+            if(i.getOpcode()==Opcode.NEW_INSTANCE && Objects.toString(r).equals(closure.getType())) allocations.add(id(method)+" @"+at);
+            if(i.getOpcode().toString().startsWith("IPUT") && Objects.toString(r).equals(captured.toString())) fieldWrites.add(id(method)+" @"+at);
+        }}
+        require(ctorCallers.size()==1 && ctorCallers.get(0).startsWith(id(render)+" @"),"foreign constructor caller: "+ctorCallers);
+        require(allocations.size()==1 && allocations.get(0).startsWith(id(render)+" @"),"foreign closure allocation: "+allocations);
+        require(fieldWrites.size()==1 && fieldWrites.get(0).equals(id(ctor)+" @0"),"shared captured-list mutation");
+        int callAt=-1; for(int at=0;at<renderCode.size();at++) if(ref(renderCode.get(at)) instanceof MethodReference m && id(m).equals(id(ctor))) callAt=at;
+        int listArgument=args(renderCode.get(callAt)).get(12);
+        int scopeArgument=args(renderCode.get(callAt)).get(9);
+        int scopeResult=-1; for(int at=callAt-1;at>=0;at--) if(writes(renderCode.get(at),scopeArgument)) { scopeResult=at; break; }
+        require(scopeResult>=1 && renderCode.get(scopeResult).getOpcode()==Opcode.MOVE_RESULT_OBJECT && ref(renderCode.get(scopeResult-1)) instanceof MethodReference,"captured scope result disconnected");
+        var scopeGetter=definition((MethodReference)ref(renderCode.get(scopeResult-1)));
+        require(scopeGetter.getDefiningClass().equals(loaderCtor.getDefiningClass()) && scopeGetter.getReturnType().equals(scopeType) && instructions(scopeGetter).size()==13 && calls(scopeGetter).stream().anyMatch(m->m.getDefiningClass().equals(folderGetter.getDefiningClass()) && m.getReturnType().equals(scopeType)),"scope does not read current native config");
+        var prefix=(FieldReference)ref(ctorCode.get(7));
+        require(prefix.getName().equals("$prefixOffsetCallback") && ctorCode.get(7).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)ctorCode.get(7)).getRegisterA()==8,"Main callback capture disconnected");
+        int prefixArg=args(renderCode.get(callAt)).get(7), prefixMove=-1;
+        for(int at=callAt-1;at>=0;at--) if(writes(renderCode.get(at),prefixArg)) { prefixMove=at; break; }
+        require(prefixMove>=0 && renderCode.get(prefixMove).getOpcode()==Opcode.MOVE_OBJECT_FROM16,"Main callback alias absent");
+        int prefixSource=((TwoRegisterInstruction)renderCode.get(prefixMove)).getRegisterB(), prefixRead=-1;
+        for(int at=prefixMove-1;at>=0;at--) if(writes(renderCode.get(at),prefixSource)) { prefixRead=at; break; }
+        require(prefixRead>=0 && renderCode.get(prefixRead).getOpcode()==Opcode.IGET_OBJECT,"Main callback source absent");
+        var mainPrefix=(FieldReference)ref(renderCode.get(prefixRead)); require(mainPrefix.getDefiningClass().equals(main.getType()) && mainPrefix.getType().equals(prefix.getType()),"foreign callback source");
+        var prefixStores=new ArrayList<Method>(); int prefixStore=-1;
+        for(var cls:classes.values()) for(var m:cls.getMethods()) { var body=instructions(m); for(int at=0;at<body.size();at++) if(body.get(at).getOpcode()==Opcode.IPUT_OBJECT && Objects.toString(ref(body.get(at))).equals(mainPrefix.toString())) { prefixStores.add(m); prefixStore=at; } }
+        var mainCtor=single(prefixStores,"unique Main callback owner"); var mainCtorCode=instructions(mainCtor);
+        require(mainCtor.getDefiningClass().equals(main.getType()) && mainCtor.getName().equals("<init>") && prefixStore>=2,"Main callback ownership changed");
+        var callbackCtor=definition((MethodReference)ref(mainCtorCode.get(prefixStore-1))); var callbackCode=instructions(callbackCtor);
+        require(callbackCtor.getParameterTypes().equals(List.of(main.getType())) && callbackCode.size()==3 && callbackCode.get(0).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)callbackCode.get(0)).getRegisterA()==1 && ((TwoRegisterInstruction)callbackCode.get(0)).getRegisterB()==0,"callback Main pointer disconnected");
+        var callbackMain=(FieldReference)ref(callbackCode.get(0));
+        int getterReceiver=args(renderCode.get(scopeResult-1)).get(0), mainLoaderRead=-1;
+        for(int at=scopeResult-2;at>=0;at--) if(writes(renderCode.get(at),getterReceiver)) { mainLoaderRead=at; break; }
+        require(mainLoaderRead>=0 && renderCode.get(mainLoaderRead).getOpcode()==Opcode.IGET_OBJECT,"Main loader source absent");
+        var mainLoader=(FieldReference)ref(renderCode.get(mainLoaderRead)); var getterCode=instructions(scopeGetter);
+        var currentPath=List.of(callbackMain,mainLoader,(FieldReference)ref(getterCode.get(0)),(FieldReference)ref(getterCode.get(1)),(FieldReference)ref(getterCode.get(8)));
+        String owner=callbackCtor.getDefiningClass();
+        for(var f:currentPath) { require(f.getDefiningClass().equals(owner),"current folder path disconnected");
+            var nativeField=single(methodFields(classes.get(owner),f.getName()),"current folder field");
+            require(AccessFlags.PUBLIC.isSet(nativeField.getAccessFlags()) && !AccessFlags.STATIC.isSet(nativeField.getAccessFlags()) && AccessFlags.PUBLIC.isSet(classes.get(owner).getAccessFlags()),"current folder path inaccessible"); owner=f.getType(); }
+        require(owner.equals(folderGetter.getDefiningClass()) && AccessFlags.PUBLIC.isSet(classes.get(owner).getAccessFlags()) && AccessFlags.PUBLIC.isSet(folderGetter.getAccessFlags()) && !AccessFlags.STATIC.isSet(folderGetter.getAccessFlags()),"current native folder getter inaccessible");
+        var folderCode=instructions(folderGetter);
+        require(folderGetter.getParameterTypes().isEmpty() && folderGetter.getImplementation().getRegisterCount()==3 &&
+            folderCode.stream().map(Instruction::getOpcode).toList().equals(List.of(Opcode.IGET_OBJECT,Opcode.CONST_STRING,Opcode.INVOKE_INTERFACE,Opcode.MOVE_RESULT,Opcode.IF_EQZ,
+                Opcode.IGET_OBJECT,Opcode.RETURN_OBJECT,Opcode.SGET_OBJECT,Opcode.IF_NEZ,Opcode.MONITOR_ENTER,Opcode.SGET_OBJECT,Opcode.IF_NEZ,Opcode.SGET_OBJECT,
+                Opcode.SPUT_OBJECT,Opcode.MONITOR_EXIT,Opcode.GOTO,Opcode.MOVE_EXCEPTION,Opcode.MONITOR_EXIT,Opcode.THROW,Opcode.SGET_OBJECT,Opcode.RETURN_OBJECT)) &&
+            calls(folderGetter).stream().map(this::id).toList().equals(List.of("Ljava/util/Set;->contains(Ljava/lang/Object;)Z")) &&
+            branch(folderGetter,4)==7 && branch(folderGetter,8)==19 && branch(folderGetter,11)==14 && branch(folderGetter,15)==19 &&
+            ref(folderCode.get(0)) instanceof FieldReference keys && keys.getDefiningClass().equals(owner) && keys.getType().equals("Ljava/util/Set;") &&
+            ref(folderCode.get(5)) instanceof FieldReference selected && selected.getDefiningClass().equals(owner) && selected.getType().equals(folderType) &&
+            ref(folderCode.get(7)) instanceof FieldReference cached && cached.getDefiningClass().equals(owner) && cached.getType().equals(folderType) &&
+            List.of(10,13,19).stream().allMatch(at->Objects.toString(ref(folderCode.get(at))).equals(Objects.toString(ref(folderCode.get(7))))) &&
+            Objects.toString(ref(folderCode.get(12))).equals(folders.get("INBOX").toString()) &&
+            ((TwoRegisterInstruction)folderCode.get(0)).getRegisterA()==1 && ((TwoRegisterInstruction)folderCode.get(0)).getRegisterB()==2 &&
+            ((TwoRegisterInstruction)folderCode.get(5)).getRegisterA()==0 && ((TwoRegisterInstruction)folderCode.get(5)).getRegisterB()==2 &&
+            ref(folderCode.get(1)) instanceof StringReference label && label.getString().equals("folderName") && args(folderCode.get(2)).equals(List.of(1,0)) &&
+            List.of(1,3,4,6,7,8,10,11,12,13,16,18,19,20).stream().allMatch(at->((OneRegisterInstruction)folderCode.get(at)).getRegisterA()==0) &&
+            List.of(9,14,17).stream().allMatch(at->((OneRegisterInstruction)folderCode.get(at)).getRegisterA()==2),"native folder getter changed");
+        publicStatic(requests); publicStatic(folders.get("INBOX"));
+        int listMove=-1; for(int at=callAt-1;at>=0;at--) if(writes(renderCode.get(at),listArgument)) { listMove=at; break; }
+        require(listMove>=1 && renderCode.get(listMove).getOpcode()==Opcode.MOVE_OBJECT_FROM16,"main list alias absent");
+        var move=(TwoRegisterInstruction)renderCode.get(listMove); var source=renderCode.get(listMove-1);
+        require(source.getOpcode()==Opcode.IGET_OBJECT && source instanceof TwoRegisterInstruction && ref(source) instanceof FieldReference,"snapshot source disconnected");
+        var modelRows=(FieldReference)ref(source); var sourceReg=(TwoRegisterInstruction)source;
+        require(sourceReg.getRegisterA()==move.getRegisterB() && modelRows.getDefiningClass().equals(render.getParameterTypes().get(1).toString()) && modelRows.getType().equals(LIST),"main snapshot does not reach ctor");
+        Method invoke=single(methods(closure).stream().filter(m->m.getName().equals("invoke") && m.getParameterTypes().equals(List.of("Ljava/lang/Object;"))).toList(),"section closure invoke");
+        var code=instructions(invoke);
+        var listReads=new ArrayList<Integer>(); for(int at=0;at<code.size();at++) if(reads(code.get(at),captured.toString())) listReads.add(at);
+        require(listReads.size()==2 && listReads.get(0)==5 && Set.of(55,56).contains(listReads.get(1)),"presentation read shape changed: "+listReads);
+        int secondRead=listReads.get(1), aliasAt=secondRead+10, sinkAt=secondRead+11;
+        require(code.size()==secondRead+19 && invoke.getImplementation().getRegisterCount()==20 && invoke.getImplementation().getTryBlocks().isEmpty(),"presentation body shape changed");
+        require(code.get(6).getOpcode()==Opcode.INVOKE_VIRTUAL && Objects.toString(ref(code.get(6))).equals("Ljava/util/AbstractCollection;->isEmpty()Z") && args(code.get(6)).equals(List.of(0)),"original empty/header gate changed");
+        require(hasString(invoke,"searchBarSection") && code.get(secondRead) instanceof TwoRegisterInstruction && ((TwoRegisterInstruction)code.get(secondRead)).getRegisterA()==0,"header or local presentation read changed");
+        require(code.get(aliasAt).getOpcode()==Opcode.MOVE_OBJECT_FROM16 && ((TwoRegisterInstruction)code.get(aliasAt)).getRegisterA()==17 && ((TwoRegisterInstruction)code.get(aliasAt)).getRegisterB()==0,"second list alias changed");
+        require(code.get(sinkAt).getOpcode()==Opcode.INVOKE_STATIC_RANGE && ref(code.get(sinkAt)) instanceof MethodReference,"list section sink changed");
+        var sink=(MethodReference)ref(code.get(sinkAt));
+        require(sink.getParameterTypes().size()==12 && sink.getParameterTypes().get(11).toString().equals("Ljava/util/List;") && args(code.get(sinkAt)).get(11)==17,"renderer list argument disconnected");
+        for(int at=secondRead+1;at<aliasAt;at++) require(!writes(code.get(at),0),"list overwritten before render");
+        require(targets(invoke).stream().noneMatch(t->t>secondRead && t<=sinkAt),"branch bypasses second-read hook");
+        require(code.subList(secondRead+1,code.size()).stream().noneMatch(i->operandReads(i,1) || operandReads(i,3)),"scope scratch register still live");
+        var search=classes.values().stream().filter(c->Set.of("MessagingTabbedSearchFragment","SearchListItemFragment","MsysMessageSearchThreadListFragment","FoldersFragment").contains(original(c))).toList();
+        require(search.stream().anyMatch(c->original(c).equals("MessagingTabbedSearchFragment")) && search.stream().anyMatch(c->original(c).equals("SearchListItemFragment")) && search.stream().anyMatch(c->original(c).equals("FoldersFragment")),"separate native Search/folder fragments absent");
+        require(search.stream().noneMatch(c->c.getType().equals(main.getType())),"Search shares main fragment");
+        var joined=new ArrayList<Method>();
+        for(var cls:classes.values()) for(var method:cls.getMethods()) if(method.getParameterTypes().equals(List.of(SUMMARY)) && method.getReturnType().equals("Z") && instructions(method).size()==9) {
+            var b=instructions(method);
+            if(b.get(0).getOpcode()==Opcode.IGET_OBJECT && ref(b.get(0)) instanceof FieldReference f && f.getDefiningClass().equals(SUMMARY) && f.getType().equals(KEY) && b.get(1).getOpcode()==Opcode.INVOKE_STATIC && ref(b.get(1)) instanceof MethodReference m && m.getDefiningClass().equals(KEY) && m.getParameterTypes().equals(List.of(KEY)) && m.getReturnType().equals("Z") && b.get(5).getOpcode()==Opcode.IGET_BOOLEAN) joined.add(method);
+        }
+        var predicate=single(joined,"native joined channel predicate"); var joinedCode=instructions(predicate);
+        require(joinedCode.stream().map(Instruction::getOpcode).toList().equals(List.of(Opcode.IGET_OBJECT,Opcode.INVOKE_STATIC,Opcode.MOVE_RESULT,Opcode.CONST_4,Opcode.IF_EQZ,Opcode.IGET_BOOLEAN,Opcode.IF_EQZ,Opcode.CONST_4,Opcode.RETURN)),"native joined branch changed");
+        require(predicate.getImplementation().getRegisterCount()==3 && predicate.getImplementation().getTryBlocks().isEmpty() &&
+            ((TwoRegisterInstruction)joinedCode.get(0)).getRegisterA()==0 && ((TwoRegisterInstruction)joinedCode.get(0)).getRegisterB()==2 && args(joinedCode.get(1)).equals(List.of(0)) &&
+            ((OneRegisterInstruction)joinedCode.get(2)).getRegisterA()==0 && literal(joinedCode.get(3),1,0) && branch(predicate,4)==8 && branch(predicate,6)==8 &&
+            ((TwoRegisterInstruction)joinedCode.get(5)).getRegisterA()==0 && ((TwoRegisterInstruction)joinedCode.get(5)).getRegisterB()==2 &&
+            literal(joinedCode.get(7),1,1) && ((OneRegisterInstruction)joinedCode.get(8)).getRegisterA()==1,"native membership value flow changed");
+        var subscribed=(FieldReference)ref(joinedCode.get(5)); require(classes.values().stream().anyMatch(c->methods(c).stream().anyMatch(m->hasString(m,"thread.isSubscribed") && instructions(m).stream().anyMatch(i->Objects.toString(ref(i)).equals(subscribed.toString())))),"subscribed native label absent");
+        var keyPredicate=definition((MethodReference)ref(joinedCode.get(1)));
+        var keyAny=definition(single(calls(keyPredicate).stream().filter(m->m.getDefiningClass().equals(KEY) && m.getParameterTypes().isEmpty() && m.getReturnType().equals("Z")).toList(),"nullable key-to-community predicate"));
+        var keyChannel=definition(single(calls(keyAny).stream().filter(m->m.getDefiningClass().equals(KEY) && m.getParameterTypes().isEmpty() && m.getReturnType().equals("Z")).toList(),"community channel predicate"));
+        require(instructions(keyPredicate).size()==8 && calls(keyPredicate).stream().anyMatch(m->id(m).equals(id(keyAny))),"null-safe community wrapper changed");
+        require(instructions(keyAny).size()==10 && calls(keyAny).stream().anyMatch(m->id(m).equals(id(keyChannel))) && instructions(keyChannel).size()==7,"community OR predicate changed");
+        var n=instructions(keyPredicate); var a=instructions(keyAny); var h=instructions(keyChannel);
+        require(n.stream().map(Instruction::getOpcode).toList().equals(List.of(Opcode.IF_EQZ,Opcode.INVOKE_VIRTUAL,Opcode.MOVE_RESULT,Opcode.IF_EQZ,Opcode.CONST_4,Opcode.RETURN,Opcode.CONST_4,Opcode.RETURN)) &&
+            keyPredicate.getImplementation().getRegisterCount()==1 && branch(keyPredicate,0)==6 && branch(keyPredicate,3)==6 && args(n.get(1)).equals(List.of(0)) && literal(n.get(4),0,1) && literal(n.get(6),0,0),"null/unknown key behavior changed");
+        require(a.stream().map(Instruction::getOpcode).toList().equals(List.of(Opcode.INVOKE_VIRTUAL,Opcode.MOVE_RESULT,Opcode.IF_NEZ,Opcode.IGET_OBJECT,Opcode.SGET_OBJECT,Opcode.IF_EQ,Opcode.CONST_4,Opcode.RETURN,Opcode.CONST_4,Opcode.RETURN)) &&
+            branch(keyAny,2)==8 && branch(keyAny,5)==8 && args(a.get(0)).equals(List.of(2)) && literal(a.get(6),0,0) && literal(a.get(8),0,1),"community OR value flow changed");
+        require(h.stream().map(Instruction::getOpcode).toList().equals(List.of(Opcode.IGET_OBJECT,Opcode.SGET_OBJECT,Opcode.IF_NE,Opcode.CONST_4,Opcode.RETURN,Opcode.CONST_4,Opcode.RETURN)) &&
+            branch(keyChannel,2)==5 && literal(h.get(3),0,1) && literal(h.get(5),0,0) && Objects.toString(ref(h.get(0))).equals(Objects.toString(ref(a.get(3)))),"ordinary key behavior changed");
+        var keyType=single(fieldsOf(KEY, ((FieldReference)ref(instructions(keyChannel).get(0))).getType()),"typed key enum"); var enums=enumMembers(keyType.getType());
+        require(Objects.toString(ref(instructions(keyChannel).get(1))).equals(enums.get("COMMUNITY_CHANNEL").toString()) && Objects.toString(ref(instructions(keyAny).get(4))).equals(enums.get("COMMUNITY_ANNOUNCEMENT_CHANNEL").toString()),"joined predicate accepts other types");
+        String rowType=single(renderCode.stream().filter(i->i.getOpcode()==Opcode.INSTANCE_OF).map(i->((TypeReference)ref(i)).getType()).distinct().filter(t->fieldsOf(t,SUMMARY).size()==1).toList(),"native row type");
+        var rowSummary=single(fieldsOf(rowType,SUMMARY),"native row summary");
+        require(AccessFlags.PUBLIC.isSet(classes.get(rowType).getAccessFlags()) && AccessFlags.PUBLIC.isSet(rowSummary.getAccessFlags()) && AccessFlags.FINAL.isSet(rowSummary.getAccessFlags()) &&
+            AccessFlags.PUBLIC.isSet(classes.get(predicate.getDefiningClass()).getAccessFlags()) && AccessFlags.PUBLIC.isSet(predicate.getAccessFlags()) && AccessFlags.STATIC.isSet(predicate.getAccessFlags()),"typed native contract inaccessible");
+        var identityParts=new ArrayList<>(List.of(id(render),id(ctor),id(scopeGetter),id(folderOverride),rowSummary.toString(),id(predicate),id(keyPredicate),id(keyAny),id(keyChannel),requests.toString(),prefix.toString()));
+        currentPath.forEach(f->identityParts.add(f.toString())); identityParts.add(id(folderGetter)); identityParts.add(folders.get("INBOX").toString());
+        String identity=String.join("|",identityParts);
+        return new CommunityInbox(invoke, identity);
+        }
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
         found.get("ai_sticker_cell").addAll(findAiStickerCells(classes));
+        var community = communityInbox(classes);
+        if (community != null) found.get("community_inbox").add(community.render());
         for (var cls : classes) for (var method : cls.getMethods())
             if (!screenshotViewerSites(method).isEmpty()) found.get("screenshot_viewers").add(method);
         var jewelCandidates = new ArrayList<Map.Entry<Method, Set<String>>>();
@@ -2515,11 +2806,11 @@ public class CompatReport {
 
         System.out.println();
         if (anyFail) {
-            System.out.println("RESULT: FAIL — one or more patches are incompatible with this APK.");
+            System.out.println("RESULT: FAIL â€” one or more patches are incompatible with this APK.");
             if (!builds.isEmpty()) System.out.println("Use an unmodified arm64 Messenger " + supported(builds) + ".");
             System.exit(1);
         } else {
-            System.out.println("RESULT: PASS — all " + (PATCHES.size() + 3) + " patches are compatible.");
+            System.out.println("RESULT: PASS â€” all " + (PATCHES.size() + 3) + " patches are compatible.");
             System.exit(0);
         }
     }

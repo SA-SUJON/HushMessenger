@@ -27,6 +27,8 @@ internal class ControlProfile(
     val bubbleRolloutGetter: String,
     /** Existing attachment, long-lived shortcut and conversation routes, separated by |. */
     val nativeBubbleRoutes: String,
+    /** Main section closure, scope and native joined predicate, connected before any mutation. */
+    val nativeCommunityInbox: String,
 )
 
 /** 346013387, 346013440, 346013442, 346013354 and 346013394 share one mapping. */
@@ -44,6 +46,7 @@ internal val BASE_PROFILE = ControlProfile(
     bubbleCapabilityGetter = "LX/1hy;->A03(Lcom/facebook/auth/usersession/FbUserSession;I)Z",
     bubbleRolloutGetter = "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->Ah8(J)Z",
     nativeBubbleRoutes = "LX/8qv;->A02(Landroid/graphics/Bitmap;LX/0MX;Lcom/facebook/auth/usersession/FbUserSession;LX/8qz;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/6ev;Lcom/facebook/push/constants/PushProperty;Z)V|LX/8qx;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/messaging/model/threadkey/ThreadKey;Ljava/lang/String;)LX/8qz;|LX/MP1;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/auth/usersession/FbUserSession;LX/MP1;Lcom/facebook/messaging/model/threads/ThreadSummary;)Z",
+    nativeCommunityInbox = "LX/1k3;->A0G(LX/1k3;LX/1mM;Ljava/lang/String;Z)V|LX/2GW;-><init>(Lcom/facebook/auth/usersession/FbUserSession;LX/2Fu;LX/2GC;LX/2GU;LX/2EW;LX/2GR;LX/4mt;LX/4sx;LX/1lQ;Lcom/facebook/mig/scheme/interfaces/MigColorScheme;LX/4pk;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;Z)V|LX/1mE;->A01()LX/1lQ;|LX/1k3;->A0H(LX/1k3;LX/1lQ;)V|LX/2WR;->A03:Lcom/facebook/messaging/model/threads/ThreadSummary;|LX/2hK;->A03(Lcom/facebook/messaging/model/threads/ThreadSummary;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A0o(Lcom/facebook/messaging/model/threadkey/ThreadKey;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1J()Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1W()Z|LX/1lQ;->A0E:LX/1lQ;|LX/2GW;->\$prefixOffsetCallback:LX/4mt;|LX/1kf;->A00:LX/1k3;|LX/1k3;->A0Y:LX/1mE;|LX/1mE;->A07:LX/1mH;|LX/1mH;->A01:LX/1ma;|LX/1ma;->A00:LX/1mZ;|LX/1mZ;->A00()LX/1V4;|LX/1V4;->A0L:LX/1V4;",
 )
 
 /**
@@ -77,6 +80,7 @@ internal val PROFILE_346013370 = ControlProfile(
         "chat_inbox" to setOf("LX/1fr;-><init>()V"),
         "chat_legacy" to setOf("LX/1hc;->onCreateAnimation(IZI)Landroid/view/animation/Animation;"),
         "chat_promotions" to setOf("LX/HCH;->A0D()Z", "LX/HCH;->A0E()Z"),
+        "community_inbox" to setOf("LX/2GV;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/VsH;->Btd(I)Z"),
         "emoji_typeface" to setOf("LX/1KU;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/HCH;->A07()Z", "LX/HCH;->A08()Z"),
@@ -136,6 +140,7 @@ internal val PROFILE_346013370 = ControlProfile(
     bubbleCapabilityGetter = "LX/1hx;->A03(Lcom/facebook/auth/usersession/FbUserSession;I)Z",
     bubbleRolloutGetter = "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->AhB(J)Z",
     nativeBubbleRoutes = "LX/8pO;->A02(Landroid/graphics/Bitmap;LX/0MX;Lcom/facebook/auth/usersession/FbUserSession;LX/8pT;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/6dR;Lcom/facebook/push/constants/PushProperty;Z)V|LX/8pR;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/messaging/model/threadkey/ThreadKey;Ljava/lang/String;)LX/8pT;|LX/PSx;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/auth/usersession/FbUserSession;LX/PSx;Lcom/facebook/messaging/model/threads/ThreadSummary;)Z",
+    nativeCommunityInbox = "LX/1k2;->A0G(LX/1k2;LX/1mL;Ljava/lang/String;Z)V|LX/2GV;-><init>(Lcom/facebook/auth/usersession/FbUserSession;LX/2Ft;LX/2GB;LX/2GT;LX/2EV;LX/2GQ;LX/4my;LX/4t2;LX/1lP;Lcom/facebook/mig/scheme/interfaces/MigColorScheme;LX/4pp;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;Z)V|LX/1mD;->A01()LX/1lP;|LX/1k2;->A0H(LX/1k2;LX/1lP;)V|LX/2WQ;->A03:Lcom/facebook/messaging/model/threads/ThreadSummary;|LX/2hJ;->A03(Lcom/facebook/messaging/model/threads/ThreadSummary;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A0n(Lcom/facebook/messaging/model/threadkey/ThreadKey;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1I()Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1V()Z|LX/1lP;->A0E:LX/1lP;|LX/2GV;->\$prefixOffsetCallback:LX/4my;|LX/1ke;->A00:LX/1k2;|LX/1k2;->A0Y:LX/1mD;|LX/1mD;->A07:LX/1mG;|LX/1mG;->A01:LX/1mZ;|LX/1mZ;->A00:LX/1mY;|LX/1mY;->A00()LX/1V3;|LX/1V3;->A0L:LX/1V3;",
 )
 
 /**
@@ -169,6 +174,7 @@ internal val PROFILE_346013423 = ControlProfile(
         "chat_inbox" to setOf("LX/1gn;-><init>()V"),
         "chat_legacy" to setOf("LX/1iY;->onCreateAnimation(IZI)Landroid/view/animation/Animation;"),
         "chat_promotions" to setOf("LX/KHo;->A0D()Z", "LX/KHo;->A0E()Z"),
+        "community_inbox" to setOf("LX/2Ha;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/YOo;->Bto(I)Z"),
         "emoji_typeface" to setOf("LX/1Ku;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/KHo;->A07()Z", "LX/KHo;->A08()Z"),
@@ -228,6 +234,7 @@ internal val PROFILE_346013423 = ControlProfile(
     bubbleCapabilityGetter = "LX/1it;->A03(Lcom/facebook/auth/usersession/FbUserSession;I)Z",
     bubbleRolloutGetter = "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->AhI(J)Z",
     nativeBubbleRoutes = "LX/8sV;->A02(Landroid/graphics/Bitmap;LX/0Ma;Lcom/facebook/auth/usersession/FbUserSession;LX/8sZ;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/6ey;Lcom/facebook/push/constants/PushProperty;Z)V|LX/8sX;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/messaging/model/threadkey/ThreadKey;Ljava/lang/String;)LX/8sZ;|LX/MAc;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/auth/usersession/FbUserSession;LX/MAc;Lcom/facebook/messaging/model/threads/ThreadSummary;)Z",
+    nativeCommunityInbox = "LX/1kz;->A0G(LX/1kz;LX/1nI;Ljava/lang/String;Z)V|LX/2Ha;-><init>(Lcom/facebook/auth/usersession/FbUserSession;LX/2Gy;LX/2HG;LX/2HY;LX/2Fa;LX/2HV;LX/4qC;LX/4wH;LX/1mM;Lcom/facebook/mig/scheme/interfaces/MigColorScheme;LX/4t3;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;Z)V|LX/1nA;->A01()LX/1mM;|LX/1kz;->A0H(LX/1kz;LX/1mM;)V|LX/2Xf;->A03:Lcom/facebook/messaging/model/threads/ThreadSummary;|LX/2iY;->A03(Lcom/facebook/messaging/model/threads/ThreadSummary;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A0o(Lcom/facebook/messaging/model/threadkey/ThreadKey;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1J()Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1W()Z|LX/1mM;->A0E:LX/1mM;|LX/2Ha;->\$prefixOffsetCallback:LX/4qC;|LX/1lb;->A00:LX/1kz;|LX/1kz;->A0Y:LX/1nA;|LX/1nA;->A07:LX/1nD;|LX/1nD;->A01:LX/1nW;|LX/1nW;->A00:LX/1nV;|LX/1nV;->A00()LX/1VZ;|LX/1VZ;->A0L:LX/1VZ;",
 )
 
 /**
@@ -261,6 +268,7 @@ internal val PROFILE_346013357 = ControlProfile(
         "chat_inbox" to setOf("LX/1fs;-><init>()V"),
         "chat_legacy" to setOf("LX/1hd;->onCreateAnimation(IZI)Landroid/view/animation/Animation;"),
         "chat_promotions" to setOf("LX/Ts2;->A0D()Z", "LX/Ts2;->A0E()Z"),
+        "community_inbox" to setOf("LX/2GW;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/K0w;->Bta(I)Z"),
         "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/Ts2;->A07()Z", "LX/Ts2;->A08()Z"),
@@ -320,6 +328,7 @@ internal val PROFILE_346013357 = ControlProfile(
     bubbleCapabilityGetter = "LX/1hy;->A03(Lcom/facebook/auth/usersession/FbUserSession;I)Z",
     bubbleRolloutGetter = "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->Ah9(J)Z",
     nativeBubbleRoutes = "LX/8qV;->A02(Landroid/graphics/Bitmap;LX/0MX;Lcom/facebook/auth/usersession/FbUserSession;LX/8qZ;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/6eV;Lcom/facebook/push/constants/PushProperty;Z)V|LX/8qX;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/messaging/model/threadkey/ThreadKey;Ljava/lang/String;)LX/8qZ;|LX/MOA;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/auth/usersession/FbUserSession;LX/MOA;Lcom/facebook/messaging/model/threads/ThreadSummary;)Z",
+    nativeCommunityInbox = "LX/1k3;->A0G(LX/1k3;LX/1mM;Ljava/lang/String;Z)V|LX/2GW;-><init>(Lcom/facebook/auth/usersession/FbUserSession;LX/2Fu;LX/2GC;LX/2GU;LX/2EW;LX/2GR;LX/4mn;LX/4sr;LX/1lQ;Lcom/facebook/mig/scheme/interfaces/MigColorScheme;LX/4pe;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;Z)V|LX/1mE;->A01()LX/1lQ;|LX/1k3;->A0H(LX/1k3;LX/1lQ;)V|LX/2WR;->A03:Lcom/facebook/messaging/model/threads/ThreadSummary;|LX/2hK;->A03(Lcom/facebook/messaging/model/threads/ThreadSummary;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A0n(Lcom/facebook/messaging/model/threadkey/ThreadKey;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1I()Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1V()Z|LX/1lQ;->A0E:LX/1lQ;|LX/2GW;->\$prefixOffsetCallback:LX/4mn;|LX/1kf;->A00:LX/1k3;|LX/1k3;->A0Y:LX/1mE;|LX/1mE;->A07:LX/1mH;|LX/1mH;->A01:LX/1ma;|LX/1ma;->A00:LX/1mZ;|LX/1mZ;->A00()LX/1V4;|LX/1V4;->A0L:LX/1V4;",
 )
 
 /**
@@ -353,6 +362,7 @@ internal val PROFILE_346013374 = ControlProfile(
         "chat_inbox" to setOf("LX/1fr;-><init>()V"),
         "chat_legacy" to setOf("LX/1hc;->onCreateAnimation(IZI)Landroid/view/animation/Animation;"),
         "chat_promotions" to setOf("LX/HKj;->A0D()Z", "LX/HKj;->A0E()Z"),
+        "community_inbox" to setOf("LX/2GV;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/VmI;->Btb(I)Z"),
         "emoji_typeface" to setOf("LX/1KU;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/HKj;->A07()Z", "LX/HKj;->A08()Z"),
@@ -412,6 +422,7 @@ internal val PROFILE_346013374 = ControlProfile(
     bubbleCapabilityGetter = "LX/1hx;->A03(Lcom/facebook/auth/usersession/FbUserSession;I)Z",
     bubbleRolloutGetter = "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->Ah7(J)Z",
     nativeBubbleRoutes = "LX/8rP;->A02(Landroid/graphics/Bitmap;LX/0MX;Lcom/facebook/auth/usersession/FbUserSession;LX/8rT;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/6fS;Lcom/facebook/push/constants/PushProperty;Z)V|LX/8rR;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/messaging/model/threadkey/ThreadKey;Ljava/lang/String;)LX/8rT;|LX/JXq;->A04(Landroid/content/Context;Landroid/graphics/Bitmap;Lcom/facebook/auth/usersession/FbUserSession;LX/JXq;Lcom/facebook/messaging/model/threads/ThreadSummary;)Z",
+    nativeCommunityInbox = "LX/1k2;->A0G(LX/1k2;LX/1mL;Ljava/lang/String;Z)V|LX/2GV;-><init>(Lcom/facebook/auth/usersession/FbUserSession;LX/2Ft;LX/2GB;LX/2GT;LX/2EV;LX/2GQ;LX/4ol;LX/4up;LX/1lP;Lcom/facebook/mig/scheme/interfaces/MigColorScheme;LX/4rc;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;Z)V|LX/1mD;->A01()LX/1lP;|LX/1k2;->A0H(LX/1k2;LX/1lP;)V|LX/2WQ;->A03:Lcom/facebook/messaging/model/threads/ThreadSummary;|LX/2hJ;->A03(Lcom/facebook/messaging/model/threads/ThreadSummary;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A0n(Lcom/facebook/messaging/model/threadkey/ThreadKey;)Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1I()Z|Lcom/facebook/messaging/model/threadkey/ThreadKey;->A1V()Z|LX/1lP;->A0E:LX/1lP;|LX/2GV;->\$prefixOffsetCallback:LX/4ol;|LX/1ke;->A00:LX/1k2;|LX/1k2;->A0Y:LX/1mD;|LX/1mD;->A07:LX/1mG;|LX/1mG;->A01:LX/1mZ;|LX/1mZ;->A00:LX/1mY;|LX/1mY;->A00()LX/1V3;|LX/1V3;->A0L:LX/1V3;",
 )
 
 /** Each supported build's profile, by version code. Builds that share a mapping share a profile. */

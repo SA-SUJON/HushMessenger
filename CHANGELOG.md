@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hide joined community chats is a new control that starts off. It filters subscribed channels and announcements from the main Chats display while keeping conversation data, delivery and unread state intact. Displayed row counts follow the filtered list. Off or Pause restores the original list on the next render. Search and community folders keep their rows. Folder and membership checks cover all 21 supported builds. Live joined-community checks remain open.
+
 - Repository links now use the HushMessenger artwork as their social preview.
 
 - Manager 1.33.0 applied all 32 patches at its existing 640 MB process limit, with a peak heap of 290 MB. The signed result passed archive checks and kept every native library unchanged. Fresh-checkout reproduction and non-English setup diagnostics also passed. The development build updated an existing signed-in installation without replacing its key or losing its chat history.

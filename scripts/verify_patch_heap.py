@@ -19,7 +19,7 @@ else:
 
 ROOT = Path(__file__).resolve().parent.parent
 # The complete gate needs every patch in the catalog, Material You included.
-PATCH_COUNT = 32
+PATCH_COUNT = 33
 
 
 def check_build(args, code, expected_hash, names):

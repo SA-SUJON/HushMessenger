@@ -70,6 +70,7 @@ internal val settingsResources = resourcePatch(description = "Install HushMessen
 internal var discoveredControls: Map<String, List<Method>> = emptyMap()
 internal var nativeBubbleActivityVerified = false
 internal var nativeBubbleRoutesVerified = false
+internal var communityInboxContract: CommunityInboxContract? = null
 
 internal val settingsExtension = bytecodePatch(description = "Load HushMessenger runtime controls") {
     dependsOn(settingsResources)
@@ -79,6 +80,7 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         val classes = mutableListOf<com.android.tools.smali.dexlib2.iface.ClassDef>()
         classDefForEach { classes.add(it) }
         discoveredControls = findControls(classes)
+        communityInboxContract = findCommunityInbox(classes)
         val nativeGate = discoveredControls["bubble_mode"].orEmpty().singleOrNull()
         nativeBubbleRoutesVerified = nativeBubbleActivityVerified && nativeGate != null &&
             findNativeBubbleRoutes(classes, nativeGate.hookId()) == activeProfile.nativeBubbleRoutes
@@ -91,6 +93,7 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         activeProfile = BASE_PROFILE
         nativeBubbleActivityVerified = false
         nativeBubbleRoutesVerified = false
+        communityInboxContract = null
     }
 }
 
@@ -207,7 +210,17 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
                     mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
                 }
             }
-            if (key == "bubbles") {
+            if (key == COMMUNITY_INBOX) {
+                val contract = communityInboxContract ?: throw PatchException("Messenger controls: the native community inbox route is missing")
+                val helpers = mutableClassDefBy(HOST_SCREENS).methods
+                val joined = helpers.singleOrNull { it.hookId() == JOINED_COMMUNITY_ROW }
+                    ?: throw PatchException("Messenger controls: the joined-community helper is missing")
+                val scope = helpers.singleOrNull { it.hookId() == MAIN_INBOX_SCOPE }
+                    ?: throw PatchException("Messenger controls: the Main inbox helper is missing")
+                val replacements = injectCommunityInbox(contract, methods.getValue(COMMUNITY_INBOX).single(), joined, scope)
+                helpers.removeAll(listOf(joined, scope))
+                helpers.addAll(replacements)
+            } else if (key == "bubbles") {
                 val capability = mutableClassDefBy(HOST_SCREENS).methods.singleOrNull { it.hookId() == NATIVE_BUBBLE_ROUTES }
                     ?: throw PatchException("Messenger controls: the extension has no native bubble capability")
                 injectNativeBubbles(methods.getValue("bubbles").single(), methods.getValue("bubble_mode").single(),
@@ -226,6 +239,9 @@ val hideInboxAdsPatch = controlPatch("ads", "Hide inbox ads", "Filters typed inb
 val hidePeoplePatch = controlPatch("people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs.", "Inbox", "people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story")
 @Suppress("unused")
 val hideFriendRequestsPatch = controlPatch("friend_requests", "Hide friend request cards", "Hides friend request cards inside the inbox.", "Inbox")
+@Suppress("unused")
+val hideJoinedCommunityChatsPatch = controlPatch("community_inbox", "Hide joined community chats",
+    "Hides joined community-chat rows from the main inbox on its next render. Keeps Search, community folders, delivery and unread counts unchanged.", "Inbox")
 @Suppress("unused")
 val hideGrowthPatch = controlPatch("growth", "Hide growth prompts", "Hides the inbox's add-more-people promotion unit. " +
     "Also hides the tip sheets in notes, like Make my notes public, and the Share your own story card after someone else's stories.",

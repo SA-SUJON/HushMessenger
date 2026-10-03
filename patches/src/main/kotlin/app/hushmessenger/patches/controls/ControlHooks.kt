@@ -96,6 +96,7 @@ internal var messageIdGetterName: String = ""
 internal var messageIsUnsentGetterName: String = ""
 
 internal val expectedHooks = mapOf(
+    COMMUNITY_INBOX to setOf("LX/2GW;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
     "stories" to setOf("LX/1mi;->A00()Z"),
     "facebook" to setOf(
         "LX/Sc2;->A06()Z", "LX/YFi;->A04()Z", "LX/2aP;->A0C()Z", "LX/3Ec;->A00()Z",
@@ -160,6 +161,7 @@ internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToStr
 /** Match semantics first, then require the complete set from both tested APKs. */
 internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>> {
     val found = expectedHooks.keys.associateWith { mutableListOf<Method>() }
+    findCommunityInbox(classes)?.let { found.getValue(COMMUNITY_INBOX).add(it.render) }
     found.getValue("ai_sticker_cell").addAll(findAiStickerCells(classes))
     val adContract = classes.any { it.type == AD_ITEM } && classes.any { cls ->
         cls.type == IMMUTABLE_LIST && cls.methods.any {

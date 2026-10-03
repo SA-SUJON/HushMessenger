@@ -14,7 +14,7 @@ import org.xml.sax.InputSource
 
 /** Local tooling only. This class is excluded from the distributed bundle. */
 object CatalogTool {
-    private const val CONTROL_KEYS = 29
+    private const val CONTROL_KEYS = 30
 
     private fun dependency(patch: Patch<*>, ancestors: Set<Patch<*>> = emptySet()): JsonObject {
         require(patch !in ancestors) { "Cyclic patch dependency" }
@@ -104,7 +104,7 @@ object CatalogTool {
         require(version == properties.getProperty("version")) { "Bundle version differs from source" }
         val patches = loadPatchesFromJar(setOf(bundle))
         val patchNames = patches.map { requireNotNull(it.name) }.toSet()
-        require(patches.size == 32 && patchNames.size == 32) { "Expected 32 distinct visible patches but found ${patches.size} (names: ${patchNames.joinToString()})" }
+        require(patches.size == 33 && patchNames.size == 33) { "Expected 33 distinct visible patches but found ${patches.size} (names: ${patchNames.joinToString()})" }
         validateDefinitions(
             root.resolve("patches/src/main/kotlin/app/hushmessenger/patches/controls/MessengerControlsPatch.kt").readText(),
             root.resolve("extensions/messenger/src/main/java/app/hushmessenger/extension/SettingsActivity.java").readText(),
