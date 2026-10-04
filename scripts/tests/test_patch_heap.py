@@ -58,6 +58,7 @@ class PatchHeapChecks(unittest.TestCase):
             with (
                 patch.object(checker, "ROOT", root),
                 patch.object(checker, "recorded_builds", return_value=builds),
+                patch.object(checker, "supported_codes", return_value=set(builds)),
                 patch.object(checker, "verify_development", return_value="metadata OK"),
                 patch.object(checker, "check_build", side_effect=check_build),
                 patch.object(
@@ -69,6 +70,47 @@ class PatchHeapChecks(unittest.TestCase):
             self.assertEqual(set(builds), set(checked))
             self.assertEqual(len(builds), len(checked))
             self.assertLessEqual(peak, 2, "the gate started too many JVM jobs at once")
+
+    def test_full_gate_covers_every_recorded_build_of_every_supported_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "frozen.mpp"
+            bundle.write_bytes(b"unchanged frozen bundle")
+            index = root / "patches-bundle.json"
+            index.write_text("{}")
+            (root / "patches-list.json").write_text(
+                json.dumps(
+                    {"patches": [{"name": "Material You theme"}, {"name": "Other"}]}
+                )
+            )
+            args = argparse.Namespace(
+                codes=None,
+                bundle=bundle,
+                bundle_sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
+                held_index_sha256=hashlib.sha256(index.read_bytes()).hexdigest(),
+            )
+            checked = []
+            guard = Lock()
+
+            def check_build(_args, code, _expected, _names):
+                with guard:
+                    checked.append(code)
+                return f"PASS {code}"
+
+            # The real records and supported codes, not fixtures: 580 and 581 together.
+            with (
+                patch.object(checker, "ROOT", root),
+                patch.object(checker, "verify_development", return_value="metadata OK"),
+                patch.object(checker, "check_build", side_effect=check_build),
+                patch.object(
+                    checker.argparse.ArgumentParser, "parse_args", return_value=args
+                ),
+                redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(0, checker.main())
+            self.assertEqual(sorted(checker.recorded_builds()), sorted(checked))
+            self.assertIn(346013387, checked)
+            self.assertIn(346213494, checked)
 
     def test_corrupt_output_entry_fails_that_build_and_keeps_the_others(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -107,6 +149,7 @@ class PatchHeapChecks(unittest.TestCase):
             with (
                 patch.object(checker, "ROOT", root),
                 patch.object(checker, "recorded_builds", return_value=builds),
+                patch.object(checker, "supported_codes", return_value=set(builds)),
                 patch.object(checker, "verify_development", return_value="metadata OK"),
                 patch.object(checker, "check_build", side_effect=check_build),
                 patch.object(
@@ -329,13 +372,17 @@ class PatchHeapChecks(unittest.TestCase):
             root = Path(directory)
             (root / "messenger-581-123.apk").write_bytes(b"stock")
             (root / "messenger-580-9123.apk").write_bytes(b"other build")
-            self.assertEqual(root / "messenger-581-123.apk", checker.stock_apk(root, 123))
+            self.assertEqual(
+                root / "messenger-581-123.apk", checker.stock_apk(root, 123)
+            )
             with self.assertRaisesRegex(ValueError, "found 0"):
                 checker.stock_apk(root, 456)
             (root / "messenger-580-123.apk").write_bytes(b"same code twice")
             with patch.object(checker.subprocess, "run") as run:
                 with self.assertRaisesRegex(ValueError, "found 2"):
-                    checker.check_build(argparse.Namespace(stock_dir=root), 123, "0" * 64, set())
+                    checker.check_build(
+                        argparse.Namespace(stock_dir=root), 123, "0" * 64, set()
+                    )
                 run.assert_not_called()
 
     def test_corrupt_frozen_zip_has_a_controlled_failure_before_patching(self):
@@ -360,6 +407,7 @@ class PatchHeapChecks(unittest.TestCase):
                     "recorded_builds",
                     return_value=dict.fromkeys(range(21), "hash"),
                 ),
+                patch.object(checker, "supported_codes", return_value=set(range(21))),
                 patch.object(
                     checker.argparse.ArgumentParser, "parse_args", return_value=args
                 ),
@@ -452,6 +500,9 @@ class PatchHeapChecks(unittest.TestCase):
                         checker,
                         "recorded_builds",
                         return_value=dict.fromkeys(range(count), "hash"),
+                    ),
+                    patch.object(
+                        checker, "supported_codes", return_value=set(range(21))
                     ),
                     patch.object(checker, "ThreadPoolExecutor") as pool,
                     redirect_stderr(error),

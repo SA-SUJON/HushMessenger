@@ -21,13 +21,26 @@ else:
     from verify_changed_apk_failure import recorded_builds
 
 ROOT = Path(__file__).resolve().parent.parent
+TARGET = ROOT / "patches/src/main/kotlin/app/hushmessenger/patches/MessengerTarget.kt"
+
+
+def supported_codes(target=TARGET):
+    """Every version code MessengerTarget.VERSIONS lists, across all supported version names."""
+    block = re.search(
+        r"val VERSIONS: .*?\n    \)", target.read_text(encoding="utf-8"), re.DOTALL
+    )
+    if not block:
+        raise ValueError(f"{target.name}: VERSIONS table not found")
+    return {int(code) for code in re.findall(r"\b\d{9}\b", block.group(0))}
 
 
 def stock_apk(stock_dir, code):
     """The one stock APK for a version code, named messenger-<major version>-<code>.apk."""
     found = sorted(stock_dir.glob(f"messenger-*-{code}.apk"))
     if len(found) != 1:
-        raise ValueError(f"{code}: expected one stock APK named messenger-<version>-{code}.apk, found {len(found)}")
+        raise ValueError(
+            f"{code}: expected one stock APK named messenger-<version>-{code}.apk, found {len(found)}"
+        )
     return found[0]
 
 
@@ -174,8 +187,10 @@ def main():
     args = parser.parse_args()
     try:
         builds = recorded_builds()
-        if len(builds) != 21:
-            raise ValueError("the complete gate requires 21 recorded builds")
+        if set(builds) != supported_codes():
+            raise ValueError(
+                "the complete gate requires a record for every supported build"
+            )
         codes = args.codes or sorted(builds)
         if len(codes) != len(set(codes)) or not set(codes) <= builds.keys():
             raise ValueError("codes must be distinct recorded version codes")
