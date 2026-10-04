@@ -4,6 +4,8 @@
 
 Development build 0.20.0. The public release remains 0.14.0.
 
+- Closing settings or canceling an update check no longer waits for a slow cache write. Pending writes from canceled checks are discarded, and an older write cannot replace a newer result.
+
 - Saving choices continues through rotation or closing settings, with the same 30-second limit and a completion or failure message. Closing the screen no longer cancels a save after its destination may have been emptied. Restores still cancel when settings close.
 
 - Compatibility profiles now require Desktop to apply every patch and rebuild the APK before the record is written. Discovery alone could previously accept a changed menu or drawer that the patcher rejected. The check rejects incomplete results and changing input files.
