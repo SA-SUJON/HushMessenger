@@ -494,12 +494,15 @@ internal fun MutableMethod.validatePluginGate() {
     }
 }
 
-/** Wrap both exits, including direct branches to a return. v5 stays intact on the inactive path. */
+/** The registers each release returns from its two exits, in order: v5 from both in 580, v7 then v2 in 581. */
+private val AD_FILTER_RESULTS = setOf(listOf(5, 5), listOf(7, 2))
+
+/** Wrap both exits, including direct branches to a return. The returned list stays intact on the inactive path. */
 internal fun MutableMethod.validateAdFilter(): List<Int> {
     val code = implementation!!.instructions
     val exits = code.indices.filter { code[it].opcode == Opcode.RETURN_OBJECT }
     if (implementation!!.registerCount != 24 || code.size != activeProfile.adFilterSize || exits != activeProfile.adFilterExits ||
-        exits.any { (code[it] as? OneRegisterInstruction)?.registerA != 5 }) {
+        exits.map { (code[it] as? OneRegisterInstruction)?.registerA ?: -1 } !in AD_FILTER_RESULTS) {
         throw PatchException("Messenger controls: the inbox ad filter exits differ from the tested build")
     }
     return exits
@@ -508,14 +511,15 @@ internal fun MutableMethod.validateAdFilter(): List<Int> {
 internal fun MutableMethod.injectAdFilter() {
     val exits = validateAdFilter()
     for (index in exits.reversed()) {
-        replaceInstruction(index, "invoke-static {v5}, $SETTINGS->filterInboxAds(Ljava/util/List;)Ljava/util/List;")
+        val result = (implementation!!.instructions[index] as OneRegisterInstruction).registerA
+        replaceInstruction(index, "invoke-static {v$result}, $SETTINGS->filterInboxAds(Ljava/util/List;)Ljava/util/List;")
         addInstructionsWithLabels(index + 1, """
             move-result-object v0
             if-eqz v0, :original_list
             invoke-static {v0}, $IMMUTABLE_LIST->copyOf(Ljava/util/Collection;)$IMMUTABLE_LIST
-            move-result-object v5
+            move-result-object v$result
             :original_list
-            return-object v5
+            return-object v$result
         """.trimIndent())
     }
 }
@@ -981,12 +985,17 @@ internal fun MutableMethod.injectOutgoingTyping() {
     """.trimIndent())
 }
 
-/** The Settings folder builder creates exactly one class: the Menu tab's folder row. */
+/**
+ * The Menu tab's folder row class, which the Settings row is built from. The builder may also make other folder rows
+ * of that class (581 adds the QR code row) and their folder keys, but nothing else.
+ */
 internal fun Method.menuFolderItemType(): String {
     val types = implementation!!.instructions.filter { it.opcode == Opcode.NEW_INSTANCE }
         .map { ((it as ReferenceInstruction).reference as TypeReference).type }.toSet()
-    return types.singleOrNull()
-        ?: throw PatchException("Messenger controls: menu settings item builder creates ${types.size} types, expected 1")
+    val row = ((implementation!!.instructions.elementAt(settingsRowCall()) as ReferenceInstruction).reference as DexMethodReference).definingClass
+    if (row !in types || types.any { it != row && !(it.startsWith(DRAWER_MODEL) && it.endsWith("FolderKey;")) })
+        throw PatchException("Messenger controls: menu settings item builder creates ${types.size} types, expected its row and folder keys")
+    return row
 }
 
 /** Messenger casts the tapped folder row just before its folder-selected trace section starts. */

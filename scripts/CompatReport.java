@@ -86,6 +86,8 @@ public class CompatReport {
     static final String STORY_CARD_DATE_KEY = "last_date_creation_card_shown";
     // The Notifications tab's server flag ID, renumbered by each release: 580's, then 581's
     static final Set<Long> PEOPLE_SERVER_FLAGS = Set.of(72344235860374863L, 72344231565407716L);
+    // The inbox ad filter's exit registers, in order: v5 from both in 580, v7 then v2 in 581
+    static final Set<List<Integer>> AD_FILTER_RESULTS = Set.of(List.of(5, 5), List.of(7, 2));
 
     // Material You theme finds its targets by shape when it patches (MaterialYouPatch.kt), so no profile records them
     static final String DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;";
@@ -469,8 +471,14 @@ public class CompatReport {
         if (ads.size() == 1) {
             var code = instructions(ads.get(0));
             var exits = new ArrayList<String>();
-            for (int i = 0; i < code.size(); i++) if (code.get(i).getOpcode() == Opcode.RETURN_OBJECT) exits.add(String.valueOf(i));
-            if (!exits.isEmpty()) {
+            var results = new ArrayList<Integer>();
+            for (int i = 0; i < code.size(); i++) {
+                if (code.get(i).getOpcode() != Opcode.RETURN_OBJECT) continue;
+                exits.add(String.valueOf(i));
+                results.add(code.get(i) instanceof OneRegisterInstruction r ? r.getRegisterA() : -1);
+            }
+            // ControlHooks.kt wraps each exit's own result register, so only the release-pinned pairs record
+            if (!exits.isEmpty() && ads.get(0).getImplementation().getRegisterCount() == 24 && AD_FILTER_RESULTS.contains(results)) {
                 found.fields.put("adFilterSize", String.valueOf(code.size()));
                 found.fields.put("adFilterExits", String.join(" ", exits));
             }
