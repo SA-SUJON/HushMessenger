@@ -90,8 +90,8 @@ internal fun screenshotViewerFixture(id: String, quickSize: Int = 438, castActiv
 
 internal fun aiStickerCellFixture(
     id: String = activeProfile.hooks.getValue("ai_sticker_cell").single(),
-    label: Int = GENERATE_AI_LABEL,
-    sourceCount: Int = 4,
+    label: Int = if (id.startsWith("LX/Ez5;")) GENERATE_AI_LABEL_581 else GENERATE_AI_LABEL,
+    sourceCount: Int = if (id.startsWith("LX/Ez5;")) 5 else 4,
 ): List<MutableClass> {
     val type = id.substringBefore("->")
     val superclass = when (type) { "LX/FTy;", "LX/FfQ;" -> "LX/1Hw;"; "LX/FSU;" -> "LX/1IL;"; "LX/Ez5;" -> "LX/1IO;"; else -> "LX/1Hx;" }
@@ -246,7 +246,8 @@ class NativeMediaControlsTest {
             val after = method.implementation!!.instructions.toList()
             assertEquals(before, after.drop(10))
             assertEquals("${method.definingClass}->A00:I", (after[1] as ReferenceInstruction).reference.toString())
-            assertEquals(GENERATE_AI_LABEL, (after[2] as NarrowLiteralInstruction).narrowLiteral)
+            val label = if (method.definingClass == "LX/Ez5;") GENERATE_AI_LABEL_581 else GENERATE_AI_LABEL
+            assertEquals(label, (after[2] as NarrowLiteralInstruction).narrowLiteral)
             assertEquals(10, after.branchTarget(3))
             assertEquals(10, after.branchTarget(7))
             assertEquals(Opcode.IF_NE, after[3].opcode)
