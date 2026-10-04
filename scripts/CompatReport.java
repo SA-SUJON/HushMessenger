@@ -12,9 +12,9 @@
  * test checks each record against the Kotlin profiles, so the copies can't drift.
  *
  * Adding a build:
- *   CompatReport <apk> --save           records the build when every control resolves,
- *                                       and prints the Kotlin to paste. Otherwise it
- *                                       lists the controls that didn't resolve.
+ *   CompatReport <apk> --save <profiles dir> <desktop.jar> <bundle.mpp>
+ *                                     records the build only after Desktop applies
+ *                                     and rebuilds every patch, then prints Kotlin.
  *   CompatReport --kotlin <record.txt>  prints the Kotlin for a recorded build again.
  *
  * Compile:
@@ -276,6 +276,18 @@ public class CompatReport {
     }
 
     static final Path PROFILES = scriptDir().resolve("profiles");
+
+    /** Discovery isn't patch application. Never publish a profile on discovery evidence alone. */
+    static boolean verifyPatch(File apk, String apkHash, Path desktop, Path bundle) throws IOException, InterruptedException {
+        var command = new ArrayList<>(List.of("python", scriptDir().resolve("verify_compat_patch.py").toString(),
+            "--apk", apk.getAbsolutePath(), "--apk-sha256", apkHash, "--desktop", desktop.toAbsolutePath().toString(),
+            "--bundle", bundle.toAbsolutePath().toString(), "--java",
+            Path.of(System.getProperty("java.home"), "bin", "java").toString()));
+        var names = new TreeSet<>(PATCHES.keySet());
+        names.addAll(List.of("Install beside Meta apps", "Restore screens on re-signed builds", "Material You theme"));
+        for (var name : names) { command.add("--enable"); command.add(name); }
+        return new ProcessBuilder(command).inheritIO().start().waitFor() == 0;
+    }
 
     /** Version code -> recorded build. */
     static Map<String, Profile> recorded(Path dir) throws IOException {
@@ -2639,8 +2651,8 @@ public class CompatReport {
         if (args.length == 2 && "--kotlin".equals(args[0])) {
             System.exit(printKotlin(Path.of(args[1])));
         }
-        if (args.length < 1 || args.length > 3 || (args.length > 1 && !"--save".equals(args[1]))) {
-            System.err.println("Usage: CompatReport <apk> [--save [<profiles dir>]]");
+        if (args.length < 1 || (args.length > 3 && args.length != 5) || (args.length > 1 && !"--save".equals(args[1]))) {
+            System.err.println("Usage: CompatReport <apk> [--save <profiles dir> <desktop.jar> <bundle.mpp>]");
             System.err.println("       CompatReport --kotlin <recorded build .txt>");
             System.exit(2);
         }
@@ -2812,16 +2824,25 @@ public class CompatReport {
             }
         }
 
+        // Even re-recording a known build requires current patch application evidence.
+        if (save && problems.isEmpty() && blockers.isEmpty()) {
+            if (args.length != 5 || !verifyPatch(apk, found.sha256, Path.of(args[3]), Path.of(args[4]))) {
+                System.out.println("PROFILE: not written. --save requires a successful Desktop run; supply <profiles dir> <desktop.jar> <bundle.mpp>.");
+                printKotlin(found, builds.values());
+                System.exit(1);
+            }
+        }
+
         // The build's profile: recorded already, written now, or the controls that keep it from being written
         System.out.println();
         if (!problems.isEmpty()) {
             System.out.println("PROFILE: not written. These controls did not resolve:");
             for (var problem : problems) System.out.println("       " + problem);
             anyFail = true;
-        } else if (expected != null && expected.sameControls(found) && expected.dexSites.equals(found.dexSites)) {
+        } else if (!save && expected != null && expected.sameControls(found) && expected.dexSites.equals(found.dexSites)) {
             System.out.println("PROFILE: matches scripts/profiles/" + found.code + ".txt" +
                 (expected.sha256.equals(found.sha256) ? "" : " (from a different APK file than the recorded one)"));
-        } else if (expected != null) {
+        } else if (expected != null && (!expected.sameControls(found) || !expected.dexSites.equals(found.dexSites))) {
             System.out.println("PROFILE: differs from scripts/profiles/" + found.code + ".txt; see the failures above.");
             anyFail = true;
         } else if (!blockers.isEmpty()) {
