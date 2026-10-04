@@ -236,22 +236,23 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
         }
     }
     var searchFieldRender: Method? = null
+    var changedViewer = false
     for (cls in classes) {
         val original = cls.fields.firstOrNull { it.name == "__redex_internal_original_name" }
             ?.initialValue.let { (it as? StringEncodedValue)?.value }
         for (method in cls.methods) {
-            val instructions = method.implementation?.instructions?.toList() ?: continue
-            val refs = instructions.mapNotNull { (it as? ReferenceInstruction)?.reference }
-            val strings = refs.filterIsInstance<StringReference>().map { it.string }.toSet()
-            val gate = method.returnType == "Z" && method.parameterTypes.isEmpty()
             fun add(key: String) { found.getValue(key).add(method) }
             if ((cls.type == EPHEMERAL_VIEWER && (method.name in EPHEMERAL_DIALOGS || method.name == "onResume")) ||
                 (cls.type == QUICKSNAP_VIEWER && method.name == "onCreateView")) {
                 try {
                     method.screenshotViewerSites()
                     add("screenshot_viewers")
-                } catch (_: PatchException) { /* This viewer is unavailable; unrelated controls still resolve. */ }
+                } catch (_: PatchException) { changedViewer = true }
             }
+            val instructions = method.implementation?.instructions?.toList() ?: continue
+            val refs = instructions.mapNotNull { (it as? ReferenceInstruction)?.reference }
+            val strings = refs.filterIsInstance<StringReference>().map { it.string }.toSet()
+            val gate = method.returnType == "Z" && method.parameterTypes.isEmpty()
             if (method.returnType == "Z" && (method.parameterTypes.isEmpty() ||
                 (AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type)))) {
                 for ((key, spec) in pluginGates) if (strings.any { it in spec.anchors }) add(key)
@@ -404,6 +405,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
         chip?.methods?.singleOrNull { it.name == "render" && it.returnType == field.returnType }
             ?.let { found.getValue("ai_search_chip").add(it) }
     }
+    if (changedViewer) found.getValue("screenshot_viewers").clear()
     return found
 }
 

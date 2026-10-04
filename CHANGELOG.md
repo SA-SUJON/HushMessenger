@@ -4,6 +4,8 @@
 
 Development build 0.20.0. The public release remains 0.14.0.
 
+- Community filtering preserves the native list type and checks backward and switch branches before reusing temporary values. Screenshot support now stays unavailable if any matching viewer method changes, even when the original methods still exist. Other controls remain available.
+
 - Profile recording now parses the rebuilt manifest, resource table and every DEX. A successful Desktop report and valid ZIP are no longer enough to accept malformed APK contents.
 
 - Changed media-viewer or community code now leaves those controls unavailable while other patches can still apply. Community discovery runs once during setup and reuses fixed method identifiers while checking the APK. Manager 1.33.0 applied all 33 patches to Messenger 581 at its unchanged 640 MB limit, with a 288 MB peak.

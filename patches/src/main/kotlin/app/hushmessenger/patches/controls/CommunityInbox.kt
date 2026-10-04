@@ -1,10 +1,8 @@
 package app.hushmessenger.patches.controls
 
-import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
-import app.morphe.patcher.util.smali.ExternalLabel
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
@@ -43,7 +41,7 @@ private fun Instruction.communityArgs(): List<Int> = when (this) {
     else -> emptyList()
 }
 private fun Instruction.communityWrites(register: Int) = opcode.setsRegister() &&
-    this is OneRegisterInstruction && (registerA == register || ("WIDE" in opcode.toString() && registerA + 1 == register))
+    this is OneRegisterInstruction && (registerA == register || (opcode.setsWideRegister() && registerA + 1 == register))
 private fun Instruction.communityReads(register: Int): Boolean {
     val name = opcode.toString()
     fun source(value: Int) = value == register || (("WIDE" in name || "LONG" in name || "DOUBLE" in name) && value + 1 == register)
@@ -257,7 +255,7 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
     } catch (_: CommunityChanged) { return null }
 }
 
-/** Read two is consumed only as List; the first empty/header read and capture stay stock. */
+/** Preserve the first empty/header read and capture, and prove scratch liveness along every successor. */
 internal fun Method.communityReadSite(scope: String): Int {
     val c = communityCode()
     val listField = "$definingClass->\$inboxUnitItems:$IMMUTABLE_LIST"
@@ -272,7 +270,35 @@ internal fun Method.communityReadSite(scope: String): Int {
         c[at + 10].opcode == Opcode.MOVE_OBJECT_FROM16 && (c[at + 10] as? TwoRegisterInstruction)?.let { it.registerA == 17 && it.registerB == 0 } == true &&
         c[at + 11].opcode == Opcode.INVOKE_STATIC_RANGE && (c[at + 11].communityRef() as? MethodReference)?.parameterTypes?.map(CharSequence::toString)?.let { it.size == 12 && it.last() == "Ljava/util/List;" } == true &&
         c[at + 11].communityArgs().last() == 17 && (at + 1 until at + 10).none { c[it].communityWrites(0) } &&
-        jumpTargets().none { it in at + 1..at + 11 } && c.drop(at + 1).none { it.communityReads(1) || it.communityReads(3) })
+        jumpTargets().none { it in at + 1..at + 11 })
+    val addresses = IntArray(c.size + 1)
+    for (index in c.indices) addresses[index + 1] = addresses[index] + c[index].codeUnits
+    val indexAt = c.indices.associateBy { addresses[it] }
+    for (register in listOf(1, 3)) {
+        val pending = ArrayDeque<Int>()
+        val seen = mutableSetOf<Int>()
+        pending.add(at + 1)
+        while (pending.isNotEmpty()) {
+            val index = pending.removeFirst()
+            if (!seen.add(index)) continue
+            val instruction = c[index]
+            communityRequire(!instruction.communityReads(register))
+            if (instruction.communityWrites(register)) continue
+            if (instruction is OffsetInstruction && instruction.opcode != Opcode.FILL_ARRAY_DATA) {
+                val landing = indexAt[addresses[index] + instruction.codeOffset] ?: throw CommunityChanged()
+                if (instruction.opcode == Opcode.PACKED_SWITCH || instruction.opcode == Opcode.SPARSE_SWITCH) {
+                    val payload = c[landing] as? SwitchPayload ?: throw CommunityChanged()
+                    for (element in payload.switchElements) {
+                        pending.add(indexAt[addresses[index] + element.offset] ?: throw CommunityChanged())
+                    }
+                } else pending.add(landing)
+            }
+            if (instruction.opcode.canContinue()) {
+                communityRequire(index + 1 < c.size)
+                pending.add(index + 1)
+            }
+        }
+    }
     return at
 }
 
@@ -338,6 +364,8 @@ internal fun injectCommunityInbox(contract: CommunityInboxContract, render: Muta
         if-eq v0, v1, :stock_list
         invoke-static {v0}, $COMMUNITY_LIST_COPY
         move-result-object v0
-    """.trimIndent(), ExternalLabel("stock_list", render.getInstruction(at + 1)))
+        :stock_list
+        check-cast v0, $IMMUTABLE_LIST
+    """.trimIndent())
     return listOf(joinedHelper, scopeHelper)
 }

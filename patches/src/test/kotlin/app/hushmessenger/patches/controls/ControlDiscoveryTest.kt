@@ -158,6 +158,20 @@ class ControlDiscoveryTest {
         validateControls(found, expectedHooks.keys - COMMUNITY_INBOX)
     }
 
+    @Test fun anExtraInvalidViewerDisablesTheWholeControlInEitherMethodOrder() {
+        for (first in listOf(false, true)) {
+            val classes = completeFixture()
+            val viewer = classes.single { it.type == EPHEMERAL_VIEWER }
+            val extra = fixtureMethod("$EPHEMERAL_VIEWER->onResume(I)V", "return-void", 2)
+            val methods = viewer.methods.toList()
+            val changed = fixtureClass(viewer.type, if (first) listOf(extra) + methods else methods + extra)
+            val found = findControls(classes.filter { it !== viewer } + changed)
+            validateControls(found, expectedHooks.keys - "screenshot_viewers")
+            assertTrue(found.getValue("screenshot_viewers").isEmpty())
+            assertFailsWith<PatchException> { validateControls(found, setOf("screenshot_viewers")) }
+        }
+    }
+
     @Test fun peopleTabHandlerIsFoundOnlyThroughItsFetchCoroutine() {
         val fixture = completeFixture()
         validateControls(findControls(fixture), setOf("people_tab"))
