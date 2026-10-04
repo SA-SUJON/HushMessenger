@@ -1311,6 +1311,32 @@ public final class SettingsActivity extends Activity {
                 if (provider != null && (context.getPackageName().equals(provider.packageName) ||
                         (provider.applicationInfo != null && provider.applicationInfo.uid == android.os.Process.myUid())))
                     throw new SecurityException("Choices document belongs to this app");
+                if (request == SAVE_CHOICES) {
+                    android.net.Uri media = "media".equals(authority) ? uri : null;
+                    boolean mediaDocument = "com.android.providers.media.documents".equals(authority);
+                    if (android.os.Build.VERSION.SDK_INT >= 29 && (mediaDocument ||
+                            "com.android.externalstorage.documents".equals(authority))) {
+                        media = android.provider.MediaStore.getMediaUri(context, uri);
+                    }
+                    if (mediaDocument && media == null)
+                        throw new SecurityException("Choices media ownership is unavailable");
+                    if (media != null) {
+                        if (android.os.Build.VERSION.SDK_INT < 29)
+                            throw new SecurityException("Choices media ownership is unavailable");
+                        // A third-party picker can return MediaStore rows owned by Messenger.
+                        // Check before opening with wt, which can truncate immediately.
+                        try (android.database.Cursor row = context.getContentResolver().query(media,
+                                new String[] {android.provider.MediaStore.MediaColumns.OWNER_PACKAGE_NAME},
+                                null, null, null, cancellation)) {
+                            if (row == null || !row.moveToFirst())
+                                throw new SecurityException("Choices media ownership is unavailable");
+                            String ownerPackage = row.getString(row.getColumnIndexOrThrow(
+                                    android.provider.MediaStore.MediaColumns.OWNER_PACKAGE_NAME));
+                            if (ownerPackage == null || ownerPackage.isEmpty() || context.getPackageName().equals(ownerPackage) || row.moveToNext())
+                                throw new SecurityException("Choices media is private or has unknown ownership");
+                        }
+                    }
+                }
                 try (android.content.res.AssetFileDescriptor opened = context.getContentResolver()
                         .openAssetFileDescriptor(uri, request == SAVE_CHOICES ? "wt" : "r", cancellation)) {
                     if (opened == null) throw new java.io.IOException("No choices document");

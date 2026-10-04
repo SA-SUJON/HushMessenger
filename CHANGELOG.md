@@ -4,6 +4,10 @@
 
 Development build 0.20.0. The public release remains 0.14.0.
 
+- Retained unsent markers are capped at 4,096 IDs and no longer share the settings monitor. This only prunes markers, never message content.
+- Choices saves check media-row ownership before opening the destination for writing. A picker can't use a Messenger-owned MediaStore row to overwrite its content.
+- An original-photo success callback that throws no longer receives a second failure callback or loses the copy it was handed.
+
 - Theme return hooks keep incoming branches attached to the color helper. Menu binding rejects reused holder registers before making changes, and the story Save helper is retained even when the patcher has already cached direct methods.
 
 - Community filtering preserves the native list type and checks backward and switch branches before reusing temporary values. Screenshot support now stays unavailable if any matching viewer method changes, even when the original methods still exist. Other controls remain available.
