@@ -4,6 +4,8 @@
 
 Development build 0.20.0. The public release remains 0.14.0.
 
+- Saving choices continues through rotation or closing settings, with the same 30-second limit and a completion or failure message. Closing the screen no longer cancels a save after its destination may have been emptied. Restores still cancel when settings close.
+
 - Compatibility profiles now require Desktop to apply every patch and rebuild the APK before the record is written. Discovery alone could previously accept a changed menu or drawer that the patcher rejected. The check rejects incomplete results and changing input files.
 
 - Development now patches Messenger **581.0.0.49.91** as well as 580.0.0.49.91 ([#29](https://github.com/SysAdminDoc/HushMessenger/issues/29)). All 16 arm64 builds APKMirror lists for 581 pass the off-device compatibility checks, and Morphe Desktop 1.18.0 applied all 33 patches to build 346213494. Meta renumbered two server flags and moved several screens around in 581, so People You May Know, joined community chats, inbox ads, the AI sticker Generate buttons, screenshots in view-once media, Native Bubbles and the HushMessenger menu row now follow the new layout. On 581 the HushMessenger row sits right under Settings, above the new QR code row. The 580 builds patch exactly as before.

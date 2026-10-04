@@ -268,7 +268,13 @@ public final class SettingsActivity extends Activity {
 
     @Override protected void onDestroy() {
         documentGeneration++;
-        cancelDocumentJob(null);
+        if (documentJob != null && documentJob.request == SAVE_CHOICES) {
+            // The provider may already have truncated the file. Finish this authorized save,
+            // keeping its original deadline and only an application context after the screen closes.
+            documentJob.owner.clear();
+            documentJob = null;
+            documentBusy = false;
+        } else cancelDocumentJob(null);
         cancelUpdateCheck();
         super.onDestroy();
     }
@@ -1224,6 +1230,7 @@ public final class SettingsActivity extends Activity {
         final android.net.Uri uri;
         final int request;
         final String export, before;
+        final String savedMessage, failedMessage, timeoutMessage;
         final long generation;
         final android.os.CancellationSignal cancellation = new android.os.CancellationSignal();
         final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -1241,11 +1248,18 @@ public final class SettingsActivity extends Activity {
             this.uri = uri;
             this.request = request;
             this.export = export;
+            savedMessage = screen.text.get("choices_file_saved");
+            failedMessage = screen.text.get("export_failed");
+            timeoutMessage = screen.text.get("choices_file_timeout");
             generation = screen.documentGeneration;
             before = ChoiceCodec.encode(Settings.preferences, Settings.installed);
             deadline = () -> {
                 SettingsActivity current = owner.get();
                 if (current != null && current.documentJob == this) current.cancelDocumentJob("choices_file_timeout");
+                else if (!canceled) {
+                    cancel();
+                    Toast.makeText(context, timeoutMessage, Toast.LENGTH_LONG).show();
+                }
             };
             worker = new Thread(this, "HushChoicesDocument");
             worker.setDaemon(true);
@@ -1341,6 +1355,8 @@ public final class SettingsActivity extends Activity {
                 handler.post(() -> {
                     SettingsActivity screen = owner.get();
                     if (screen != null) screen.finishDocumentJob(this, completed, result);
+                    else if (request == SAVE_CHOICES && !canceled)
+                        Toast.makeText(context, completed ? savedMessage : failedMessage, Toast.LENGTH_LONG).show();
                 });
                 release();
             }

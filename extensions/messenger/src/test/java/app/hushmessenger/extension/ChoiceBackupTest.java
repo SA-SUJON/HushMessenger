@@ -627,6 +627,64 @@ public class ChoiceBackupTest {
         } finally { release.countDown(); finishWorkers(); }
     }
 
+    @Test public void aStartedSaveFinishesAfterRotationOrBackWithoutKeepingTheScreen() throws Exception {
+        for (boolean rotate : new boolean[] {false, true}) {
+            CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1);
+            var canceled = new java.util.concurrent.atomic.AtomicBoolean();
+            var bytes = new ByteArrayOutputStream() {
+                @Override public synchronized void write(byte[] data) throws java.io.IOException {
+                    started.countDown();
+                    while (release.getCount() != 0) {
+                        try { release.await(); } catch (InterruptedException ignored) { }
+                    }
+                    super.write(data);
+                }
+            };
+            try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+                SettingsActivity original = screen.get();
+                Settings.installed = new HashSet<>(Set.of("stories"));
+                String expected = ChoiceCodec.encode(Settings.preferences, Settings.installed);
+                Uri uri = Uri.parse("content://choices/save-after-close");
+                Shadows.shadowOf(original.getContentResolver()).registerOutputStream(uri, bytes);
+                DocumentResolver.onOpen = signal -> signal.setOnCancelListener(() -> canceled.set(true));
+                startFile(original, true, uri);
+                assertTrue(started.await(5, TimeUnit.SECONDS));
+                Object job = org.robolectric.util.ReflectionHelpers.getField(original, "documentJob");
+                java.lang.ref.WeakReference<?> owner = org.robolectric.util.ReflectionHelpers.getField(job, "owner");
+                if (rotate) screen.recreate();
+                else screen.pause().stop().destroy();
+                assertNull(owner.get());
+                release.countDown();
+                finishWorkers();
+                assertFalse("Closing the screen must not cancel an authorized save", canceled.get());
+                assertEquals(expected, bytes.toString(StandardCharsets.UTF_8));
+                assertEquals("Choices file saved", ShadowToast.getTextOfLatestToast());
+            } finally { release.countDown(); finishWorkers(); }
+        }
+    }
+
+    @Test public void aDetachedSaveStillTimesOutAndReportsTheIncompleteFile() throws Exception {
+        CountDownLatch started = new CountDownLatch(1), canceled = new CountDownLatch(1);
+        SettingsActivity.documentTimeoutMillis = 100;
+        DocumentResolver.onOpen = signal -> {
+            signal.setOnCancelListener(canceled::countDown);
+            started.countDown();
+            try { canceled.await(5, TimeUnit.SECONDS); }
+            catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+            signal.throwIfCanceled();
+        };
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            startFile(screen.get(), true, Uri.parse("content://choices/detached-timeout"));
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            screen.pause().stop().destroy();
+            assertEquals(1, canceled.getCount());
+            Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(101));
+            assertTrue(canceled.await(5, TimeUnit.SECONDS));
+            finishWorkers();
+            assertEquals("The file operation took too long. Try again. A save may leave an incomplete file.", ShadowToast.getTextOfLatestToast());
+        } finally { canceled.countDown(); finishWorkers(); SettingsActivity.documentTimeoutMillis = 30_000; }
+    }
+
     @Test public void realDescriptorSlicesPreserveInputAndOutputBoundaries() throws Exception {
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
             SettingsActivity activity = screen.get();
