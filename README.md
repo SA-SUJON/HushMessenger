@@ -1,10 +1,10 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.19.3-0084FF" alt="Development 0.19.3"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.20.0-0084FF" alt="Development 0.20.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
-  <img src="https://img.shields.io/badge/Messenger-580.0.0.49.91-0084FF" alt="Messenger 580.0.0.49.91">
+  <img src="https://img.shields.io/badge/Messenger-580%20and%20581-0084FF" alt="Messenger 580.0.0.49.91 and 581.0.0.49.91">
   <img src="https://img.shields.io/badge/status-preview-8A2BE2" alt="Preview release">
 </p>
 
@@ -12,7 +12,7 @@
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 33 patches. 30 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-The source builds development v0.19.3. The public download and Morphe source serve v0.14.0. Settings give each control's full row one accessible touch target. Development also extends AI sticker hiding to Generate buttons and screenshot access to view-once media and Quicksnap. Hide joined community chats now removes joined channels and announcements from the main Chats display. It starts off and keeps the original list for Off or Pause. Changes apply on the next inbox render.
+The source builds development v0.20.0. The public download and Morphe source serve v0.14.0. Development adds Messenger 581.0.0.49.91, every arm64 build APKMirror lists under that name. Settings give each control's full row one accessible touch target. Development also extends AI sticker hiding to Generate buttons and screenshot access to view-once media and Quicksnap. Hide joined community chats now removes joined channels and announcements from the main Chats display. It starts off and keeps the original list for Off or Pause. Changes apply on the next inbox render.
 
 v0.14.0 adds **Native Bubbles** to **Allow chat bubbles** ([#19](https://github.com/SysAdminDoc/HushMessenger/issues/19)) and **Slide chats in and out**, an optional slide for chats you open from the chat list or search ([#28](https://github.com/SysAdminDoc/HushMessenger/issues/28)). Settings now open from Messenger's side menu as well as its Menu tab ([#26](https://github.com/SysAdminDoc/HushMessenger/issues/26)), and **Use system emoji** draws your phone's own emoji on Android 12 and newer ([#25](https://github.com/SysAdminDoc/HushMessenger/issues/25)). On Root Mount installs, HushMessenger adds the **Patch controls** and **Restart Messenger** shortcuts itself, because Android never reads the patched ones there ([#27](https://github.com/SysAdminDoc/HushMessenger/issues/27)). The [changelog](CHANGELOG.md) has the rest.
 
@@ -199,13 +199,16 @@ Always on. It adds a **HushMessenger** row right under Settings in Messenger's *
 | Field | Value |
 | --- | --- |
 | Package | `com.facebook.orca` |
-| Version | `580.0.0.49.91` |
+| Version | `580.0.0.49.91`, plus `581.0.0.49.91` in development builds |
 | Version codes | `346013354`, `346013355`, `346013356`, `346013357`, `346013358`, `346013359`, `346013370`, `346013372`, `346013374`, `346013375`, `346013387`, `346013391`, `346013394`, `346013423`, `346013427`, `346013440`, `346013441`, `346013442`, `346013443`, `346013444`, `346013445` |
+| 581 version codes | `346213494`, `346213498`, `346213510`, `346213514`, `346213528`, `346213531`, `346213532`, `346213564`, `346213567`, `346213568`, `346213580`, `346213581`, `346213582`, `346213583`, `346213584`, `346213585` |
 | Architecture | `arm64-v8a` |
 | Minimum Android version | Android 9 (API 28) |
-| APKMirror downloads | [All variants of 580.0.0.49.91](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/). Every arm64 one works. |
+| APKMirror downloads | [All variants of 580.0.0.49.91](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-580-0-0-49-91-release/). Every arm64 one works. [All variants of 581.0.0.49.91](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-581-0-0-49-91-release/). Every arm64 one works with development builds. |
 
 APKMirror's 580.0.0.49.91 release has 25 variants, and all 21 arm64 ones are supported. Six are "nodpi" builds: `346013354` (a bundle), `346013370`, `346013387`, `346013394`, `346013423` and `346013440`. The other 15 are each made for one screen density, and `346013442` is also on APKPure. The four 32-bit (armeabi-v7a) variants aren't supported. Meta's build tooling gives the same code different internal names from one build to the next, so the patch keeps a checked list per naming. One list covers eight builds, and four more cover the other 13. A build that isn't listed here is rejected before anything changes. Builds `346013354` ([issue 3](https://github.com/SysAdminDoc/HushMessenger/issues/3)) and `346013370` ([issue 1](https://github.com/SysAdminDoc/HushMessenger/issues/1), [issue 8](https://github.com/SysAdminDoc/HushMessenger/issues/8)) were the first ones people ran into.
+
+Development v0.20.0 adds Messenger 581.0.0.49.91. APKMirror lists 19 variants of it, and all 16 arm64 ones are supported, including `346213583`, which it labels a bundle. All 16 share one internal naming. The public v0.14.0 download patches 580 builds, so pair it with a 580 APK until a release carries 581.
 
 SHA-256 of the stock base APKs used for the off-device checks:
 
@@ -233,13 +236,34 @@ SHA-256 of the stock base APKs used for the off-device checks:
 346013445  927a238854c21a8e23106a725c72a24c5d068b9190a73aff1b86002e878279e7
 ```
 
+And for 581.0.0.49.91:
+
+```text
+346213494  8c1dfe7313236ca7c257298f50d6603912e0048389fc4903caedb88b87d94045
+346213498  2aef7ef8a078916966440cf26576a8075a7411681478b9f9018b0e60d40ba976
+346213510  ebac6d63d47a2e41046245d7cf5a00cd8786c746fb5ea8ec1146a834f58bd2e3
+346213514  1730d25ca482aab14a52819e3c0fad7da12672794447ecd0c7052a2ea605eae6
+346213528  a4f5aaa3f236c1c8d9b3bec140dadc1fe8d9beb593dcc7f94c5328f6d3ee9066
+346213531  8c3a90ca89321fbc6618244df3f6bc81856dd47d17097ae3786dd0885234100a
+346213532  49df7d88c1b063b3abf21b49652a4d2c6d03225f348ae8c9f57be22aa5574e19
+346213564  a37d615b71b82bbc296c6f3641fa13941fcc1637e41b6ec5123b7d931de72d1a
+346213567  df5f8e4a85fd5ce697129ec7b4aa2aba36402d26218861d6399ff1452aa4b7f9
+346213568  8d73cfd218f5ff4d71b586edb61c650d95574f8da661d357af1acc53433e6f7c
+346213580  92c7c68d3495aeb60722310e42dc3074fcded8358f0a8bf97741ac729e3c138e
+346213581  261f5baea4e5e8cb97ebe77b9ebe89fad531022c816f126354ba7fdad9da7fed
+346213582  e471f45825c2e981e2c070271504ffb4caeab63bfe4333a6ba3288eb56e71cc2
+346213583  cd9325e63bbafac6a40dd694988ce22f7b2f9318f3a8cde6981599d61d0cd329
+346213584  46fb373a50587f681e1e28a676740cf7c7f5b9f3c4e8d752ffae9469253aeb8c
+346213585  95095ea4207743e3c92fe39b05d033a504dee73b90651a8f10147d8852f40ac2
+```
+
 On Windows, compare your file with `Get-FileHash -Algorithm SHA256 .\messenger.apk`. Meta can publish different APKs under one version name. If the hash differs, don't assume the off-device result applies to your file. The patch also checks its permission layout and instruction sites.
 
 ## Verification and build
 
 The Galaxy S25 took each update in place with the same signing key as its installed Messenger and Facebook apps, keeping its original install date, its sign-in and 19 enabled controls. With the v0.5.0 patch code it passed voice calls, one-to-one notifications, silence for muted chats, facebook.com links opening the Facebook app, and a same-key update and rollback that kept all data. Turning switches on and off showed the expected change for Facebook shortcuts, stories and notes, the Meta AI button, the "Ask Meta AI" search button, People You May Know on the Notifications tab, external links, system emoji and the avatar sticker tab. A two-phone check in an end-to-end encrypted chat showed no typing indicator with the switch on and the usual one while paused, and messages still arrived. Restart Messenger refuses requests from other apps, while the long-press shortcut and the App tab button still restart into the signed-in chat list. At Android's largest font size the chat list, chats and settings stayed usable. The Galaxy S22 now runs a patched build as well.
 
-The source baseline on 2026-10-03 passed all 164 Kotlin cases with no skips. That run includes native-media and joined-community replays against all 21 exact APKs. All 644 Android unit cases passed too. The updated Python suite passes 55 checks, including complete scheduling under the concurrency limit and subprocess exit diagnostics. Coverage includes partial patch selection, failed targets, safe-mode recovery, bounded file operations, release-cache policy and control scope in copied setup details. Release builds run locally. Android lint reports no errors, ten warnings and one hint, including two package-visibility notices for queries restricted to this app.
+The development 0.20.0 source passed all 170 Kotlin cases with no skips on 2026-10-03. That run includes native-media and joined-community replays against all 37 exact APKs, the 21 from 580 and the 16 from 581. All 659 Android unit cases passed too. Morphe Desktop 1.18.0 then applied all 33 patches, Material You included, to 581 build `346213494`. The updated Python suite passes 63 checks, including complete scheduling under the concurrency limit and subprocess exit diagnostics. Coverage includes partial patch selection, failed targets, safe-mode recovery, bounded file operations, release-cache policy and control scope in copied setup details. Release builds run locally. Android lint reports no errors, ten warnings and one hint, including two package-visibility notices for queries restricted to this app.
 
 For v0.14.0, Morphe Desktop 1.18.0 applied all 32 patches, Material You included, to private copies of all 21 supported builds with a 1024 MB Java heap, and `scripts/verify_patch_heap.py` passed every output. One build from each of the five naming groups (`346013440`, `346013372`, `346013423`, `346013357` and `346013374`) was also patched and signed, and Android verified each v3 signature. Two clean release builds, one of them from a fresh checkout, produced the same bundle checksum. The three rebuilt v0.5.0 APKs kept their 13 compressed arm64 libraries byte for byte, with 16KB minimum ELF load alignment. A changed permission fixture stopped before output, and continued exports left failed People methods and permission declarations untouched. The earlier v0.2.0 single-control Galaxy S25 build selected only **Hide People You May Know**. It changed exactly the two expected host methods, added settings once and recorded only that feature. The original signature-permission patch wasn't selected or applied in that check. On 2026-09-30, builds `346013394` and `346013423` took all 27 patches in Desktop 1.17.0 too, and both outputs passed Android's v3 signature check and 16KB alignment. Later that day the 14 single-density builds did the same. Every one of the 21 builds has a committed hook record from `scripts/CompatReport.java`, and a test fails the build if a record and the patch code disagree.
 
@@ -274,16 +298,16 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The native-media and joined-community replay tests use private APK inputs. Set `HUSH_NATIVE_FIXTURES` to the folder of exact stock APKs before testing, with the file names described below. Without those inputs, both optional replay tests are skipped. Report those skips separately from a run with the actual inputs. Finish the tests before the final `:patches:buildAndroid` invocation. A later Gradle task can replace the intermediate archive with a Java-only bundle.
+The native-media and joined-community replay tests use private APK inputs. Set `HUSH_NATIVE_FIXTURES` to the folder of exact stock APKs for every supported build before testing, with the file names described below. Without those inputs, both optional replay tests are skipped. Report those skips separately from a run with the actual inputs. Finish the tests before the final `:patches:buildAndroid` invocation. A later Gradle task can replace the intermediate archive with a Java-only bundle.
 
 While the public source is held, validate development separately and freeze its Android-ready bytes in a new folder outside Gradle's outputs. Record the feed hash before making changes. The command below reloads the actual bundle, checks its exact catalog and control definitions, and walks both DEX files. It checks DEX checksums and section bounds, then reads and rebuilds the class data in memory. This is a structural check. Running inside Android remains a separate check.
 
 ```powershell
 $heldHash = (Get-FileHash .\patches-bundle.json -Algorithm SHA256).Hash.ToLowerInvariant()
-$freeze = Join-Path $env:TEMP "hushmessenger-0.19.3"
+$freeze = Join-Path $env:TEMP "hushmessenger-0.20.0"
 .\gradlew.bat :patches:buildAndroid --no-daemon
 python scripts/check_release.py --development --held-index-sha256 $heldHash --freeze $freeze
-$bundle = Join-Path $freeze "patches-0.19.3.mpp"
+$bundle = Join-Path $freeze "patches-0.20.0.mpp"
 $bundleHash = (Get-FileHash $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
 ```
 
@@ -291,7 +315,7 @@ The destination must be new. It contains the bundle, exact catalog evidence and 
 
 Validation parses the mapped data in both DEX files and checks section counts against their bounds. References must point to the start of the item they use. Cached catalog checks preserve JSON types, so a number can't stand in for a switch default.
 
-To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-580-<version code>.apk`. Run this with Desktop 1.18.0 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
+To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-<major version>-<version code>.apk`, for example `messenger-581-346213494.apk`. Run this with Desktop 1.18.0 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
 
 ```powershell
 python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle --bundle-sha256 $bundleHash --held-index-sha256 $heldHash --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
@@ -299,11 +323,11 @@ python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle 
 
 The check runs at most two builds at once. Each Java process has a 1024 MB heap and uses two processors. Each build runs in its own temporary folder with all patches selected. The check rechecks the frozen bundle's checksum, verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. Failures include the subprocess exit code. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
-The output from main is `patches/build/libs/patches-0.19.3.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output from main is `patches/build/libs/patches-0.20.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 After changing patch metadata, run `:patches:generatePatchCatalog` and review `patches-list.json`. The normal `:patches:check` task checks the committed catalog against the built bundle and checks all 30 control keys against the extension and manifest. It fails on drift instead of rewriting the catalog.
 
-Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.19.3 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash. Then sign the checksum file with `ssh-keygen -Y sign -f <release key> -n hushmessenger-release SHA256SUMS.txt`, attach `SHA256SUMS.txt.sig` next to it, and run the same command with `--verify-signature` added. That checks the signature against `scripts/release_signers`.
+Before publishing, synchronize the release version, source index, changelog and README checksum, then run `:patches:verifyReleaseMetadata`. This loads fresh bundle metadata and checks its checksum against the release files. To check a proposed tag and checksum asset too, run `python scripts/check_release.py --release-tag v0.20.0 --checksums SHA256SUMS.txt` after the Gradle check. Catalog evidence is bound to the exact bundle hash. Then sign the checksum file with `ssh-keygen -Y sign -f <release key> -n hushmessenger-release SHA256SUMS.txt`, attach `SHA256SUMS.txt.sig` next to it, and run the same command with `--verify-signature` added. That checks the signature against `scripts/release_signers`.
 
 ### Check the bundle
 

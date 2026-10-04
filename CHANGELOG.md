@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Development build 0.19.3. The public release remains 0.14.0.
+Development build 0.20.0. The public release remains 0.14.0.
+
+- Development now patches Messenger **581.0.0.49.91** as well as 580.0.0.49.91 ([#29](https://github.com/SysAdminDoc/HushMessenger/issues/29)). All 16 arm64 builds APKMirror lists for 581 pass the off-device compatibility checks, and Morphe Desktop 1.18.0 applied all 33 patches to build 346213494. Meta renumbered two server flags and moved several screens around in 581, so People You May Know, joined community chats, inbox ads, the AI sticker Generate buttons, screenshots in view-once media, Native Bubbles and the HushMessenger menu row now follow the new layout. On 581 the HushMessenger row sits right under Settings, above the new QR code row. The 580 builds patch exactly as before.
 
 - **Open** in settings and **Restart Messenger** now find Messenger when you've switched to one of its alternate app icons. They used to report that no launcher was available, because they read each icon's built-in default instead of whether Messenger had turned it on.
 
@@ -11,6 +13,8 @@ Development build 0.19.3. The public release remains 0.14.0.
 - Update checks recover on their own if GitHub's reply no longer matches the saved release details. A retry time from GitHub never holds checks back for more than a day, and it never shortens the normal wait between failed checks.
 
 - Development release checks compare the held public feed with the one published under its release tag, and the development version must be newer. Catalog validation runs the Gradle wrapper directly and stops the whole process tree if it times out. The compatibility report keeps going when the community route changes on a new build, and the memory gate reports a damaged output APK without dropping the other results.
+
+- The memory gate now checks every build of every supported Messenger version. It used to expect exactly 21 and would have refused to start once 581 was added.
 
 - The memory gate runs at most two builds at once, with two processors per Java process. Compatibility and patching failures include their subprocess exit codes. Regression tests check that all inputs run without exceeding the concurrency limit.
 
