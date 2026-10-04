@@ -889,6 +889,12 @@ internal fun Method.validateMenuSettingsBind() {
         !parameterTypes[0].startsWith("L") || impl.registerCount < 3) {
         throw PatchException("Messenger controls: invalid menu settings binder registers or parameters")
     }
+    val holder = impl.registerCount - 2
+    if (code.any { instruction ->
+        instruction.opcode != Opcode.CHECK_CAST && instruction.opcode.setsRegister() &&
+            instruction is OneRegisterInstruction && (instruction.registerA == holder ||
+                instruction.opcode.setsWideRegister() && instruction.registerA + 1 == holder)
+    }) throw PatchException("Messenger controls: menu settings binder overwrites its holder")
 }
 
 internal fun MutableMethod.injectMenuSettingsBind() {

@@ -4,6 +4,8 @@
 
 Development build 0.20.0. The public release remains 0.14.0.
 
+- Theme return hooks keep incoming branches attached to the color helper. Menu binding rejects reused holder registers before making changes, and the story Save helper is retained even when the patcher has already cached direct methods.
+
 - Community filtering preserves the native list type and checks backward and switch branches before reusing temporary values. Screenshot support now stays unavailable if any matching viewer method changes, even when the original methods still exist. Other controls remain available.
 
 - Profile recording now parses the rebuilt manifest, resource table and every DEX. A successful Desktop report and valid ZIP are no longer enough to accept malformed APK contents.

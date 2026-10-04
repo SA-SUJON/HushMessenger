@@ -364,7 +364,10 @@ val saveStoriesPatch = bytecodePatch(
         if (builderClass.methods.any { it.name == STORY_SAVE_HELPER }) {
             throw PatchException("Messenger controls: the story menu already has $STORY_SAVE_HELPER")
         }
-        builderClass.methods.add(storySaveHelper(original.definingClass, save))
+        val direct = builderClass.directMethods
+        val helper = storySaveHelper(original.definingClass, save)
+        builderClass.methods.add(helper)
+        direct.add(helper)
         builder.injectStorySave(save)
         recordControl("save_stories")
         saveStoriesApplied = true
