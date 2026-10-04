@@ -1,6 +1,7 @@
 package app.hushmessenger.patches.controls
 
 import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.util.proxy.mutableTypes.MutableClass
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.ClassDef
@@ -138,6 +139,23 @@ class ControlDiscoveryTest {
         validateControls(found)
         assertEquals(100, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
+    }
+
+    @Test fun aChangedViewerLeavesOnlyScreenshotDiscoveryUnavailable() {
+        val classes = completeFixture()
+        val method = classes.single { it.type == EPHEMERAL_VIEWER }.methods.single { it.name == "onResume" }
+        method.replaceInstruction(method.screenshotViewerSites().first(), "nop")
+        val before = lifecycleDex(classes)
+        val found = findControls(classes)
+        validateControls(found, expectedHooks.keys - "screenshot_viewers")
+        assertFailsWith<PatchException> { validateControls(found, setOf("screenshot_viewers")) }
+        kotlin.test.assertContentEquals(before, lifecycleDex(classes))
+    }
+
+    @Test fun aSuppliedUnavailableCommunityContractDoesNotRunDiscoveryAgain() {
+        val found = findControls(completeFixture(), null)
+        assertTrue(found.getValue(COMMUNITY_INBOX).isEmpty())
+        validateControls(found, expectedHooks.keys - COMMUNITY_INBOX)
     }
 
     @Test fun peopleTabHandlerIsFoundOnlyThroughItsFetchCoroutine() {

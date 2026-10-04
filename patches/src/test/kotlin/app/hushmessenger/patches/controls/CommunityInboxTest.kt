@@ -81,7 +81,7 @@ class CommunityInboxTest {
     }
 
     @Test fun changedSnapshotScopePredicateAndForeignSearchCallerFailBeforeMutation() {
-        for (change in listOf("snapshot", "scope", "first_read", "second_alias", "predicate", "null_key", "foreign_search", "captured_write", "branch", "folder_path", "folder_getter", "scratch3", "scratch_one", "scratch_wide", "session_slot")) {
+        for (change in listOf("enum_init", "channel_field", "snapshot", "scope", "first_read", "second_alias", "predicate", "null_key", "foreign_search", "captured_write", "branch", "folder_path", "folder_getter", "scratch3", "scratch_one", "scratch_wide", "session_slot")) {
             val classes = communityInboxFixture().toMutableList()
             val valid = assertNotNull(findCommunityInbox(classes))
             val ids = valid.identity.split('|')
@@ -89,6 +89,8 @@ class CommunityInboxTest {
             val renderer = valid.render as MutableMethod
             val at = renderer.communityReadSite(valid.capturedScope)
             when (change) {
+                "enum_init" -> classes.single { it.type == valid.requests.substringBefore("->") }.methods.removeIf { it.name == "<clinit>" }
+                "channel_field" -> classes.flatMap { it.methods }.single { it.hookId() == ids[8] }.replaceInstruction(0, "const-string v0, \"changed\"")
                 "snapshot" -> update.replaceInstruction(58, "move-object/from16 v26, v2")
                 "scope" -> update.replaceInstruction(111, "const/16 v23, 0x0")
                 "first_read" -> renderer.replaceInstruction(6, "invoke-virtual {v1}, Ljava/util/AbstractCollection;->isEmpty()Z")

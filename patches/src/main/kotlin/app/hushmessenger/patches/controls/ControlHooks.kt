@@ -159,9 +159,9 @@ internal val expectedHooks = mapOf(
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
 
 /** Match semantics first, then require the complete set from both tested APKs. */
-internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>> {
+internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInboxContract? = findCommunityInbox(classes)): Map<String, List<Method>> {
     val found = expectedHooks.keys.associateWith { mutableListOf<Method>() }
-    findCommunityInbox(classes)?.let { found.getValue(COMMUNITY_INBOX).add(it.render) }
+    community?.let { found.getValue(COMMUNITY_INBOX).add(it.render) }
     found.getValue("ai_sticker_cell").addAll(findAiStickerCells(classes))
     val adContract = classes.any { it.type == AD_ITEM } && classes.any { cls ->
         cls.type == IMMUTABLE_LIST && cls.methods.any {
@@ -247,8 +247,10 @@ internal fun findControls(classes: Iterable<ClassDef>): Map<String, List<Method>
             fun add(key: String) { found.getValue(key).add(method) }
             if ((cls.type == EPHEMERAL_VIEWER && (method.name in EPHEMERAL_DIALOGS || method.name == "onResume")) ||
                 (cls.type == QUICKSNAP_VIEWER && method.name == "onCreateView")) {
-                method.screenshotViewerSites()
-                add("screenshot_viewers")
+                try {
+                    method.screenshotViewerSites()
+                    add("screenshot_viewers")
+                } catch (_: PatchException) { /* This viewer is unavailable; unrelated controls still resolve. */ }
             }
             if (method.returnType == "Z" && (method.parameterTypes.isEmpty() ||
                 (AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type)))) {

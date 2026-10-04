@@ -79,8 +79,8 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         activeProfile = controlProfileFor(packageMetadata.versionCode)
         val classes = mutableListOf<com.android.tools.smali.dexlib2.iface.ClassDef>()
         classDefForEach { classes.add(it) }
-        discoveredControls = findControls(classes)
         communityInboxContract = findCommunityInbox(classes)
+        discoveredControls = findControls(classes, communityInboxContract)
         val nativeGate = discoveredControls["bubble_mode"].orEmpty().singleOrNull()
         nativeBubbleRoutesVerified = nativeBubbleActivityVerified && nativeGate != null &&
             findNativeBubbleRoutes(classes, nativeGate.hookId()) == activeProfile.nativeBubbleRoutes
