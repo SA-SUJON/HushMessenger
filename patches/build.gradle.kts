@@ -22,8 +22,26 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 }
 
+val nativeFixtureRoot = providers.environmentVariable("HUSH_NATIVE_FIXTURES").getOrElse("")
+val requireNativeFixtures = tasks.register("requireNativeFixtures") {
+    group = "verification"
+    description = "Require private stock inputs for the complete compatibility gate."
+    doLast {
+        require(nativeFixtureRoot.isNotBlank() && file(nativeFixtureRoot).isDirectory) {
+            "Set HUSH_NATIVE_FIXTURES to the exact stock APK directory before running :patches:check. Use :patches:test for unit-only work."
+        }
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
+    mustRunAfter(requireNativeFixtures)
+    inputs.property("nativeFixtureRoot", nativeFixtureRoot)
+    if (nativeFixtureRoot.isNotBlank()) inputs.files(fileTree(nativeFixtureRoot) { include("*.apk") })
+        .withPropertyName("nativeApks").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(rootProject.file("scripts/profiles")).withPropertyName("stockProfiles")
+    inputs.files(rootProject.files("README.md", "patches-bundle.json", "scripts/CompatReport.java"))
+        .withPropertyName("compatibilitySources")
 }
 
 tasks.named<Jar>("jar") {
@@ -60,7 +78,7 @@ for ((taskName, mode) in mapOf("generatePatchCatalog" to "generate", "checkPatch
     }
 }
 
-tasks.check { dependsOn("checkPatchCatalog") }
+tasks.check { dependsOn("checkPatchCatalog", requireNativeFixtures) }
 
 for (taskName in listOf("checkFrozenPatchCatalog", "checkRebuiltApk")) tasks.register<JavaExec>(taskName) {
     group = "verification"

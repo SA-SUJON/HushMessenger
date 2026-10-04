@@ -95,6 +95,7 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
         val u = update.communityCode()
         communityRequire(update.returnType == "V" && update.parameterTypes.size == 4 && update.parameterTypes.first().toString() == main.type)
         val ctor = definition(calls(update).filter { it.name == "<init>" && it.parameterTypes.map(CharSequence::toString).contains(IMMUTABLE_LIST) }.communitySingle())
+        val ctorId = ctor.hookId()
         val closure = byType[ctor.definingClass] ?: throw CommunityChanged()
         val c = ctor.communityCode()
         communityRequire(ctor.parameterTypes.size == 14 && ctor.parameterTypes[11].toString() == IMMUTABLE_LIST && c.size == 17 &&
@@ -107,7 +108,7 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
         communityRequire(c[0].opcode == Opcode.IPUT_OBJECT && (c[0] as? TwoRegisterInstruction)?.let { it.registerA == 13 && it.registerB == 1 } == true &&
             captured.name == "\$inboxUnitItems" && captured.type == IMMUTABLE_LIST && c[scopeAt].opcode == Opcode.IPUT_OBJECT &&
             (c[scopeAt] as? TwoRegisterInstruction)?.let { it.registerA == 10 && it.registerB == 1 } == true && scope.name == "\$threadTypeFilter")
-        val ctorCall = u.indices.filter { u[it].communityRef().toString() == ctor.hookId() }.communitySingle()
+        val ctorCall = u.indices.filter { u[it].communityRef().toString() == ctorId }.communitySingle()
         val ctorArgs = u[ctorCall].communityArgs()
         communityRequire(ctorArgs.size == 15)
         fun previousWrite(register: Int) = (ctorCall - 1 downTo 0).firstOrNull { u[it].communityWrites(register) } ?: throw CommunityChanged()
@@ -197,7 +198,6 @@ internal fun findCommunityInbox(classes: Iterable<ClassDef>): CommunityInboxCont
             listOf(9, 14, 17).all { f[it].communityRegister() == 2 })
         publicStatic(requests)
         publicStatic(folders.getValue("INBOX"))
-        val ctorId = ctor.hookId()
         val updateId = update.hookId()
         val captures = setOf(captured.toString(), scope.toString())
         var callers = 0; var allocations = 0; var writes = 0

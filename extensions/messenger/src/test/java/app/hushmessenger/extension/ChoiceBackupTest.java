@@ -831,7 +831,20 @@ public class ChoiceBackupTest {
         } finally { Files.deleteIfExists(file); }
     }
 
-    @Test @Config(sdk = {28, 29}) public void aNonSeekableFiniteStreamStillRestoresChoices() throws Exception {
+    @Test @Config(sdk = {30, 36}) public void atomicReplacementUsesPosixSemanticsAlongsideDocumentShadows() throws Exception {
+        var file = Files.createTempFile("choices-atomic", ".txt");
+        var atomic = new android.util.AtomicFile(file.toFile());
+        try {
+            Files.write(file, "old".getBytes(StandardCharsets.UTF_8));
+            var output = atomic.startWrite();
+            output.write("new".getBytes(StandardCharsets.UTF_8));
+            atomic.finishWrite(output);
+            assertArrayEquals("new".getBytes(StandardCharsets.UTF_8), Files.readAllBytes(file));
+            assertFalse(Files.exists(java.nio.file.Path.of(file + ".new")));
+        } finally { atomic.delete(); }
+    }
+
+    @Test @Config(sdk = {28, 29, 36}) public void aNonSeekableFiniteStreamStillRestoresChoices() throws Exception {
         var file = Files.createTempFile("choices-nonseekable", ".txt");
         byte[] original = (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8);
         Files.write(file, original);

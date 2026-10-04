@@ -29,6 +29,21 @@ class CommunityInboxTest {
     private fun structural(i: Instruction) = listOf(i.opcode, reference(i), (i as? OneRegisterInstruction)?.registerA,
         (i as? TwoRegisterInstruction)?.registerB, (i as? NarrowLiteralInstruction)?.narrowLiteral)
 
+    @Test fun fixtureUsesRecordedStockIdentitiesEvenWhenTheCompiledProfileDrifts() {
+        val profile = activeProfile
+        val original = profile.nativeCommunityInbox
+        val field = ControlProfile::class.java.getDeclaredField("nativeCommunityInbox").apply { isAccessible = true }
+        try {
+            field.set(profile, original.replaceFirst("->", "->changed_"))
+            val contract = assertNotNull(findCommunityInbox(communityInboxFixture()))
+            assertEquals(original, contract.identity, "The fixture must not repeat the changed compiled contract")
+            assertFailsWith<PatchException> {
+                injectCommunityInbox(contract, contract.render as MutableMethod,
+                    communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
+            }
+        } finally { field.set(profile, original) }
+    }
+
     @Test fun backwardPathsMustReplaceScratchRegistersBeforeReadingThem() {
         for (register in listOf(1, 3)) for (overwritten in listOf(false, true)) for (branch in listOf("goto", "if", "switch")) {
             val classes = communityInboxFixture()
@@ -414,6 +429,7 @@ class CommunityInboxTest {
         assumeTrue(folder != null, "Set HUSH_NATIVE_FIXTURES to the exact stock fixture directory")
         val apks = Files.list(Path.of(folder!!)).use { it.filter { p -> p.toString().endsWith(".apk") }.sorted().toList() }
         assertEquals(controlProfiles.size, apks.size)
+        assertEquals(controlProfiles.keys.map { it.toString() }.toSet(), apks.map { it.fileName.toString().substringBeforeLast(".apk").substringAfterLast('-') }.toSet())
         for (apk in apks) {
             val code = apk.fileName.toString().substringBeforeLast(".apk").substringAfterLast('-')
             activeProfile = controlProfileFor(code)

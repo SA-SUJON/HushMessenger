@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-Development build 0.20.0. The public release remains 0.14.0.
+Development build 0.20.1. The public release remains 0.14.0.
+
+- The full compatibility check now requires the exact stock APKs. Community fixtures use recorded stock identities, and media replay goes through shared discovery. Tests track fixture changes and reject duplicate builds that would leave another build untested.
+- File tests now share Android's atomic-replace semantics on Windows, check post-commit read failures, and cover nonseekable restores on Android 16. Community discovery also reuses its constructor identifier in both scans.
 
 - Retained unsent markers are capped at 4,096 IDs and no longer share the settings monitor. This only prunes markers, never message content.
 - Choices saves check media-row ownership before opening the destination for writing. A picker can't use a Messenger-owned MediaStore row to overwrite its content.
