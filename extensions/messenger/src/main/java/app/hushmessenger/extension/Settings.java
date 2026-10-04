@@ -544,12 +544,16 @@ public final class Settings {
         }
     }
 
-    /** Appends a HushMessenger copy of the Menu tab's Settings folder row (one title String per row). */
+    /** Puts a HushMessenger copy of the Menu tab's Settings folder row right after it (one title String per row). */
     @SuppressWarnings("unchecked")
     public static void addMenuSettingsEntry(ArrayList list) {
         try {
             if (list == null || list.isEmpty()) return;
-            Object original = list.get(0);
+            // Messenger 581 builds its QR code row into the same list, so find Settings by its folder key.
+            int at = -1;
+            for (int i = 0; i < list.size() && at < 0; i++) if (holdsSettingsKey(list.get(i))) at = i;
+            if (at < 0) return;
+            Object original = list.get(at);
             Object clone = shallowClone(original);
             if (clone == null) return;
             java.lang.reflect.Field title = null;
@@ -583,10 +587,21 @@ public final class Settings {
             }
             if (title == null) return;
             title.set(clone, "HushMessenger");
-            list.add(clone);
+            list.add(at + 1, clone);
         } catch (Exception e) {
             hookFailed("menu_row", "addMenuSettingsEntry failed", e);
         }
+    }
+
+    private static boolean holdsSettingsKey(Object row) throws IllegalAccessException {
+        if (row == null) return false;
+        for (java.lang.reflect.Field f : row.getClass().getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            f.setAccessible(true);
+            Object value = f.get(row);
+            if (value != null && value.getClass().getName().endsWith("SettingsFolderKey")) return true;
+        }
+        return false;
     }
 
     /** Opens settings for the HushMessenger folder row and returns null; other rows come back unchanged. */
