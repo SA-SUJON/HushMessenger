@@ -4,6 +4,8 @@
 
 Development build 0.20.1. The public release remains 0.14.0.
 
+- Patch builds now use Morphe Patcher 1.15.1 and the ARSCLib update that comes with it. The tested tools are Morphe Manager 1.34.0 and Morphe Desktop 1.18.1.
+
 - Inbox switches such as Hide People You May Know, friend requests and growth prompts now give one steady answer to each chat list Messenger builds ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)). Messenger asks the same question when it lists a section, when it starts the section's loading and when it stops it. Flipping a switch, pausing or safe mode could change the answer between those steps and leave suggestion loading attached to the list. A change now applies to the next chat list Messenger builds, and **Restart Messenger** applies it everywhere.
 
 - The full compatibility check now requires the exact stock APKs. Community fixtures use recorded stock identities, and media replay goes through shared discovery. Tests track fixture changes and reject duplicate builds that would leave another build untested.

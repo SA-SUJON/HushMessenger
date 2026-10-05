@@ -283,15 +283,15 @@ The current screenshots show v0.10.0 inside patched Messenger on a Galaxy S22. B
 
 Before patching, the stock apps on a Galaxy S22 and S25 exchanged messages between two owned accounts in an end-to-end encrypted chat, and both phones showed the messages and read receipts. HTTP and HTTPS link tests on the Galaxy S22 confirmed the stock external-browser switch works.
 
-The supported tool baseline is [Morphe Manager 1.33.0](https://github.com/MorpheApp/morphe-manager/releases/tag/v1.33.0) or [Morphe Desktop 1.18.0](https://github.com/MorpheApp/morphe-desktop/releases/tag/v1.18.0). Desktop needs JDK 21 or newer. The local build is tested with JDK 21. To inspect the source:
+The supported tool baseline is [Morphe Manager 1.34.0](https://github.com/MorpheApp/morphe-manager/releases/tag/v1.34.0) or [Morphe Desktop 1.18.1](https://github.com/MorpheApp/morphe-desktop/releases/tag/v1.18.1). Desktop needs JDK 21 or newer. The local build is tested with JDK 21. To inspect the source:
 
 ```powershell
-& "$env:JAVA_HOME\bin\java.exe" -jar morphe-desktop-1.18.0-all.jar list-patches --patches https://github.com/SysAdminDoc/HushMessenger --filter-package-name com.facebook.orca
+& "$env:JAVA_HOME\bin\java.exe" -jar morphe-desktop-1.18.1-all.jar list-patches --patches https://github.com/SysAdminDoc/HushMessenger --filter-package-name com.facebook.orca
 ```
 
 This command lists patches. Source updates and Messenger installation are separate steps.
 
-To build the bundle on Windows, use JDK 21, Android SDK 36 and the Gradle wrapper. The build pins Morphe Patcher 1.15.0 and `com.github.MorpheApp:ARSCLib:88d5e0811f`. Android tooling uses AGP 9.4.1 and Android Test Engine for device tests. Those host tools aren't bundled into Messenger. Set `ANDROID_HOME` to your SDK directory. The Morphe Gradle plugin needs GitHub Packages credentials:
+To build the bundle on Windows, use JDK 21, Android SDK 36 and the Gradle wrapper. The build pins Morphe Patcher 1.15.1 and `com.github.MorpheApp:ARSCLib:9b742c412d`. Android tooling uses AGP 9.4.1 and Android Test Engine for device tests. Those host tools aren't bundled into Messenger. Set `ANDROID_HOME` to your SDK directory. The Morphe Gradle plugin needs GitHub Packages credentials:
 
 ```powershell
 $env:GITHUB_ACTOR = gh api user --jq .login
@@ -317,10 +317,10 @@ The destination must be new. It contains the bundle, exact catalog evidence and 
 
 Validation parses the mapped data in both DEX files and checks section counts against their bounds. References must point to the start of the item they use. Cached catalog checks preserve JSON types, so a number can't stand in for a switch default.
 
-To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-<major version>-<version code>.apk`, for example `messenger-581-346213494.apk`. Run this with Desktop 1.18.0 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
+To repeat the whole-APK memory check, keep the unmodified supported APKs in a private folder, with each file named `messenger-<major version>-<version code>.apk`, for example `messenger-581-346213494.apk`. Run this with Desktop 1.18.1 and the smali dexlib2, Guava and failureaccess JARs selected by the locked dependency graph:
 
 ```powershell
-python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle --bundle-sha256 $bundleHash --held-index-sha256 $heldHash --desktop-jar .\morphe-desktop-1.18.0-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
+python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle --bundle-sha256 $bundleHash --held-index-sha256 $heldHash --desktop-jar .\morphe-desktop-1.18.1-all.jar --compat-classpath "<dexlib2.jar>;<guava.jar>;<failureaccess.jar>" --java "$env:JAVA_HOME\bin\java.exe"
 ```
 
 The check runs at most two builds at once. Each Java process has a 1024 MB heap and uses two processors. Each build runs in its own temporary folder with all patches selected. The check rechecks the frozen bundle's checksum, verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. Failures include the subprocess exit code. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
@@ -341,7 +341,7 @@ The [v0.14.0 release](https://github.com/SysAdminDoc/HushMessenger/releases/tag/
 6e67bf58dad6ca26a94f2b024f4f229e65acfc84ddf593371bf3acaa2414b2ad  patches-0.14.0.mpp
 ```
 
-Morphe Manager 1.33.0 and Desktop 1.18.0 don't verify detached patch-bundle signatures on import. Manager downloads the bundle directly, and Desktop's source model drops the signature URL. An `.asc` link in the source index doesn't add automatic protection. See the [Manager download path](https://github.com/MorpheApp/morphe-manager/blob/v1.33.0/app/src/main/java/app/morphe/manager/domain/bundles/RemotePatchBundle.kt) and [Desktop source model](https://github.com/MorpheApp/morphe-desktop/blob/v1.18.0/src/main/kotlin/app/morphe/engine/model/PatchesBundle.kt). Verify the signed checksum manually before importing.
+Morphe Manager 1.34.0 and Desktop 1.18.1 don't verify detached patch-bundle signatures on import. Manager downloads the bundle directly, and Desktop's source model drops the signature URL. An `.asc` link in the source index doesn't add automatic protection. See the [Manager download path](https://github.com/MorpheApp/morphe-manager/blob/v1.34.0/app/src/main/java/app/morphe/manager/domain/bundles/RemotePatchBundle.kt) and [Desktop source model](https://github.com/MorpheApp/morphe-desktop/blob/v1.18.1/src/main/kotlin/app/morphe/engine/model/PatchesBundle.kt). Verify the signed checksum manually before importing.
 
 Starting with v0.7.0, `SHA256SUMS.txt` comes with `SHA256SUMS.txt.sig`, an SSH signature made with the project's release key. The key's fingerprint is `SHA256:Z+UfHy7IUbtgNRO/wHkIr68+u4I+SIKPY9avfx/VAPU` and its public half is in [`scripts/release_signers`](scripts/release_signers). Manager and Desktop don't check this signature, so checking it is up to you. You need OpenSSH 8.1 or newer, which Windows 10 and later already include, as do macOS and most Linux systems. Download both files and `scripts/release_signers` from the same tag, then run this in a terminal (in PowerShell, wrap it in `cmd /c "..."`, since PowerShell has no `<`):
 
