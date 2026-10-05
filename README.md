@@ -50,7 +50,7 @@ A Galaxy S22's stock Messenger 580 has a **Hide suggestions** action in the `Peo
 
 The repository includes a read-only installation check. It uses Android's `apksigner` to verify the candidate and installed APKs, compares the complete signer sets for the phone's Android version, and checks who owns the candidate's declared permissions. It checks every Android user for an existing installation. Source-stamp certificates aren't treated as app signers. It also catches version downgrades and checks the APK's arm64 libraries against the phone's memory page size. If Android retained Messenger's data after removal, the check reads its retained version code. A code of 2147483647 points to the data-preserving guidance under **If something doesn't work**.
 
-Use Python 3.11 or newer, JDK 21, Android SDK Build Tools (tested with 36.1.0), and an authorized ADB connection. Run this from the repository with the phone's exact serial from `adb devices`:
+Use Python 3.11 or newer, JDK 21, Android SDK Build Tools (tested with 36.1.0 and 37.0.0), and an authorized ADB connection. Run this from the repository with the phone's exact serial from `adb devices`:
 
 ```powershell
 python scripts/check_install.py --apk .\messenger-signed.apk --stock-apk .\messenger-stock.apk --serial YOUR_PHONE_SERIAL --build-tools "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0" --java "$env:JAVA_HOME\bin\java.exe"
