@@ -1799,6 +1799,40 @@ public class CompatReport {
         return declared == 1 && read ? hookId(subscribe) + "|" + listed : null;
     }
 
+    /**
+     * The constructor of the holder Messenger keeps its downloaded emoji font in, or null. The getter reads the holder's
+     * Typeface and returns it at once; the final holder has that Typeface, the font's File and one constructor taking both.
+     */
+    static String emojiFontHolder(Map<String, ClassDef> byType, Method getter) {
+        var code = instructions(getter);
+        var holders = new LinkedHashSet<String>();
+        for (int i = 0; i + 1 < code.size(); i++) {
+            if (code.get(i).getOpcode() == Opcode.IGET_OBJECT && code.get(i) instanceof ReferenceInstruction ri &&
+                ri.getReference() instanceof FieldReference fr && "Landroid/graphics/Typeface;".equals(fr.getType()) &&
+                code.get(i + 1).getOpcode() == Opcode.RETURN_OBJECT && code.get(i) instanceof TwoRegisterInstruction read &&
+                ((OneRegisterInstruction) code.get(i + 1)).getRegisterA() == read.getRegisterA()) holders.add(fr.getDefiningClass());
+        }
+        if (holders.size() != 1 || holders.contains(getter.getDefiningClass())) return null;
+        var holder = byType.get(holders.iterator().next());
+        if (holder == null || !AccessFlags.FINAL.isSet(holder.getAccessFlags())) return null;
+        var fields = new ArrayList<String>();
+        for (var f : holder.getFields()) if (!AccessFlags.STATIC.isSet(f.getAccessFlags())) fields.add(f.getType());
+        Collections.sort(fields);
+        if (!fields.equals(List.of("Landroid/graphics/Typeface;", "Ljava/io/File;"))) return null;
+        Method init = null;
+        for (var m : holder.getMethods()) {
+            if (!"<init>".equals(m.getName())) continue;
+            if (init != null) return null;
+            init = m;
+        }
+        if (init == null || !hookId(init).equals(holder.getType() + "-><init>(Landroid/graphics/Typeface;Ljava/io/File;)V")) return null;
+        var body = instructions(init);
+        if (body.isEmpty() || body.get(0).getOpcode() != Opcode.INVOKE_DIRECT || !(body.get(0) instanceof ReferenceInstruction call) ||
+            !(call.getReference() instanceof MethodReference mr) || !"Ljava/lang/Object;".equals(mr.getDefiningClass()) ||
+            !"<init>".equals(mr.getName()) || mediaTargets(init).contains(1)) return null;
+        return hookId(init);
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -2146,10 +2180,10 @@ public class CompatReport {
                     found.get("original_photo").add(method);
                 }
 
-                // emoji_typeface
+                // emoji_typeface: Messenger's emoji getter, counted only when its downloaded font holder proves out (#34)
                 if ("Landroid/graphics/Typeface;".equals(method.getReturnType()) &&
                     paramTypes.isEmpty() && !isStatic &&
-                    strings.contains("FacebookEmojiTypefaceProviderImpl")) {
+                    strings.contains("FacebookEmojiTypefaceProviderImpl") && emojiFontHolder(inboxTypes, method) != null) {
                     found.get("emoji_typeface").add(method);
                 }
 

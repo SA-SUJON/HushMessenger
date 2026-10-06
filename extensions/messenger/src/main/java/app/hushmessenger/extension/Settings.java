@@ -359,6 +359,7 @@ public final class Settings {
             // Glyph 0 is the missing-glyph box: the phone has no emoji font, so Messenger's set should stay.
             if (glyphs.glyphCount() == 0 || glyphs.getGlyphId(0) == 0) return null;
             android.graphics.fonts.Font font = glyphs.getFont(0);
+            systemEmojiShaped = font;
             java.io.File file = font.getFile();
             android.graphics.Typeface typeface;
             if (file != null && file.canRead()) {
@@ -374,6 +375,54 @@ public final class Settings {
             android.util.Log.w("HushMessenger", "Can't find the phone's emoji font, using " + NOTO_EMOJI_FONT, error);
             return null;
         }
+    }
+
+    /** The android.graphics.fonts.Font Android shaped the emoji probe with; Object so Android 9 never resolves the type. */
+    static Object systemEmojiShaped;
+    /** Messenger's downloaded FacebookEmoji.ttf, recorded as Messenger loads it. */
+    static volatile java.io.File messengerEmojiFile;
+    static java.io.File mergedEmojiFile;
+    static android.graphics.Typeface mergedEmoji;
+
+    /** Messenger's emoji font holder hands over its font file as Messenger builds it. */
+    public static void messengerEmojiFont(java.io.File file) {
+        messengerEmojiFile = file;
+    }
+
+    /**
+     * Wraps every return of Messenger's emoji typeface getter. The phone's emoji font has no glyph for Messenger's own
+     * Like (U+F0000) and similar private characters, so Android 10 and newer draw those from Messenger's font (#34).
+     */
+    public static android.graphics.Typeface systemEmojiTypeface(android.graphics.Typeface messenger) {
+        android.graphics.Typeface system = systemEmojiTypeface();
+        if (system == null) return messenger;
+        java.io.File file = messengerEmojiFile;
+        if (messenger == null || file == null || android.os.Build.VERSION.SDK_INT < 29) return system;
+        synchronized (Settings.class) {
+            if (!file.equals(mergedEmojiFile)) {
+                mergedEmojiFile = file;
+                mergedEmoji = null;
+                try {
+                    mergedEmoji = withMessengerFallback(file);
+                } catch (Exception error) {
+                    // The phone's emoji still apply; only Messenger's private characters stay as boxes.
+                    hookFailedPrivately("use_system_emoji", "Can't add Messenger's emoji font behind the phone's", error);
+                }
+            }
+            return mergedEmoji != null ? mergedEmoji : system;
+        }
+    }
+
+    @android.annotation.TargetApi(29)
+    static android.graphics.Typeface withMessengerFallback(java.io.File messengerFont) throws java.io.IOException {
+        android.graphics.fonts.Font system = systemEmojiShaped instanceof android.graphics.fonts.Font
+            ? (android.graphics.fonts.Font) systemEmojiShaped
+            : new android.graphics.fonts.Font.Builder(new java.io.File(systemEmojiSource)).build();
+        return new android.graphics.Typeface.CustomFallbackBuilder(new android.graphics.fonts.FontFamily.Builder(system).build())
+            .addCustomFallback(new android.graphics.fonts.FontFamily.Builder(
+                new android.graphics.fonts.Font.Builder(messengerFont).build()).build())
+            .setSystemFallback("sans-serif")
+            .build();
     }
 
     /** Null means return the exact original list. Only typed ad rows are removed. */

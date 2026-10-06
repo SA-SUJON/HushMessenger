@@ -3,6 +3,7 @@
 ## Unreleased
 
 - With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)).
+- With **Use system emoji** on, a Like in the chat list shows Messenger's thumbs-up again instead of an empty box ([#34](https://github.com/SysAdminDoc/HushMessenger/issues/34)). The phone's emoji font doesn't have Messenger's own Like character, so on Android 10 and newer that character now comes from Messenger's emoji font while every other emoji keeps the phone's look.
 
 ## 0.21.0 (2026-10-05)
 

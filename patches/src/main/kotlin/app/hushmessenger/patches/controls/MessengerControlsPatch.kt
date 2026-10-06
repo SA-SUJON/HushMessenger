@@ -133,7 +133,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "keep_unsent" -> method.validateKeepUnsent()
             "unsent_indicator" -> method.validateUnsentIndicator()
             "delta_unsent" -> method.validateDeltaUnsent()
-            "emoji_typeface" -> method.validateScratch()
+            "emoji_typeface" -> method.validateEmojiTypeface()
             "original_photo" -> method.validateOriginalPhoto()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
@@ -211,6 +211,9 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
             val inboxRoute = if (INBOX_REFRESH_HOOK in selected) {
                 resolveInboxRefresh(discoveredControls.getValue(INBOX_REFRESH_HOOK).single()) { classDefByOrNull(it) } to inboxRefreshStub()
             } else null
+            val emojiFontHolder = if ("emoji_typeface" in selected) {
+                discoveredControls.getValue("emoji_typeface").single().emojiFontHolder { classDefByOrNull(it) }
+            } else null
             val methods = selected.associateWith { hook ->
                 discoveredControls.getValue(hook).map { original ->
                     mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
@@ -240,6 +243,9 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
             } else {
                 injectControl(key, methods)
                 inboxRoute?.let { (route, stub) -> stub.writeInboxRefreshRoute(route) }
+                emojiFontHolder?.let { init ->
+                    mutableClassDefBy(init.substringBefore("->")).methods.single { it.hookId() == init }.injectEmojiFontHolder()
+                }
             }
             recordControl(key)
             applied = true

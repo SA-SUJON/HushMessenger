@@ -591,19 +591,6 @@ internal fun MutableMethod.validateSwitch() {
     }
 }
 
-internal fun MutableMethod.injectEmojiTypeface() {
-    validateScratch()
-    if (returnType != "Landroid/graphics/Typeface;") {
-        throw PatchException("Expected Typeface return for emoji hook: ${hookId()}")
-    }
-    addInstructionsWithLabels(0, """
-        invoke-static {}, $SETTINGS->systemEmojiTypeface()Landroid/graphics/Typeface;
-        move-result-object v0
-        if-eqz v0, :stock_behavior
-        return-object v0
-    """.trimIndent(), ExternalLabel("stock_behavior", getInstruction(0)))
-}
-
 internal fun MutableMethod.validateOriginalPhoto() {
     validateScratch()
     if (AccessFlags.STATIC.isSet(accessFlags) || (hookId() != TRANSCODE_IMAGE && hookId() != TRANSCODE_IMAGE_ASYNC)) {
