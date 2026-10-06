@@ -1,7 +1,7 @@
 # Messenger 580.0.0.49.91 (346013387), written by CompatReport.java --save. Record the APK again instead of editing this.
 version 580.0.0.49.91
 code 346013387
-sha256 128ec75e836f24328d2b28777091c03b20abba0adc536e7ee911ee5fe52e70bc
+sha256 6a935ff4f2befef821291365c3105830f314ee6f570bfa702511bae7a30909a4
 hook ads LX/2Wl;->D2i(LX/1fx;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;)Lcom/google/common/collect/ImmutableList;
 hook ai_fab LX/6k8;->render(LX/2MZ;)LX/1GG;
 hook ai_menu LX/HFe;->A00()Z
