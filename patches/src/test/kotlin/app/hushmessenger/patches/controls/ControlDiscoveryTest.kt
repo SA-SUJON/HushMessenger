@@ -35,6 +35,7 @@ class ControlDiscoveryTest {
                 if (key == "people_tab") return@map peopleTabMethod()
                 if (key == "people_search") return@map peopleSearchMethod()
                 if (key == "people_story") return@map peopleStoryMethod()
+                if (key == INBOX_REFRESH_HOOK) return@map inboxItemsMethod()
                 if (key == "bubbles") return@map bubbleEligibilityMethod()
                 if (key == "bubble_mode") return@map nativeBubbleModeMethod()
                 val body = when (key) {
@@ -137,7 +138,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(100, found.values.sumOf { it.size })
+        assertEquals(101, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

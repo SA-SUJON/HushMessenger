@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)).
+
 ## 0.21.0 (2026-10-05)
 
 This release has 33 patches, 30 of them switches, for all 37 arm64 builds of Messenger 580.0.0.49.91 and 581.0.0.49.91. It adds Messenger 581 and a new switch, Hide joined community chats. Hide AI sticker tools now covers the Generate buttons in the sticker keyboard, and Allow screenshots covers view-once media and Quicksnap.

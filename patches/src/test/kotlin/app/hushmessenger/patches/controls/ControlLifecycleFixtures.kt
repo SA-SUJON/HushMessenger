@@ -74,7 +74,7 @@ internal fun lifecycleClasses(brokenMenu: Boolean = false, brokenPeople: Boolean
     )
     return (legacyDrawerFixture(BASE_PROFILE, if (brokenMenu) "bind" else "none").classes +
         peopleMethods.groupBy { it.definingClass }.map { (type, methods) -> fixtureClass(type, methods) } +
-        peopleJewelKeyHolder() + theme).filterNot { it.type.startsWith("Lapp/hushmessenger/extension/") }
+        peopleJewelKeyHolder() + inboxRefreshClasses() + theme).filterNot { it.type.startsWith("Lapp/hushmessenger/extension/") }
 }
 
 /** ARSCLib is provided at runtime by the pinned patcher, so keep it out of the bundle's compile graph. */

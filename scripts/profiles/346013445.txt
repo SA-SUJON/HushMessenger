@@ -82,6 +82,7 @@ hook original_photo Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->t
 hook original_photo Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V
 hook people LX/1pm;->A0C()Z
 hook people LX/2Wl;->A04()Z
+hook people_inbox_refresh Lcom/facebook/messaging/msys/threadlist/plugins/core/itemsupplier/ThreadListItemSupplierImplementation;->A0B()Lcom/google/common/collect/ImmutableList;
 hook people_jewel LX/H9p;->A01(LX/H9p;)Z
 hook people_list_end LX/1pm;->A0B()Z
 hook people_list_end LX/2Wl;->A03()Z

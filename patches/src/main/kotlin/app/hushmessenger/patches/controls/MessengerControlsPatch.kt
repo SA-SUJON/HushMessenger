@@ -129,6 +129,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "people_tab" -> method.validatePeopleTab()
             "people_search" -> method.validatePeopleSearch()
             "people_story" -> method.validatePeopleStory()
+            INBOX_REFRESH_HOOK -> method.validateInboxItems()
             "keep_unsent" -> method.validateKeepUnsent()
             "unsent_indicator" -> method.validateUnsentIndicator()
             "delta_unsent" -> method.validateDeltaUnsent()
@@ -154,6 +155,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "people_tab" -> method.injectPeopleTab()
             "people_search" -> method.injectPeopleSearch()
             "people_story" -> method.injectPeopleStory()
+            INBOX_REFRESH_HOOK -> method.injectInboxItems()
             "stories" -> method.injectSwitch("hideStories", "0x0")
             "facebook" -> method.injectSwitch("hideFacebook", "0x0")
             "ai_menu", "ai_fab", "ai_toolbar", "ai_search", "ai_search_chip" -> method.injectSwitch("hideMetaAi", "0x0")
@@ -205,6 +207,10 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
         execute {
             val selected = hooks.toSet().ifEmpty { setOf(key) }
             validateControls(discoveredControls, selected)
+            // Proved on the stock classes, and the extension's half checked, before any target is edited.
+            val inboxRoute = if (INBOX_REFRESH_HOOK in selected) {
+                resolveInboxRefresh(discoveredControls.getValue(INBOX_REFRESH_HOOK).single()) { classDefByOrNull(it) } to inboxRefreshStub()
+            } else null
             val methods = selected.associateWith { hook ->
                 discoveredControls.getValue(hook).map { original ->
                     mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
@@ -231,7 +237,10 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
                 injectNativeBubbles(methods.getValue("bubbles").single(), methods.getValue("bubble_mode").single(),
                     capability, nativeBubbleRoutesVerified)
                 nativeRoutesApplied = nativeBubbleRoutesVerified
-            } else injectControl(key, methods)
+            } else {
+                injectControl(key, methods)
+                inboxRoute?.let { (route, stub) -> stub.writeInboxRefreshRoute(route) }
+            }
             recordControl(key)
             applied = true
         }
@@ -241,7 +250,7 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
 @Suppress("unused")
 val hideInboxAdsPatch = controlPatch("ads", "Hide inbox ads", "Filters typed inbox ad items, in case Meta brings back the inbox ads it stopped selling in November 2025.", "Inbox")
 @Suppress("unused")
-val hidePeoplePatch = controlPatch("people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs.", "Inbox", "people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story")
+val hidePeoplePatch = controlPatch("people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs.", "Inbox", "people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story", INBOX_REFRESH_HOOK)
 @Suppress("unused")
 val hideFriendRequestsPatch = controlPatch("friend_requests", "Hide friend request cards", "Hides friend request cards inside the inbox.", "Inbox")
 @Suppress("unused")

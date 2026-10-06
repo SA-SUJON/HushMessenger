@@ -1,7 +1,7 @@
 ![HushMessenger. Keep the conversation. Cut the friction.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/HushMessenger/releases/tag/v0.21.0"><img src="https://img.shields.io/badge/version-0.21.0-0084FF" alt="Version 0.21.0"></a>
+  <a href="https://github.com/SysAdminDoc/HushMessenger"><img src="https://img.shields.io/badge/development-0.21.1-0084FF" alt="Development 0.21.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B%20arm64-3DDC84" alt="Platform Android 9 or newer, arm64">
   <img src="https://img.shields.io/badge/Messenger-580%20and%20581-0084FF" alt="Messenger 580.0.0.49.91 and 581.0.0.49.91">
@@ -11,6 +11,8 @@
 # HushMessenger
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 33 patches. 30 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
+
+The source builds v0.21.1. The public download and Morphe source still serve v0.21.0 while development checks continue. With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)).
 
 v0.21.0 adds Messenger 581.0.0.49.91, every arm64 build APKMirror lists under that name ([#29](https://github.com/SysAdminDoc/HushMessenger/issues/29)). It also brings **Hide joined community chats**, a new switch that starts off and removes joined channels and announcements from the main Chats list on its next render. **Hide AI sticker tools** now covers the Generate buttons in the sticker keyboard, and **Allow screenshots** covers view-once media and Quicksnap. Settings give each control's full row one accessible touch target.
 
@@ -176,7 +178,7 @@ The [patch catalog](patches-list.json) lists all 33 patches with their categorie
 
 Each control is a separate patch. They share one settings extension, and manifest metadata records which controls were installed. Selecting one control only edits its hooks, and omitted controls have no active switches. Saved preferences remain available if you select the feature again later.
 
-v0.21.0 checks 100 hook methods in each supported APK. Plugin gates must retain their expected enable/disable branch and return constants. The tab, browser, ad-filter, keyboard and typing edits check their specific instruction sites. Each control validates every target before editing its first method, and its settings entry is recorded only after success. A missing or ambiguous target stops that control. Changed media-viewer or community code leaves unrelated controls available. The settings provider is private, and its launcher accepts no external commands to change preferences. Since v0.5.0, Restart Messenger is private too, so only Messenger and its own launcher shortcuts can start it. v0.4.2 and earlier let other apps start it.
+Development v0.21.1 checks 101 hook methods in each supported APK, one more than v0.21.0. Plugin gates must retain their expected enable/disable branch and return constants. The tab, browser, ad-filter, keyboard and typing edits check their specific instruction sites. Each control validates every target before editing its first method, and its settings entry is recorded only after success. A missing or ambiguous target stops that control. Changed media-viewer or community code leaves unrelated controls available. The settings provider is private, and its launcher accepts no external commands to change preferences. Since v0.5.0, Restart Messenger is private too, so only Messenger and its own launcher shortcuts can start it. v0.4.2 and earlier let other apps start it.
 
 ### Install beside Meta apps
 
@@ -302,16 +304,16 @@ $env:GITHUB_TOKEN = gh auth token
 python -m unittest discover -s scripts/tests -v
 ```
 
-The native-media and joined-community replay tests use private APK inputs. Set `HUSH_NATIVE_FIXTURES` to the folder of exact stock APKs for every supported build before running `:patches:check`, with the file names described below. The full check fails without them and verifies every supported code and checksum. For unit-only work, `:patches:test` still runs without the private inputs and reports the two replay tests as skipped. Fixture paths, APK bytes and profile records are tracked as test inputs. Finish the tests before the final `:patches:buildAndroid` invocation. A later Gradle task can replace the intermediate archive with a Java-only bundle.
+The native-media, joined-community and chat list refresh replay tests use private APK inputs. Set `HUSH_NATIVE_FIXTURES` to the folder of exact stock APKs for every supported build before running `:patches:check`, with the file names described below. The full check fails without them and verifies every supported code and checksum. For unit-only work, `:patches:test` still runs without the private inputs and reports the three replay tests as skipped. Fixture paths, APK bytes and profile records are tracked as test inputs. Finish the tests before the final `:patches:buildAndroid` invocation. A later Gradle task can replace the intermediate archive with a Java-only bundle.
 
 While the public source is held, validate development separately and freeze its Android-ready bytes in a new folder outside Gradle's outputs. Record the feed hash before making changes. The command below reloads the actual bundle, checks its exact catalog and control definitions, and walks both DEX files. It checks DEX checksums and section bounds, then reads and rebuilds the class data in memory. This is a structural check. Running inside Android remains a separate check.
 
 ```powershell
 $heldHash = (Get-FileHash .\patches-bundle.json -Algorithm SHA256).Hash.ToLowerInvariant()
-$freeze = Join-Path $env:TEMP "hushmessenger-0.21.0"
+$freeze = Join-Path $env:TEMP "hushmessenger-0.21.1"
 .\gradlew.bat :patches:buildAndroid --no-daemon
 python scripts/check_release.py --development --held-index-sha256 $heldHash --freeze $freeze
-$bundle = Join-Path $freeze "patches-0.21.0.mpp"
+$bundle = Join-Path $freeze "patches-0.21.1.mpp"
 $bundleHash = (Get-FileHash $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
 ```
 
@@ -327,7 +329,7 @@ python scripts/verify_patch_heap.py --stock-dir .\private-apks --bundle $bundle 
 
 The check runs at most two builds at once. Each Java process has a 1024 MB heap and uses two processors. Each build runs in its own temporary folder with all patches selected. The check rechecks the frozen bundle's checksum, verifies the stock checksum before and after patching, inspects the output APK and compares the theme's class, surface and color-call counts with `CompatReport.java`. Failures include the subprocess exit code. It removes its temporary APKs and leaves the stock files unchanged. Use `--codes 346013440` to check one build.
 
-The output from main is `patches/build/libs/patches-0.21.0.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
+The output from main is `patches/build/libs/patches-0.21.1.mpp`. Dependency locks and SHA-256 checks are committed. Review both when changing a dependency. Clean builds from the same source produce the same bundle checksum.
 
 Recording a compatibility profile requires a real patch run. Run `:patches:test` first to compile the local validation tool. With Python 3.11 or newer on PATH and Android Build Tools available, run `CompatReport <apk> --save <profiles directory> <desktop.jar> <bundle.mpp>`. The reporter first checks discovery, then uses Desktop to apply every patch, including Material You, and rebuild a temporary unsigned APK at a 1024 MB heap. It parses the rebuilt manifest and resource table with `aapt2` and structurally validates every DEX. Failed or incomplete results leave the profile directory unchanged. A discovery-only PASS doesn't prove that the patcher can apply the bundle. For a new mapping, use the printed Kotlin to update the source and build the candidate bundle before recording it.
 

@@ -151,7 +151,8 @@ public class CompatReport {
     static final Map<String, List<String>> PATCHES = new LinkedHashMap<>();
     static {
         PATCHES.put("Hide inbox ads", List.of("ads"));
-        PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story"));
+        PATCHES.put("Hide People You May Know", List.of("people", "people_list_end", "people_jewel", "people_tab", "people_search", "people_story",
+            "people_inbox_refresh"));
         PATCHES.put("Hide friend request cards", List.of("friend_requests"));
         PATCHES.put("Hide joined community chats", List.of("community_inbox"));
         PATCHES.put("Hide growth prompts", List.of("growth", "growth_notes", "growth_story_card"));
@@ -1713,9 +1714,96 @@ public class CompatReport {
         }
     }
 
+    static final String INBOX_SUPPLIER = "Lcom/facebook/messaging/msys/threadlist/plugins/core/itemsupplier/ThreadListItemSupplierImplementation;";
+    static final String INBOX_ITEMS_TRACE = "ThreadListItemSupplierImplementation.getInboxItems";
+    static final String INBOX_SUBSCRIBE_WARNING =
+        "useSecondaryParentThreadKey set without a parentThreadKey; folder read falls back to the full Meta AI inbox";
+
+    static String inboxString(Instruction i) {
+        return i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr ? sr.getString() : null;
+    }
+
+    static List<String> inboxParams(MethodReference m) {
+        return m.getParameterTypes().stream().map(CharSequence::toString).toList();
+    }
+
+    static boolean inboxLiteral(Instruction i, int register, int value) {
+        return i.getOpcode() == Opcode.CONST_4 && register(i) == register && ((NarrowLiteralInstruction) i).getNarrowLiteral() == value;
+    }
+
+    /**
+     * The chat list refresh route the patch proves, as "subscribe call|listed count", or null. The items read starts with
+     * its trace outside any branch, the final supplier has one static subscribe call holding the folder warning, that call
+     * creates its observer just before the observer's (Object, int) constructor, and the observer's one list callback sets
+     * one declared int to 5 or 1, which the items read checks.
+     */
+    static String inboxRefreshRoute(Map<String, ClassDef> byType, Method items) {
+        var code = instructions(items);
+        if (!INBOX_SUPPLIER.equals(items.getDefiningClass()) || AccessFlags.STATIC.isSet(items.getAccessFlags()) ||
+            !items.getParameterTypes().isEmpty() || !IMMUTABLE_LIST.equals(items.getReturnType()) || code.isEmpty() ||
+            (code.get(0).getOpcode() != Opcode.CONST_STRING && code.get(0).getOpcode() != Opcode.CONST_STRING_JUMBO) ||
+            !INBOX_ITEMS_TRACE.equals(inboxString(code.get(0))) || mediaTargets(items).contains(0)) return null;
+        var supplier = byType.get(INBOX_SUPPLIER);
+        if (supplier == null || !AccessFlags.FINAL.isSet(supplier.getAccessFlags())) return null;
+        Method subscribe = null;
+        for (var m : supplier.getMethods()) {
+            if (!AccessFlags.STATIC.isSet(m.getAccessFlags()) || !"V".equals(m.getReturnType()) || !inboxParams(m).equals(List.of(INBOX_SUPPLIER)) ||
+                instructions(m).stream().noneMatch(i -> INBOX_SUBSCRIBE_WARNING.equals(inboxString(i)))) continue;
+            if (subscribe != null) return null;
+            subscribe = m;
+        }
+        if (subscribe == null) return null;
+        var body = instructions(subscribe);
+        int at = -1;
+        for (int i = 0; i < body.size(); i++) {
+            if (body.get(i).getOpcode() == Opcode.INVOKE_DIRECT && body.get(i) instanceof ReferenceInstruction ri &&
+                ri.getReference() instanceof MethodReference mr && "<init>".equals(mr.getName()) && "V".equals(mr.getReturnType()) &&
+                inboxParams(mr).equals(List.of("Ljava/lang/Object;", "I"))) {
+                if (at >= 0) return null;
+                at = i;
+            }
+        }
+        if (at < 1 || body.get(at - 1).getOpcode() != Opcode.NEW_INSTANCE) return null;
+        var init = (FiveRegisterInstruction) body.get(at);
+        var observerType = ((TypeReference) ((ReferenceInstruction) body.get(at - 1)).getReference()).getType();
+        if (init.getRegisterCount() != 3 || register(body.get(at - 1)) != init.getRegisterC() ||
+            !observerType.equals(((MethodReference) ((ReferenceInstruction) body.get(at)).getReference()).getDefiningClass())) return null;
+        var observer = byType.get(observerType);
+        if (observer == null) return null;
+        Method callback = null;
+        for (var m : observer.getMethods()) {
+            if (AccessFlags.STATIC.isSet(m.getAccessFlags()) || !"V".equals(m.getReturnType()) ||
+                !inboxParams(m).equals(List.of("Ljava/util/List;"))) continue;
+            if (callback != null) return null;
+            callback = m;
+        }
+        if (callback == null) return null;
+        var list = instructions(callback);
+        String listed = null, name = null;
+        for (int k = 3; k < list.size(); k++) {
+            if (list.get(k).getOpcode() != Opcode.IPUT || !(((ReferenceInstruction) list.get(k)).getReference() instanceof FieldReference f) ||
+                !INBOX_SUPPLIER.equals(f.getDefiningClass()) || !"I".equals(f.getType())) continue;
+            int value = ((TwoRegisterInstruction) list.get(k)).getRegisterA();
+            if (!inboxLiteral(list.get(k - 3), value, 5) || list.get(k - 2).getOpcode() != Opcode.IF_LT || !jumpsTo(list, k - 2, k) ||
+                !inboxLiteral(list.get(k - 1), value, 1)) continue;
+            if (listed != null) return null;
+            name = f.getName();
+            listed = INBOX_SUPPLIER + "->" + name + ":I";
+        }
+        if (listed == null) return null;
+        int declared = 0;
+        for (var f : supplier.getFields())
+            if (f.getName().equals(name) && "I".equals(f.getType()) && !AccessFlags.STATIC.isSet(f.getAccessFlags())) declared++;
+        boolean read = false;
+        for (var i : code) if (i.getOpcode() == Opcode.IGET && listed.equals(ref(i))) read = true;
+        return declared == 1 && read ? hookId(subscribe) + "|" + listed : null;
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
+        var inboxTypes = new HashMap<String, ClassDef>();
+        classes.forEach(c -> inboxTypes.put(c.getType(), c));
         found.get("ai_sticker_cell").addAll(findAiStickerCells(classes));
         var community = communityInbox(classes);
         if (community != null) found.get("community_inbox").add(community.render());
@@ -2133,6 +2221,12 @@ public class CompatReport {
                 if ("V".equals(method.getReturnType()) && isStatic && paramTypes.equals(List.of(cls.getType())) &&
                     strings.contains("MsgrPeopleYouMayKnowQuery")) {
                     found.get("people_story").add(method);
+                }
+
+                // people_inbox_refresh: the chat list supplier's items read, counted only when the whole refresh route proves out
+                if (INBOX_SUPPLIER.equals(cls.getType()) && !isStatic && IMMUTABLE_LIST.equals(method.getReturnType()) &&
+                    paramTypes.isEmpty() && strings.contains(INBOX_ITEMS_TRACE) && inboxRefreshRoute(inboxTypes, method) != null) {
+                    found.get("people_inbox_refresh").add(method);
                 }
 
                 // avatar_tabs: the Litho sticker keyboard's tab list builder

@@ -120,6 +120,7 @@ internal val expectedHooks = mapOf(
     "people_search" to setOf("LX/CX5;->DLP(LX/EA8;Ljava/lang/Object;)LX/EBu;"),
     "people_story" to setOf("Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->" +
         "A0Y(Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;)V"),
+    INBOX_REFRESH_HOOK to setOf("$INBOX_SUPPLIER->A0B()$IMMUTABLE_LIST"),
     "allow_screenshot" to setOf(
         "LX/N2h;->run()V",
         "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
@@ -293,6 +294,9 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
                 strings.containsAll(setOf(PEOPLE_SEARCH_SOURCE, "Failed to load people you may know"))) add("people_search")
             if (AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == "V" && method.parameterTypes == listOf(cls.type) &&
                 STORY_SUGGESTIONS_QUERY in strings) add("people_story")
+            // The chat list supplier's items read, which first traces under its own name.
+            if (cls.type == INBOX_SUPPLIER && !AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == IMMUTABLE_LIST &&
+                method.parameterTypes.isEmpty() && INBOX_ITEMS_TRACE in strings) add(INBOX_REFRESH_HOOK)
             if (cls.type == "Lcom/facebook/screenshot/ScreenshotContentObserver;" && method.name == "onChange" &&
                 method.returnType == "V") add("allow_screenshot")
             // Android 14 and newer report a screenshot here, and Messenger turns it into the in-chat notice.
