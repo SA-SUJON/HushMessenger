@@ -139,6 +139,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateEmojiTypeface()
             EMOJI_DRAWER -> method.validateEmojiDrawer()
+            EMOJI_SEARCH -> method.validateEmojiSearch()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
             MESSAGE_LOG -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
@@ -181,6 +182,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
             EMOJI_DRAWER -> method.injectEmojiDrawer()
+            EMOJI_SEARCH -> method.injectEmojiSearch()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
             MESSAGE_LOG -> method.injectMessageLog()
             "original_photo" -> method.injectOriginalPhoto()
@@ -307,6 +309,9 @@ val hideAvatarStickersPatch = controlPatch("avatar_stickers", "Hide avatar stick
 val restoreEmojiDrawerPatch = controlPatch("emoji_drawer", "Restore old emoji drawer",
     "Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. " +
         "Changes apply after Restart Messenger. Accounts Meta never moved to the redesign see no difference.", "Stickers")
+@Suppress("unused")
+val keepEmojiSearchPatch = controlPatch("emoji_search", "Keep emoji search on emoji",
+    "Typing while the emoji keyboard is open no longer switches it to sticker search. The keyboard stays on emoji.", "Stickers")
 @Suppress("unused")
 val hideChatPromotionsPatch = controlPatch("chat_promotions", "Hide chat promotions", "Hides Messenger quick-promotion banners inside conversations.", "Conversations")
 @Suppress("unused")

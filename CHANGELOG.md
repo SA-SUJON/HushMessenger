@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Keep emoji search on emoji** is a new switch under Stickers that starts off. With it on, typing while the emoji keyboard is open no longer flips it over to sticker search, so you stay on emoji. It takes effect right away, with no restart.
 - **Use the phone's camera app** is a new switch under Conversations that starts off. With it on, the camera button in a chat opens your phone's own camera app instead of Messenger's camera. The photo comes back into Messenger's photo editor for that chat, the same way a photo picked from another app does, and you send it from there. It's photos only. HushMessenger has the camera app save the photo to Messenger's cache, not your gallery. Checks cover the chat camera button in all 37 supported builds.
 - **Pure black dark mode** is a new switch under Appearance in settings, shown when Material You theme is patched in, and it starts off. With both on, Messenger's darkest dark mode backgrounds turn pure black. Lighter surfaces keep their wallpaper tint, and light mode doesn't change. You can flip it without patching again.
 - **Send videos without re-encoding** is a new switch under Conversations that starts off. Messenger already skips the re-encode for a video that's close to its target size. With the switch on, a video up to 25 MB takes that same passthrough instead of being re-encoded. Bigger videos still get Messenger's compression, and so do trimmed or edited ones and formats Messenger won't pass through. Checks cover the video transcoder in all 37 supported builds.

@@ -50,6 +50,7 @@ hook community_inbox LX/2GV;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
 hook delta_unsent LX/VsH;->Btd(I)Z
 hook emoji_drawer LX/H1T;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
 hook emoji_drawer Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A04()Z
+hook emoji_search LX/7S2;->A8X(Landroid/text/Editable;Z)V
 hook emoji_typeface LX/1KU;->A00()Landroid/graphics/Typeface;
 hook event_prompts LX/HCH;->A07()Z
 hook event_prompts LX/HCH;->A08()Z

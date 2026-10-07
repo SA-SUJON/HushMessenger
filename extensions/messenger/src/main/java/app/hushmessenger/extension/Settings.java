@@ -190,6 +190,21 @@ public final class Settings {
         return false;
     }
 
+    /**
+     * The mode Messenger asks its emoji and sticker tray for after each edit in the composer, right before the tray hears
+     * it. With the switch on, the sticker search mode becomes the plain emoji mode, so typing keeps the tray on emoji.
+     * Every other mode, and every mode while the switch is off, paused or in safe mode, passes through unchanged.
+     */
+    public static String emojiSearchMode(String original) {
+        if (!"expression_search".equals(original)) return original;
+        try {
+            return enabled("emoji_search") ? "expression" : original;
+        } catch (RuntimeException error) {
+            hookFailed("emoji_search", "Can't keep emoji search on emoji", error);
+            return original;
+        }
+    }
+
     public static boolean showSubtabs(boolean original) { return original && !enabled("subtabs"); }
     public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean keepPeopleSection(boolean original) { return original && !enabled("people"); }

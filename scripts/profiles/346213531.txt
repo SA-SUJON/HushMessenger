@@ -56,6 +56,7 @@ hook emoji_drawer LX/5NL;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capabi
 hook emoji_drawer LX/5UV;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;
 hook emoji_drawer LX/5iR;->render(LX/2AL;)LX/1Gd;
 hook emoji_drawer LX/Eyg;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
+hook emoji_search LX/7GD;->A8e(Landroid/text/Editable;Z)V
 hook emoji_typeface LX/1L4;->A00()Landroid/graphics/Typeface;
 hook event_prompts LX/HG6;->A08()Z
 hook event_prompts LX/HG6;->A09()Z
