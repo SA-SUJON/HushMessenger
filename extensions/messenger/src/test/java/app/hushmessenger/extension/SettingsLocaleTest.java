@@ -139,9 +139,9 @@ public class SettingsLocaleTest {
                 root.findViewWithTag("category_chats").performClick();
                 assertEquals(0, visibleControls(root));
                 root.findViewWithTag("clear_filters").performClick();
-                assertEquals(31, visibleControls(root));
+                assertEquals(32, visibleControls(root));
                 assertTrue(root.findViewWithTag("category_all").isSelected());
-                assertNotEquals("31 of 31 installed controls", ((TextView) root.findViewWithTag("search_status")).getText().toString());
+                assertNotEquals("32 of 32 installed controls", ((TextView) root.findViewWithTag("search_status")).getText().toString());
             }
         }
     }

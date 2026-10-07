@@ -10,7 +10,7 @@
 
 # HushMessenger
 
-HushMessenger is a Morphe patch source for Facebook Messenger. It offers 37 patches. 31 of them are optional controls with searchable settings and long-press shortcuts. Three help a re-signed build install, open and reach those settings. The other three start unselected and change the app package itself: one installs a second copy under another package name, **Spoof package version** stops Play Store update offers, and **Custom new-message sound** swaps in a sound file you choose. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
+HushMessenger is a Morphe patch source for Facebook Messenger. It offers 38 patches. 32 of them are optional controls with searchable settings and long-press shortcuts. Three help a re-signed build install, open and reach those settings. The other three start unselected and change the app package itself: one installs a second copy under another package name, **Spoof package version** stops Play Store update offers, and **Custom new-message sound** swaps in a sound file you choose. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
 The source builds v0.21.1. The public download and Morphe source still serve v0.21.0 while development checks continue. With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)). Development also adds **Unlock app icons**, a switch that lets you pick any of Messenger's built-in app icons without a subscription ([#33](https://github.com/SysAdminDoc/HushMessenger/issues/33)). **Clone install under another package name** puts a second Messenger beside the first, **Spoof package version** gives Messenger a very high version code so the Play Store stops offering updates, and **Custom new-message sound** plays your own file ([#32](https://github.com/SysAdminDoc/HushMessenger/issues/32)).
 
@@ -92,6 +92,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Hide Reels badge | Hides the Reels notification badge. |
 | Hide AI sticker tools | Hides the generated-sticker tab and AI sticker suggestions. It also hides the Generate buttons in the sticker keyboard. |
 | Hide avatar stickers | Hides the avatar tab in the sticker keyboard, including Messenger's newer keyboard. |
+| Restore old emoji drawer | Starts off. Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. It takes effect after **Restart Messenger**, and accounts Meta never moved to the redesign see no difference. |
 | Hide chat promotions | Hides quick-promotion banners inside conversations. |
 | Hide business reply suggestions | Hides suggested replies in business chats. |
 | Hide business typing suggestions | Hides business suggestions as you type. |
@@ -173,13 +174,13 @@ The closed [issue #22](https://github.com/SysAdminDoc/HushMessenger/issues/22) c
 
 ## What the patches change
 
-The [patch catalog](patches-list.json) lists all 37 development patches with their categories, default selections, options, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
+The [patch catalog](patches-list.json) lists all 38 development patches with their categories, default selections, options, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
 
 ### Independent optional controls
 
 Each control is a separate patch. They share one settings extension, and manifest metadata records which controls were installed. Selecting one control only edits its hooks, and omitted controls have no active switches. Saved preferences remain available if you select the feature again later.
 
-Development v0.21.1 checks 103 hook methods in each supported APK, three more than v0.21.0. Plugin gates must retain their expected enable/disable branch and return constants. The tab, browser, ad-filter, keyboard and typing edits check their specific instruction sites. Each control validates every target before editing its first method, and its settings entry is recorded only after success. A missing or ambiguous target stops that control. Changed media-viewer or community code leaves unrelated controls available. The settings provider is private, and its launcher accepts no external commands to change preferences. Since v0.5.0, Restart Messenger is private too, so only Messenger and its own launcher shortcuts can start it. v0.4.2 and earlier let other apps start it.
+Development v0.21.1 checks 105 hook methods in each supported 580 APK and 111 in each 581 APK, where v0.21.0 checked 100. Messenger 581 reads the redesigned emoji drawer flag in eight places that 580 reaches through one helper, which is why the two counts differ. Plugin gates must retain their expected enable/disable branch and return constants. The tab, browser, ad-filter, keyboard and typing edits check their specific instruction sites. Each control validates every target before editing its first method, and its settings entry is recorded only after success. A missing or ambiguous target stops that control. Changed media-viewer or community code leaves unrelated controls available. The settings provider is private, and its launcher accepts no external commands to change preferences. Since v0.5.0, Restart Messenger is private too, so only Messenger and its own launcher shortcuts can start it. v0.4.2 and earlier let other apps start it.
 
 ### Install beside Meta apps
 
@@ -380,7 +381,7 @@ An untouched file prints `Good "hushmessenger-release" signature for SysAdminDoc
 
 The [research snapshot](https://github.com/SysAdminDoc/HushMessenger/blob/015654380957d775f95b9f1c7871e91452d6216a/RESEARCH.md) compares Messenger patches in Morphe, ReVanced, De-Vanced and other projects. The remaining checks are summarized below. [Hushfeed](https://github.com/SysAdminDoc/hushfeed) is another Hush patch project.
 
-HushMessenger starts from the [Morphe patches template](https://github.com/MorpheApp/morphe-patches-template). Messenger hook definitions come from [De-Vanced](https://github.com/RookieEnough/De-Vanced), including its ReVanced contributions, and [Doom's patches](https://github.com/rushiranpise/morphe-patches). The typed ad-filter approach follows [Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed), with its MIT notice retained. The bubble eligibility anchor originated in [ChatHeadEnabler](https://github.com/NeonOrbit/ChatHeadEnabler). The permission approach is adapted from [Hushfacebook's shared-permission patch](https://github.com/SysAdminDoc/Hushfacebook/blob/15b8e9ed9315464a3e2d1a821b4e26ad47bbc28c/patches/src/main/kotlin/app/morphe/patches/facebook/coexist/SharedPermissions.kt). Source is under [GPL-3.0](LICENSE), and [NOTICE](NOTICE) has the details. HushMessenger is independent of Meta and Morphe.
+HushMessenger starts from the [Morphe patches template](https://github.com/MorpheApp/morphe-patches-template). Messenger hook definitions come from [De-Vanced](https://github.com/RookieEnough/De-Vanced), including its ReVanced contributions, and [Doom's patches](https://github.com/rushiranpise/morphe-patches). The typed ad-filter approach follows [Messenger Cleaner](https://github.com/N01-r0/messenger-cleaner-lsposed), with its MIT notice retained. The bubble eligibility anchor originated in [ChatHeadEnabler](https://github.com/NeonOrbit/ChatHeadEnabler). The emoji drawer anchor comes from ReVanced patches merge request !6833. The permission approach is adapted from [Hushfacebook's shared-permission patch](https://github.com/SysAdminDoc/Hushfacebook/blob/15b8e9ed9315464a3e2d1a821b4e26ad47bbc28c/patches/src/main/kotlin/app/morphe/patches/facebook/coexist/SharedPermissions.kt). Source is under [GPL-3.0](LICENSE), and [NOTICE](NOTICE) has the details. HushMessenger is independent of Meta and Morphe.
 
 ## Remaining checks
 
@@ -391,6 +392,7 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 - The Generate-button, protected-viewer and joined-community routes pass native discovery checks. Their live layout, playback, cleanup and inbox checks inside a signed-in account remain open. Settings preview speech passed, but Messenger inbox speech and a physical keyboard still need separate checks.
 - Unlock app icons passes its native checks on all 37 builds. A signed-in account still has to show the App icon setting, apply a paid icon and keep it after Messenger closes.
 - Clone install under another package name passes its native checks on all 37 builds, and Morphe Desktop applies it with every other patch on one build of each family. A phone still has to install the copy beside Messenger, sign in, get a notification and restore encrypted history.
+- Restore old emoji drawer passes the native discovery and patch checks on all 37 builds. It hasn't been tried on a phone yet.
 - Keep unsent messages can't cover end-to-end encrypted chats. Messenger removes those messages below the part of the app HushMessenger can change.
 
 <p align="center">

@@ -137,6 +137,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "unsent_indicator" -> method.validateUnsentIndicator()
             "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateEmojiTypeface()
+            EMOJI_DRAWER -> method.validateEmojiDrawer()
             "original_photo" -> method.validateOriginalPhoto()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
@@ -174,6 +175,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "unsent_indicator" -> method.injectUnsentIndicator()
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
+            EMOJI_DRAWER -> method.injectEmojiDrawer()
             "original_photo" -> method.injectOriginalPhoto()
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
@@ -289,6 +291,10 @@ val hideReelsBadgePatch = controlPatch("reels_badge", "Hide Reels badge", "Hides
 val hideAiStickersPatch = controlPatch("ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions.", "Stickers", "ai_stickers", "ai_sticker_cell")
 @Suppress("unused")
 val hideAvatarStickersPatch = controlPatch("avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "Stickers", "avatar_stickers", "avatar_tabs")
+@Suppress("unused")
+val restoreEmojiDrawerPatch = controlPatch("emoji_drawer", "Restore old emoji drawer",
+    "Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. " +
+        "Changes apply after Restart Messenger. Accounts Meta never moved to the redesign see no difference.", "Stickers")
 @Suppress("unused")
 val hideChatPromotionsPatch = controlPatch("chat_promotions", "Hide chat promotions", "Hides Messenger quick-promotion banners inside conversations.", "Conversations")
 @Suppress("unused")

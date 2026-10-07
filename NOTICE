@@ -10,6 +10,8 @@ package rename and encrypted-backup fix are adapted from rushiranpise/morphe-pat
 Spoof package version is adapted from rushiranpise/morphe-patches
 (e3bb3af54e13ecfac60eb8bf9bdf287330f0529f) and RookieEnough/De-Vanced
 (5cf78f17aae0665c196fb71d63d50726d9ba518e), under GPL-3.0.
+Restore old emoji drawer takes its anchor string from ReVanced patches
+merge request !6833 (Messenger, restore old emoji drawer), under GPL-3.0.
 The bubble eligibility anchor originates from NeonOrbit/ChatHeadEnabler.
 The runtime settings and checked 580 integrations are HushMessenger changes.
 

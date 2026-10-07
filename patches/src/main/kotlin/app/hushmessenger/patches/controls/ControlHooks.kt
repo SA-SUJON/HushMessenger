@@ -143,6 +143,8 @@ internal val expectedHooks = mapOf(
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "ai_search_chip" to setOf("LX/D8E;->render(LX/2MZ;)LX/1GG;"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
+    EMOJI_DRAWER to setOf("Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z",
+        "LX/H1n;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
     "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
@@ -240,6 +242,8 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     val appIconManagers = findAppIconManagers(classes)
     var searchFieldRender: Method? = null
     var changedViewer = false
+    val drawerReaders = mutableListOf<Method>()
+    val drawerAnchors = mutableListOf<Method>()
     for (cls in classes) {
         val original = cls.fields.firstOrNull { it.name == "__redex_internal_original_name" }
             ?.initialValue.let { (it as? StringEncodedValue)?.value }
@@ -256,6 +260,8 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
             val refs = instructions.mapNotNull { (it as? ReferenceInstruction)?.reference }
             val strings = refs.filterIsInstance<StringReference>().map { it.string }.toSet()
             val gate = method.returnType == "Z" && method.parameterTypes.isEmpty()
+            if (instructions.any { it.isEmojiDrawerFlag() }) drawerReaders.add(method)
+            if (EMOJI_DRAWER_ANCHOR in strings) drawerAnchors.add(method)
             if (method.returnType == "Z" && (method.parameterTypes.isEmpty() ||
                 (AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type)))) {
                 for ((key, spec) in pluginGates) if (strings.any { it in spec.anchors }) add(key)
@@ -413,6 +419,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
             ?.let { found.getValue("ai_search_chip").add(it) }
     }
     if (changedViewer) found.getValue("screenshot_viewers").clear()
+    found.getValue(EMOJI_DRAWER).addAll(connectEmojiDrawer(drawerReaders, drawerAnchors))
     return found
 }
 

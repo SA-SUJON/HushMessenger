@@ -86,6 +86,10 @@ internal val PROFILE_346013370 = ControlProfile(
         "chat_promotions" to setOf("LX/HCH;->A0D()Z", "LX/HCH;->A0E()Z"),
         "community_inbox" to setOf("LX/2GV;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/VsH;->Btd(I)Z"),
+        "emoji_drawer" to setOf(
+            "LX/H1T;->invoke(Ljava/lang/Object;)Ljava/lang/Object;",
+            "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A04()Z",
+        ),
         "emoji_typeface" to setOf("LX/1KU;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/HCH;->A07()Z", "LX/HCH;->A08()Z"),
         "facebook" to setOf(
@@ -185,6 +189,10 @@ internal val PROFILE_346013423 = ControlProfile(
         "chat_promotions" to setOf("LX/KHo;->A0D()Z", "LX/KHo;->A0E()Z"),
         "community_inbox" to setOf("LX/2Ha;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/YOo;->Bto(I)Z"),
+        "emoji_drawer" to setOf(
+            "LX/H0E;->invoke(Ljava/lang/Object;)Ljava/lang/Object;",
+            "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A03()Z",
+        ),
         "emoji_typeface" to setOf("LX/1Ku;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/KHo;->A07()Z", "LX/KHo;->A08()Z"),
         "facebook" to setOf(
@@ -284,6 +292,10 @@ internal val PROFILE_346013357 = ControlProfile(
         "chat_promotions" to setOf("LX/Ts2;->A0D()Z", "LX/Ts2;->A0E()Z"),
         "community_inbox" to setOf("LX/2GW;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/K0w;->Bta(I)Z"),
+        "emoji_drawer" to setOf(
+            "LX/H19;->invoke(Ljava/lang/Object;)Ljava/lang/Object;",
+            "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z",
+        ),
         "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/Ts2;->A07()Z", "LX/Ts2;->A08()Z"),
         "facebook" to setOf(
@@ -383,6 +395,10 @@ internal val PROFILE_346013374 = ControlProfile(
         "chat_promotions" to setOf("LX/HKj;->A0D()Z", "LX/HKj;->A0E()Z"),
         "community_inbox" to setOf("LX/2GV;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/VmI;->Btb(I)Z"),
+        "emoji_drawer" to setOf(
+            "LX/Mxk;->invoke(Ljava/lang/Object;)Ljava/lang/Object;",
+            "Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z",
+        ),
         "emoji_typeface" to setOf("LX/1KU;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/HKj;->A07()Z", "LX/HKj;->A08()Z"),
         "facebook" to setOf(
@@ -482,6 +498,15 @@ internal val PROFILE_346213494 = ControlProfile(
         "chat_promotions" to setOf("LX/HG6;->A0E()Z", "LX/HG6;->A0F()Z"),
         "community_inbox" to setOf("LX/25I;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
         "delta_unsent" to setOf("LX/YSN;->BuT(I)Z"),
+        "emoji_drawer" to setOf(
+            "LX/4hH;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;",
+            "LX/4wu;->render(LX/5Sd;LX/5qW;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;)V",
+            "LX/517;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;",
+            "LX/55L;->render(LX/2AL;)LX/1Gd;",
+            "LX/5NL;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;",
+            "LX/5UV;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;",
+            "LX/5iR;->render(LX/2AL;)LX/1Gd;", "LX/Eyg;->invoke(Ljava/lang/Object;)Ljava/lang/Object;",
+        ),
         "emoji_typeface" to setOf("LX/1L4;->A00()Landroid/graphics/Typeface;"),
         "event_prompts" to setOf("LX/HG6;->A08()Z", "LX/HG6;->A09()Z"),
         "facebook" to setOf(

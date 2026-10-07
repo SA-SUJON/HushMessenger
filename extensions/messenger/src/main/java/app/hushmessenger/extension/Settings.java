@@ -167,6 +167,29 @@ public final class Settings {
     }
 
     private static final Object META_AI_TAB = new Object();
+
+    /** First answer this process gave for the emoji drawer, or null before Messenger asked. */
+    static volatile Boolean oldEmojiDrawer;
+    private static final Object EMOJI_DRAWER = new Object();
+
+    /**
+     * Messenger reads its redesigned emoji drawer flag in each part of the drawer as it builds it, and the parts have to
+     * agree, the way Meta's server flag never changes while Messenger runs. So the first answer holds until a restart,
+     * and a switch, Pause or safe-mode change can't leave half the drawer redesigned. This only ever turns a yes into a no.
+     */
+    public static boolean redesignedEmojiDrawer(boolean original) {
+        Boolean old = oldEmojiDrawer;
+        if (old == null) {
+            synchronized (EMOJI_DRAWER) {
+                if (oldEmojiDrawer == null) oldEmojiDrawer = wouldUse("emoji_drawer");
+                old = oldEmojiDrawer;
+            }
+        }
+        if (!original || !old) return original;
+        activeAt.put("emoji_drawer", System.currentTimeMillis());
+        return false;
+    }
+
     public static boolean showSubtabs(boolean original) { return original && !enabled("subtabs"); }
     public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean keepPeopleSection(boolean original) { return original && !enabled("people"); }

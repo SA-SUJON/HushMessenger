@@ -39,6 +39,14 @@ hook chat_promotions LX/HG6;->A0E()Z
 hook chat_promotions LX/HG6;->A0F()Z
 hook community_inbox LX/25I;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
 hook delta_unsent LX/YSN;->BuT(I)Z
+hook emoji_drawer LX/4hH;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;
+hook emoji_drawer LX/4wu;->render(LX/5Sd;LX/5qW;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;)V
+hook emoji_drawer LX/517;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;
+hook emoji_drawer LX/55L;->render(LX/2AL;)LX/1Gd;
+hook emoji_drawer LX/5NL;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;
+hook emoji_drawer LX/5UV;->ALl(LX/5kw;LX/1NP;Lcom/facebook/xapp/messaging/capability/vector/Capabilities;LX/5qW;LX/5KG;)LX/1Gd;
+hook emoji_drawer LX/5iR;->render(LX/2AL;)LX/1Gd;
+hook emoji_drawer LX/Eyg;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
 hook emoji_typeface LX/1L4;->A00()Landroid/graphics/Typeface;
 hook event_prompts LX/HG6;->A08()Z
 hook event_prompts LX/HG6;->A09()Z

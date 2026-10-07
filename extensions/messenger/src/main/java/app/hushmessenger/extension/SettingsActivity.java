@@ -105,6 +105,7 @@ public final class SettingsActivity extends Activity {
         {"chat_animation", "Slide chats in and out", "Slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. Chat heads and bubbles keep their own animations.", "navigation"},
         {"ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions.", "stickers"},
         {"avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "stickers"},
+        {"emoji_drawer", "Restore old emoji drawer", "Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. Restart Messenger after changing this. Accounts Meta never moved to the redesign see no difference.", "stickers"},
         {"chat_promotions", "Hide chat promotions", "Hides Messenger's quick-promotion banners inside conversations.", "conversations"},
         {"suggested_replies", "Hide business reply suggestions", "Hides suggested replies in business conversations.", "conversations"},
         {"business_suggestions", "Hide business typing suggestions", "Hides business suggestions as you type.", "conversations"},

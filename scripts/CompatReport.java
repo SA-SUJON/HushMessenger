@@ -86,6 +86,12 @@ public class CompatReport {
     static final String STORY_CARD_DATE_KEY = "last_date_creation_card_shown";
     // The Notifications tab's server flag ID, renumbered by each release: 580's, then 581's
     static final Set<Long> PEOPLE_SERVER_FLAGS = Set.of(72344235860374863L, 72344231565407716L);
+    // The redesigned emoji drawer's server flag, renumbered by each release: 580's, then 581's
+    static final Set<Long> EMOJI_DRAWER_FLAGS = Set.of(36320734536089357L, 36320704471318256L);
+    // The drawer renderer throws this when the redesign can't draw, which ties the flag to the emoji drawer
+    static final String EMOJI_DRAWER_ANCHOR = "Cannot render redesigned drawer with search icon ";
+    // Controls whose hook count follows how Redex inlined one flag read, so it differs between releases
+    static final Set<String> RELEASE_HOOK_COUNTS = Set.of("emoji_drawer");
     // The inbox ad filter's exit registers, in order: v5 from both in 580, v7 then v2 in 581
     static final Set<List<Integer>> AD_FILTER_RESULTS = Set.of(List.of(5, 5), List.of(7, 2));
 
@@ -165,6 +171,7 @@ public class CompatReport {
         PATCHES.put("Hide Reels badge", List.of("reels_badge"));
         PATCHES.put("Hide AI sticker tools", List.of("ai_stickers", "ai_sticker_cell"));
         PATCHES.put("Hide avatar stickers", List.of("avatar_stickers", "avatar_tabs"));
+        PATCHES.put("Restore old emoji drawer", List.of("emoji_drawer"));
         PATCHES.put("Hide chat promotions", List.of("chat_promotions"));
         PATCHES.put("Hide business reply suggestions", List.of("suggested_replies"));
         PATCHES.put("Hide business typing suggestions", List.of("business_suggestions"));
@@ -329,10 +336,14 @@ public class CompatReport {
      */
     static List<Problem> unresolved(Profile found, Collection<Profile> recorded) {
         var problems = new ArrayList<Problem>();
-        Profile shape = recorded.isEmpty() ? null : recorded.iterator().next();
+        // Builds of one release share every count. A new release is held to any recorded build's counts, except
+        // where the count follows Redex's inlining of one flag read, which needs only one hook or more.
+        Profile sameRelease = recorded.stream().filter(p -> p.version.equals(found.version)).findFirst().orElse(null);
+        Profile shape = sameRelease != null ? sameRelease : recorded.isEmpty() ? null : recorded.iterator().next();
         for (var key : CONTROL_KEYS) {
             int count = found.hooks.getOrDefault(key, Set.of()).size();
             int expected = shape == null ? Math.max(count, 1) : shape.hooks.getOrDefault(key, Set.of()).size();
+            if (sameRelease == null && RELEASE_HOOK_COUNTS.contains(key) && count >= 1) continue;
             if (count != expected) problems.add(new Problem(key, Set.of(key), "expected " + expected + " hooks, found " + count));
         }
         for (var entry : FIELD_CONTROLS.entrySet()) {
@@ -1874,6 +1885,40 @@ public class CompatReport {
         return hookId(init);
     }
 
+    /**
+     * Every method that loads the emoji drawer flag, but only when the one renderer that throws the anchor loads it
+     * too, itself (581) or through a static no-argument boolean that does (580). Mirrors EmojiDrawer.kt.
+     */
+    static List<Method> emojiDrawerReaders(List<ClassDef> classes) {
+        var readers = new ArrayList<Method>();
+        var anchors = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null) continue;
+            boolean reads = false, anchor = false;
+            for (var i : method.getImplementation().getInstructions()) {
+                if (i.getOpcode() == Opcode.CONST_WIDE && EMOJI_DRAWER_FLAGS.contains(((WideLiteralInstruction) i).getWideLiteral())) reads = true;
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                    EMOJI_DRAWER_ANCHOR.equals(sr.getString())) anchor = true;
+            }
+            if (reads) readers.add(method);
+            if (anchor) anchors.add(method);
+        }
+        if (anchors.size() != 1) return List.of();
+        var anchor = anchors.get(0);
+        var ids = new HashSet<String>();
+        var helpers = new HashSet<String>();
+        for (var reader : readers) {
+            ids.add(hookId(reader));
+            if (AccessFlags.STATIC.isSet(reader.getAccessFlags()) && reader.getParameterTypes().isEmpty() &&
+                "Z".equals(reader.getReturnType())) helpers.add(hookId(reader));
+        }
+        boolean connected = ids.contains(hookId(anchor));
+        for (var i : anchor.getImplementation().getInstructions()) {
+            if (i.getOpcode() == Opcode.INVOKE_STATIC && helpers.contains(((ReferenceInstruction) i).getReference().toString())) connected = true;
+        }
+        return connected ? readers : List.of();
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -1882,6 +1927,7 @@ public class CompatReport {
         found.get("ai_sticker_cell").addAll(findAiStickerCells(classes));
         var community = communityInbox(classes);
         if (community != null) found.get("community_inbox").add(community.render());
+        found.get("emoji_drawer").addAll(emojiDrawerReaders(classes));
         for (var cls : classes) for (var method : cls.getMethods())
             if (!screenshotViewerSites(method).isEmpty()) found.get("screenshot_viewers").add(method);
         var jewelCandidates = new ArrayList<Map.Entry<Method, Set<String>>>();

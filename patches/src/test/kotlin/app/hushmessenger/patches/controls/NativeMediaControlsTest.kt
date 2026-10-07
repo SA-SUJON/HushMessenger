@@ -295,7 +295,10 @@ class NativeMediaControlsTest {
             val dex = DexFileFactory.loadDexContainer(apk.toFile(), Opcodes.forApi(35))
             val classes = dex.dexEntryNames.flatMap { dex.getEntry(it)!!.dexFile.classes }
             val discovered = findControls(classes)
-            validateControls(discovered, setOf("ai_sticker_cell", "screenshot_viewers"))
+            validateControls(discovered, setOf("ai_sticker_cell", "screenshot_viewers", EMOJI_DRAWER))
+            // The emoji drawer rides on the same discovery: every flag read takes the helper and nothing else moves.
+            val drawerReads = discovered.getValue(EMOJI_DRAWER).sumOf { assertEmojiDrawerInjected(it, "$code ${it.hookId()}") }
+            assertEquals(if (code.startsWith("3462")) 9 else 2, drawerReads, code)
             val cell = discovered.getValue("ai_sticker_cell").single()
             assertEquals(activeProfile.hooks.getValue("ai_sticker_cell").single(), cell.hookId())
             val viewers = discovered.getValue("screenshot_viewers")

@@ -39,6 +39,8 @@ hook chat_promotions LX/Ts2;->A0D()Z
 hook chat_promotions LX/Ts2;->A0E()Z
 hook community_inbox LX/2GW;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
 hook delta_unsent LX/K0w;->Bta(I)Z
+hook emoji_drawer LX/H19;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
+hook emoji_drawer Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z
 hook emoji_typeface LX/1KV;->A00()Landroid/graphics/Typeface;
 hook event_prompts LX/Ts2;->A07()Z
 hook event_prompts LX/Ts2;->A08()Z
