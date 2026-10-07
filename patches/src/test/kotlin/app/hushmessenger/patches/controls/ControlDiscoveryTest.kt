@@ -73,6 +73,7 @@ class ControlDiscoveryTest {
                     "chat_legacy" -> LEGACY_CHAT_ANIMATION_BODY
                     "growth_notes" -> "const-string v0, \"$NOTES_TIP_SHEET\"\nconst-string v0, \"$NOTES_TIP_TYPE_ARG\"\nconst/4 v0, 0x0\nreturn-object v0"
                     "growth_story_card" -> "sget-object v0, LX/JVI;->A0E:LX/1BL;\nconst/4 v0, 0x1\nreturn v0"
+                    APP_ICONS -> APP_ICON_GATE_BODY
                     "menu_settings" -> when {
                         id.contains("ArrayList") ->
                             "const-string v0, \"messaging.navigation.settingsfolder.folderitem.SettingsFolderItem\"\nconst/4 v0, 0x0\nreturn-object v0"
@@ -96,7 +97,7 @@ class ControlDiscoveryTest {
                     """.trimIndent()
                     else -> error("Missing synthetic resolver fixture for $key")
                 }
-                val staticGate = (key in pluginGates || key == "ai_search" || key == "growth_story_card") && !id.substringAfter('(').startsWith(')')
+                val staticGate = (key in pluginGates || key == "ai_search" || key == "growth_story_card" || key == APP_ICONS) && !id.substringAfter('(').startsWith(')')
                 fixtureMethod(id, body, registers = when (key) { "original_photo" -> 22; "chat_animation", "chat_legacy" -> 5; else -> 8 }, flags = AccessFlags.PUBLIC.value or
                     if (staticGate) AccessFlags.STATIC.value else 0)
             }
@@ -106,6 +107,7 @@ class ControlDiscoveryTest {
                 "LX/Txc;" -> listOf(fixtureMethod("LX/Txc;->CH7(Landroid/view/ViewGroup;I)LX/4jw;",
                     "new-instance v0, LX/TxV;\nconst/4 v0, 0x0\nreturn-object v0"))
                 "LX/JZ6;" -> listOf(peopleTabFetchMethod())
+                "LX/7Ya;" -> listOf(appIconAliasMap("LX/7Ya;"))
                 else -> emptyList()
             }
             fixtureClass(type, grouped + extra, originals[type],
@@ -138,7 +140,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(101, found.values.sumOf { it.size })
+        assertEquals(103, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

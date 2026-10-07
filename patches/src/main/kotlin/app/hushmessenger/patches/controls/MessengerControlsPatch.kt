@@ -141,6 +141,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "growth_notes" -> method.validateNotesTips()
             "bubbles" -> method.validateBubbleEligibility()
             "bubble_mode" -> method.validateNativeBubbleMode()
+            APP_ICONS -> method.validateAppIconGate()
             else -> method.validateSwitch()
         }
     }
@@ -163,6 +164,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "typing" -> method.injectSwitch("suppressTyping", "0x0")
             "bubbles" -> method.injectSwitch("enableBubbles", "0x1")
             "bubble_mode" -> method.injectNativeBubbleMode()
+            APP_ICONS -> method.injectAppIconGate()
             "allow_screenshot" -> method.injectSwitch("allowScreenshot", "0x0")
             "hide_read_receipts", "read_mailbox" -> method.injectSwitch("hideReadReceipts", "0x0")
             "keep_unsent" -> method.injectKeepUnsent()
@@ -308,6 +310,10 @@ val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots",
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Stops sending read receipts. Opened encrypted chats can stay unread on this phone. Replying or switching this off may notify the sender. Group coverage isn't verified.", "Privacy", "hide_read_receipts", "read_mailbox")
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Preserves messages on verified legacy unsend routes. End-to-end encrypted chats are unsupported, and group coverage is unverified. Activity records intercepted legacy unsends, not chat support. Your own unsend may be limited.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
+@Suppress("unused")
+val unlockAppIconsPatch = controlPatch("app_icons", "Unlock app icons", "Makes every icon in Messenger's App icon setting selectable without a subscription. " +
+    "Messenger applies the icon with its own launcher switch. Messenger still decides whether that setting shows on your account, " +
+    "and switching this off can bring its default icon back.", "Theme")
 private var anonymousStoriesApplied = false
 
 private val anonymousStoriesResources = resourcePatch(description = "Record HushMessenger capability: anonymous_stories") {

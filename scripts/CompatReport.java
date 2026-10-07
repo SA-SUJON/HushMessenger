@@ -177,6 +177,7 @@ public class CompatReport {
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
+        PATCHES.put("Unlock app icons", List.of("app_icons"));
         PATCHES.put("View stories anonymously", List.of("anonymous_stories"));
         PATCHES.put("Save any story", List.of("save_stories"));
         PATCHES.put("Slide chats in and out", List.of("chat_animation", "chat_fragment", "chat_inbox", "chat_legacy"));
@@ -1965,6 +1966,17 @@ public class CompatReport {
             }
         }
 
+        // The app icon manager maps "default" to the start screen and every other icon to a LauncherAlias.
+        var appIconManagers = new HashSet<String>();
+        for (var cls : classes) for (var m : cls.getMethods()) {
+            if (!"<clinit>".equals(m.getName()) || m.getImplementation() == null) continue;
+            var literals = new HashSet<String>();
+            for (var i : m.getImplementation().getInstructions())
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) literals.add(sr.getString());
+            if (literals.contains("com.facebook.orca.auth.StartScreenActivity") &&
+                literals.stream().anyMatch(s -> s.startsWith("com.facebook.orca.LauncherAlias"))) appIconManagers.add(cls.getType());
+        }
+
         for (var cls : classes) {
             String original = null;
             for (var f : cls.getFields()) {
@@ -2017,6 +2029,12 @@ public class CompatReport {
                 // stories
                 if (gate && strings.contains("com.facebook.messaging.friendsinboxunit.plugins.inboxunit.FriendsInboxUnitKillSwitch")) {
                     found.get("stories").add(method);
+                }
+
+                // app_icons: the icon manager's subscription benefit checks
+                if (appIconManagers.contains(cls.getType()) && isStatic && "Z".equals(method.getReturnType()) &&
+                    paramTypes.equals(List.of(BUBBLE_SESSION)) && strings.contains("CUSTOM_APP_ICON")) {
+                    found.get("app_icons").add(method);
                 }
 
                 // facebook

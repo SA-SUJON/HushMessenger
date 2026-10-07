@@ -21,6 +21,8 @@ hook allow_screenshot LX/8zQ;->onScreenCaptured()V
 hook allow_screenshot LX/Pf4;->run()V
 hook allow_screenshot Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V
 hook anonymous_stories LX/NUZ;->C1g(Lcom/facebook/messaging/montage/model/MontageCard;Z)V
+hook app_icons LX/7Zm;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z
+hook app_icons LX/7Zm;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z
 hook avatar_stickers LX/YAk;->A01(LX/YAk;)Z
 hook avatar_tabs Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A6U(LX/5qN;)V
 hook browser Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0M(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z

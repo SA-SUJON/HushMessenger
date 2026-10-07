@@ -132,6 +132,7 @@ internal val expectedHooks = mapOf(
     "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
     "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
     "anonymous_stories" to setOf("LX/HNV;->C1V(${MONTAGE_CARD}Z)V"),
+    APP_ICONS to setOf("LX/7Ya;->A02($FB_USER_SESSION)Z", "LX/7Ya;->A03($FB_USER_SESSION)Z"),
     "save_stories" to setOf("LX/JgG;->onClick(Landroid/view/View;)V"),
     "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->" +
         "A01(Landroidx/fragment/app/Fragment;LX/Ocr;Ljava/util/List;LX/5MS;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
@@ -236,6 +237,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
             break
         }
     }
+    val appIconManagers = findAppIconManagers(classes)
     var searchFieldRender: Method? = null
     var changedViewer = false
     for (cls in classes) {
@@ -261,6 +263,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
             if (adContract && method.returnType == IMMUTABLE_LIST && method.parameterTypes.size == 3 &&
                 strings.containsAll(setOf("messaging.inbox.itemlistprocessor.ItemListProcessorInterfaceSpec", "processItems", "new_friend_bump_threads"))) add("ads")
             if (gate && "com.facebook.messaging.friendsinboxunit.plugins.inboxunit.FriendsInboxUnitKillSwitch" in strings) add("stories")
+            if (cls.type in appIconManagers && method.isAppIconGate()) add(APP_ICONS)
             if (gate && instructions.any {
                 it.opcode == Opcode.NEW_INSTANCE &&
                     ((it as? ReferenceInstruction)?.reference as? TypeReference)?.type in facebookPlugins
