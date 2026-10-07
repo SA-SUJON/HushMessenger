@@ -739,6 +739,10 @@ public final class SettingsActivity extends Activity {
         ui.add(content, ui.heading(text.get("appearance")), 22);
         LinearLayout appearance = ui.panel();
         ui.add(appearance, controlRow("light", text.format("light"), text.format("light_help"), false), 0);
+        if (Settings.installed.contains("material_you")) {
+            ui.rule(appearance, 14);
+            ui.add(appearance, controlRow("material_you_black", text.format("material_you_black"), text.format("material_you_black_help"), false), 14);
+        }
         ui.rule(appearance, 14);
         ui.add(appearance, ui.text(text.get("theme_help"), 13, ui.muted, false), 14);
         ui.add(content, appearance, 12);

@@ -134,6 +134,8 @@ final class SettingsText {
         ENGLISH.put("choice_on", "%s on");
         ENGLISH.put("choice_off", "%s off");
         ENGLISH.put("appearance", "APPEARANCE");
+        ENGLISH.put("material_you_black", "Pure black dark mode");
+        ENGLISH.put("material_you_black_help", "With Material You theme on, Messenger's darkest backgrounds become pure black. Light mode doesn't change.");
         ENGLISH.put("light", "Light theme");
         ENGLISH.put("light_help", "Use a light background in settings.");
         ENGLISH.put("theme_help", "Dark by default. Your choice stays saved.");
