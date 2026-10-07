@@ -159,6 +159,7 @@ internal val expectedHooks = mapOf(
         "LX/H1n;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
     "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
     ORIGINAL_VIDEO to setOf(VIDEO_TRANSCODE),
+    SYSTEM_CAMERA to setOf("LX/7Jp;->DXV($MONTAGE_PARAMS$NAVIGATION_TRIGGER)V"),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
         "LX/9rv;->A1i()V",
@@ -437,6 +438,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     found.getValue(ANALYTICS_UPLOADS).addAll(findAnalyticsUploads(classes))
     found.getValue(MESSAGE_LOG).addAll(findMessageLogHook(classes))
     messageLogContract = resolveMessageLogContract(classes)
+    found.getValue(SYSTEM_CAMERA).addAll(findSystemCamera(classes))
     return found
 }
 

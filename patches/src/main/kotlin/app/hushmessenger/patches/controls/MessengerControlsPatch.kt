@@ -143,6 +143,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             MESSAGE_LOG -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
             ORIGINAL_VIDEO -> method.validateOriginalVideo()
+            SYSTEM_CAMERA -> method.validateSystemCamera()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
             "anonymous_stories" -> method.validateStorySeen()
@@ -184,6 +185,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             MESSAGE_LOG -> method.injectMessageLog()
             "original_photo" -> method.injectOriginalPhoto()
             ORIGINAL_VIDEO -> method.injectOriginalVideo()
+            SYSTEM_CAMERA -> method.injectSystemCamera()
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
             "anonymous_stories" -> method.injectStorySeen()
@@ -193,7 +195,9 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
     }
 }
 
-private fun controlPatch(key: String, title: String, summary: String, group: String, vararg hooks: String): BytecodePatch {
+/** [manifest] adds the components a control needs, and runs only once its hooks are in. */
+private fun controlPatch(key: String, title: String, summary: String, group: String, vararg hooks: String,
+    manifest: (Document.() -> Unit)? = null): BytecodePatch {
     var applied = false
     var nativeRoutesApplied = false
     val featureResources = resourcePatch(description = "Record HushMessenger capability: $key") {
@@ -206,6 +210,7 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
         finalize {
             if (applied) document("AndroidManifest.xml").use {
                 it.addFeature(key)
+                manifest?.invoke(it)
                 if (nativeRoutesApplied) it.addNativeBubbleRoutesMetadata()
             }
         }
@@ -329,6 +334,11 @@ val keepMessageLogPatch = controlPatch("message_log", "Keep a message log",
     "Keeps a copy of each message as its notification arrives, so an unsend can't take it back. This is the only way " +
         "that reaches end-to-end encrypted chats. The log stays on your phone, encrypted with a key that never leaves it, " +
         "and holds only messages that raised a notification. Read it or clear it from the log in settings.", "Privacy")
+@Suppress("unused")
+val systemCameraPatch = controlPatch("system_camera", "Use the phone's camera app",
+    "The camera button in a chat opens your phone's own camera app instead of Messenger's camera. " +
+        "The photo you take opens in Messenger's editor for that chat, ready to send. Photos only.", "Conversations",
+    manifest = { addSystemCamera() })
 @Suppress("unused")
 val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytics uploads",
     "Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, " +

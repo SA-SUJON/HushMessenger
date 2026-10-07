@@ -182,6 +182,7 @@ public class CompatReport {
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Send photos at original quality", List.of("original_photo"));
         PATCHES.put("Send videos without re-encoding", List.of("original_video"));
+        PATCHES.put("Use the phone's camera app", List.of("system_camera"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
         PATCHES.put("Keep a message log", List.of("message_log"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
@@ -1966,6 +1967,47 @@ public class CompatReport {
      * Every upload entry point. Analytics2UploadService inherits its two from an obfuscated job service base, which
      * counts only while it's abstract, extends JobService directly and has no other subclass.
      */
+    static final String MONTAGE_PARAMS = "Lcom/facebook/messaging/montage/composer/model/MontageComposerFragmentParams;";
+    static final String NAVIGATION_TRIGGER = "Lcom/facebook/messaging/send/trigger/NavigationTrigger;";
+    static final String MONTAGE_ACTIVITY = "Lcom/facebook/messaging/montage/composer/MontageComposerActivity;";
+
+    static boolean hasLiteral(Method m, int value) {
+        for (var i : m.getImplementation().getInstructions())
+            if (i instanceof NarrowLiteralInstruction n && n.getNarrowLiteral() == value) return true;
+        return false;
+    }
+
+    /**
+     * system_camera: the chat composer's camera listener, which builds MontageComposerActivity's intent and starts it
+     * with request code 7377. Counted only while exactly one chat fragment also reads a photo picked in another app
+     * (request code 1112), the path the switch hands the phone camera's photo to.
+     */
+    static List<Method> systemCameraLaunches(List<ClassDef> classes) {
+        var launches = new ArrayList<Method>();
+        int readers = 0;
+        for (var cls : classes) for (var m : cls.getMethods()) {
+            if (m.getImplementation() == null) continue;
+            var params = new ArrayList<String>();
+            for (var t : m.getParameterTypes()) params.add(t.toString());
+            var strings = new HashSet<String>();
+            boolean buildsIntent = false;
+            for (var i : m.getImplementation().getInstructions()) {
+                if (!(i instanceof ReferenceInstruction r)) continue;
+                if (r.getReference() instanceof StringReference sr) strings.add(sr.getString());
+                if (r.getReference() instanceof MethodReference mr && MONTAGE_ACTIVITY.equals(mr.getDefiningClass()) &&
+                    "Landroid/content/Intent;".equals(mr.getReturnType()) &&
+                    List.of("Landroid/content/Context;", MONTAGE_PARAMS, NAVIGATION_TRIGGER).equals(mr.getParameterTypes().stream().map(Object::toString).toList()))
+                    buildsIntent = true;
+            }
+            if ("onActivityResult".equals(m.getName()) && "V".equals(m.getReturnType()) && params.equals(List.of("I", "I", "Landroid/content/Intent;")) &&
+                hasLiteral(m, 7377) && hasLiteral(m, 1112) && strings.contains("ComposeFragment:externalMediaGalleryActivityResultNullData") &&
+                strings.contains("ComposeFragment:montageMessageActivityResultNullData")) readers++;
+            if ("V".equals(m.getReturnType()) && params.equals(List.of(MONTAGE_PARAMS, NAVIGATION_TRIGGER)) &&
+                !AccessFlags.STATIC.isSet(m.getAccessFlags()) && buildsIntent && hasLiteral(m, 7377)) launches.add(m);
+        }
+        return readers == 1 ? launches : List.of();
+    }
+
     static List<Method> analyticsUploads(List<ClassDef> classes) {
         var found = new ArrayList<Method>();
         ClassDef uploader = null;
@@ -2003,6 +2045,7 @@ public class CompatReport {
         found.get("emoji_drawer").addAll(emojiDrawerReaders(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
+        found.get("system_camera").addAll(systemCameraLaunches(classes));
         for (var cls : classes) for (var method : cls.getMethods())
             if (!screenshotViewerSites(method).isEmpty()) found.get("screenshot_viewers").add(method);
         var jewelCandidates = new ArrayList<Map.Entry<Method, Set<String>>>();

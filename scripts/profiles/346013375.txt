@@ -115,6 +115,7 @@ hook subtabs LX/2UK;->run()V
 hook suggested_replies LX/7T9;->A06(LX/7T9;)Z
 hook suggested_replies LX/7U7;->A05(LX/7U7;)Z
 hook suggested_replies LX/HKl;->A05()Z
+hook system_camera LX/7KL;->DXL(Lcom/facebook/messaging/montage/composer/model/MontageComposerFragmentParams;Lcom/facebook/messaging/send/trigger/NavigationTrigger;)V
 hook typing LX/Aia;->run()V
 hook typing_mailbox LX/8f5;->A0I(Ljava/lang/String;Z)LX/324;
 hook unsent_indicator LX/VmI;->BWm(I)Ljava/lang/String;

@@ -212,6 +212,25 @@ public final class Settings {
 
     /** The notification hook hands the message here; the log stores it off this thread and swallows its own failures. */
     public static void recordReceivedMessage(String text, String thread) { MessageLog.record(text, thread); }
+    /**
+     * The chat camera button's intent, right before Messenger starts it. With the switch on it opens the capture screen,
+     * which uses the phone's camera app. Off, Pause, safe mode and an install without the capture screen get Messenger's.
+     */
+    public static android.content.Intent systemCamera(android.content.Intent original) {
+        try {
+            Context context = appContext;
+            if (original == null || context == null || !wouldUse(CameraActivity.KEY)) return original;
+            android.content.Intent capture = CameraActivity.captureIntent(context);
+            return capture != null && enabled(CameraActivity.KEY) ? capture : original;
+        } catch (RuntimeException error) {
+            hookFailed(CameraActivity.KEY, "Can't open the phone's camera app", error);
+            return original;
+        }
+    }
+    /** The chat reads a photo from another app back under its own request code, so the capture screen starts with that one. */
+    public static int cameraRequestCode(android.content.Intent intent, int requestCode) {
+        return CameraActivity.isCapture(appContext, intent) ? CameraActivity.EXTERNAL_MEDIA_REQUEST : requestCode;
+    }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) {
