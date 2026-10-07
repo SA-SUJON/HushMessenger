@@ -1,6 +1,5 @@
 package app.hushmessenger.tools
 
-import app.morphe.patcher.patch.Option
 import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.loadPatchesFromJar
 import com.android.tools.smali.dexlib2.ReferenceType
@@ -41,6 +40,33 @@ object CatalogTool {
         ))
     }
 
+    private fun optionValue(value: Any?): JsonElement = when (value) {
+        null -> JsonNull
+        is String -> JsonPrimitive(value)
+        is Boolean -> JsonPrimitive(value)
+        is Int, is Long -> JsonPrimitive(value as Number)
+        else -> throw IllegalArgumentException("Option values of ${value.javaClass.name} need explicit catalog support")
+    }
+
+    private fun options(patch: Patch<*>): JsonArray = JsonArray(patch.options.values.sortedBy { it.key }.map { option ->
+        require(option.key.isNotBlank() && !option.title.isNullOrBlank() && !option.description.isNullOrBlank()) {
+            "Options need a key, title and description for the public catalog"
+        }
+        JsonObject(linkedMapOf(
+            "key" to JsonPrimitive(option.key),
+            "title" to JsonPrimitive(option.title),
+            "description" to JsonPrimitive(option.description),
+            "required" to JsonPrimitive(option.required),
+            "type" to JsonPrimitive(option.type.toString()),
+            "default" to optionValue(option.default),
+            "values" to JsonObject(option.values.orEmpty().entries.sortedBy { it.key }.associate { it.key to optionValue(it.value) }),
+        ))
+    })
+
+    /** Visible patches that are neither a settings control nor one of the always-on fixes. */
+    val NON_CONTROL_PATCHES = setOf("Install beside Meta apps", "Open settings from menu", "Restore screens on re-signed builds",
+        "Spoof package version", "Clone install under another package name")
+
     fun catalog(version: String, patches: Set<Patch<*>>): JsonObject = JsonObject(linkedMapOf(
         "NOTE" to JsonPrimitive("Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand."),
         "version" to JsonPrimitive(version),
@@ -71,26 +97,10 @@ object CatalogTool {
                         )) }),
                     ))
                 }) } ?: JsonNull),
-                "options" to JsonArray(patch.options.values.sortedBy { it.key }.map(::option)),
+                "options" to options(patch),
             ))
         }),
     ))
-
-    /** Free-text string options only. Anything else needs its own catalog support first. */
-    @Suppress("DEPRECATION")
-    private fun option(option: Option<*>): JsonObject {
-        require(option.type.classifier == String::class && option.values.isNullOrEmpty() && option.default is String?) {
-            "Only free-text string options have catalog support"
-        }
-        return JsonObject(linkedMapOf(
-            "key" to JsonPrimitive(option.key),
-            "title" to JsonPrimitive(option.title),
-            "description" to JsonPrimitive(option.description),
-            "required" to JsonPrimitive(option.required),
-            "type" to JsonPrimitive("String"),
-            "default" to JsonPrimitive(option.default as String?),
-        ))
-    }
 
     fun validateDefinitions(patchSource: String, uiSource: String, manifest: String, names: Set<String>): Int {
         val declarations = (Regex("""controlPatch\("([a-z_]+)",\s*"([^"]+)"""").findAll(patchSource)
@@ -114,8 +124,7 @@ object CatalogTool {
         require(uiKeys.size == keys.size && uiKeys.toSet() == keys.toSet()) { "Extension control keys differ from patches" }
         require(manifestKeys.size == keys.size && manifestKeys.toSet() == keys.toSet()) { "Manifest capabilities differ from patches" }
         require(declarations.map { it.second }.toSet().size == keys.size &&
-            names == declarations.map { it.second }.toSet() + "Install beside Meta apps" + "Open settings from menu" + "Restore screens on re-signed builds" +
-            "Clone install under another package name") { "Built patch names differ from control declarations" }
+            names == declarations.map { it.second }.toSet() + NON_CONTROL_PATCHES) { "Built patch names differ from control declarations" }
         return keys.size
     }
 

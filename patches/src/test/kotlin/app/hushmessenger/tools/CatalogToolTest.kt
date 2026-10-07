@@ -3,7 +3,6 @@ package app.hushmessenger.tools
 import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patcher.patch.intOption
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patcher.patch.resourcePatch
 import app.hushmessenger.patches.controls.fixtureClass
@@ -177,6 +176,18 @@ class CatalogToolTest {
         assertEquals("346013387, 346013440 and 346013442", target.getValue("description").jsonPrimitive.content)
     }
 
+    @Test fun optionsKeepTheirKeyTypeDefaultAndRequirement() {
+        val catalog = CatalogTool.catalog("1", setOf(app.hushmessenger.patches.misc.spoofPackageVersionPatch))
+        val option = catalog.getValue("patches").jsonArray.single().jsonObject.getValue("options").jsonArray.single().jsonObject
+        assertEquals("versionCode", option.getValue("key").jsonPrimitive.content)
+        assertEquals("Version code", option.getValue("title").jsonPrimitive.content)
+        assertEquals("kotlin.Int", option.getValue("type").jsonPrimitive.content)
+        assertEquals(2147483647, option.getValue("default").jsonPrimitive.int)
+        assertTrue(option.getValue("required").jsonPrimitive.boolean)
+        assertEquals(JsonObject(emptyMap()), option.getValue("values"))
+        assertEquals(catalog, Json.parseToJsonElement(catalog.toString()))
+    }
+
     @Test fun catalogOrderIsIndependentOfDiscoveryOrder() {
         val first = resourcePatch("A", "First") { }
         val last = resourcePatch("Z", "Last") { }
@@ -201,7 +212,7 @@ class CatalogToolTest {
         val ui = root.resolve("extensions/messenger/src/main/java/app/hushmessenger/extension/SettingsActivity.java").readText()
         val manifest = root.resolve("extensions/messenger/src/main/AndroidManifest.xml").readText()
         val names = Regex("""controlPatch\("[a-z_]+",\s*"([^"]+)"""").findAll(patch)
-            .map { it.groupValues[1] }.toSet() + "Install beside Meta apps" + "Open settings from menu" + "Restore screens on re-signed builds" + "Material You theme" + "View stories anonymously" + "Save any story" + "Slide chats in and out" + "Clone install under another package name"
+            .map { it.groupValues[1] }.toSet() + CatalogTool.NON_CONTROL_PATCHES + "Material You theme" + "View stories anonymously" + "Save any story" + "Slide chats in and out"
         CatalogTool.validateDefinitions(patch, ui, manifest, names)
         assertFailsWith<IllegalArgumentException> { CatalogTool.validateDefinitions(patch.replace("controlPatch(\"people\"", "controlPatch(\"changed\""), ui, manifest, names) }
         assertFailsWith<IllegalArgumentException> { CatalogTool.validateDefinitions(patch, ui.replace("{\"people\",", "{\"changed\","), manifest, names) }
@@ -212,7 +223,7 @@ class CatalogToolTest {
         assertFailsWith<IllegalArgumentException> { CatalogTool.validateDefinitions(patch, ui, manifest, names - "Clone install under another package name") }
     }
 
-    @Test fun stringOptionsAreListedAndOtherKindsNeedSupportFirst() {
+    @Test fun stringOptionsAreListedInKeyOrder() {
         val entry = CatalogTool.catalog("1", setOf(bytecodePatch("Clone", default = false) {
             stringOption("cloneAppName", "Copy", null, "App name", "The name under the icon.", true) { it != null }
             stringOption("clonePackageName", "com.example.copy", null, "Package name", "The package name.", true) { it != null }
@@ -224,12 +235,12 @@ class CatalogToolTest {
             "title" to JsonPrimitive("Package name"),
             "description" to JsonPrimitive("The package name."),
             "required" to JsonPrimitive(true),
-            "type" to JsonPrimitive("String"),
+            "type" to JsonPrimitive("kotlin.String"),
             "default" to JsonPrimitive("com.example.copy"),
+            "values" to JsonObject(emptyMap()),
         )), entry["options"]!!.jsonArray[1])
-        for (unsupported in listOf(
-            bytecodePatch("Count") { intOption("count", 1, null, "Count", null, false) },
-            bytecodePatch("Pick") { stringOption("pick", "a", mapOf("A" to "a"), "Pick", null, false) },
-        )) assertFailsWith<IllegalArgumentException> { CatalogTool.catalog("1", setOf(unsupported)) }
+        assertFailsWith<IllegalArgumentException> {
+            CatalogTool.catalog("1", setOf(bytecodePatch("Untitled") { stringOption("bare", "a", null, null, null, false) }))
+        }
     }
 }
