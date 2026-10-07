@@ -846,6 +846,7 @@ public final class SettingsActivity extends Activity {
             boolean safeMode = CrashGuard.isSafeMode();
             StringBuilder summary = new StringBuilder("HushMessenger v").append(BuildConfig.VERSION_NAME)
                 .append("\nHost package: ").append(getPackageName())
+                .append("\nSettings provider: ").append(HostScreens.settingsProviderFound(this) ? "found" : "missing")
                 .append("\nHost version: ").append(host.versionName == null ? "unknown" : host.versionName)
                 .append("\nHost version code: ").append(host.getLongVersionCode())
                 .append("\nAndroid API: ").append(Build.VERSION.SDK_INT)

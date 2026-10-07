@@ -131,6 +131,87 @@
             "options": []
         },
         {
+            "name": "Clone install under another package name",
+            "description": "Installs a second copy of Messenger beside the first, under its own package name and app name. Messenger's own permissions, providers, task affinities and push categories move to the new name, and encrypted chat backups still find their settings. Push notifications may not reach the copy. Facebook's sign-in shortcut and other Meta apps won't see its account, and a Root Mount install can't use it. Sign it with the same key as your other patched Meta apps.",
+            "default": false,
+            "category": "Fixes",
+            "dependencies": [
+                {
+                    "type": "BytecodePatch",
+                    "name": "Install beside Meta apps",
+                    "description": "Renames two shared permissions so a re-signed Messenger can install beside Meta apps. Checked 580 builds only. Earlier clean installs stopped at a blank first-run screen.",
+                    "dependencies": [
+                        {
+                            "type": "ResourcePatch",
+                            "name": null,
+                            "description": "Rename Messenger shared permissions",
+                            "dependencies": [
+                                {
+                                    "type": "BytecodePatch",
+                                    "name": null,
+                                    "description": "Validate Messenger shared-permission bytecode",
+                                    "dependencies": []
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "ResourcePatch",
+                    "name": null,
+                    "description": "Move Messenger's manifest to the clone's package name",
+                    "dependencies": []
+                }
+            ],
+            "compatiblePackages": [
+                {
+                    "packageName": "com.facebook.orca",
+                    "name": "Messenger",
+                    "description": null,
+                    "apkFileType": "APK",
+                    "appIconColor": "#0084FF",
+                    "signatures": [
+                        "911d604446084ca7f4760b775bfc160fa8702441240a7258645d7a72c4312d27",
+                        "e3f9e1e0cf99d0e56a055ba65e241b3399f7cea524326b0cdd6ec1327ed0fdc1"
+                    ],
+                    "targets": [
+                        {
+                            "version": "580.0.0.49.91",
+                            "versionCodes": null,
+                            "isExperimental": false,
+                            "minSdk": 28,
+                            "description": "Arm64 builds 346013387, 346013440, 346013442, 346013354, 346013370, 346013394, 346013423, 346013355, 346013356, 346013357, 346013358, 346013359, 346013372, 346013374, 346013375, 346013391, 346013427, 346013441, 346013443, 346013444 and 346013445; checked again during patching"
+                        },
+                        {
+                            "version": "581.0.0.49.91",
+                            "versionCodes": null,
+                            "isExperimental": false,
+                            "minSdk": 28,
+                            "description": "Arm64 builds 346213494, 346213498, 346213510, 346213514, 346213528, 346213531, 346213532, 346213564, 346213567, 346213568, 346213580, 346213581, 346213582, 346213583, 346213584 and 346213585; checked again during patching"
+                        }
+                    ]
+                }
+            ],
+            "options": [
+                {
+                    "key": "cloneAppName",
+                    "title": "App name",
+                    "description": "The name under the copy's home screen icon. Up to 40 letters, numbers, spaces and simple punctuation.",
+                    "required": true,
+                    "type": "String",
+                    "default": "Messenger Clone"
+                },
+                {
+                    "key": "clonePackageName",
+                    "title": "Package name",
+                    "description": "The copy's package name, such as com.facebook.orca.hush. It can't be Messenger's own or another Meta app's.",
+                    "required": true,
+                    "type": "String",
+                    "default": "com.facebook.orca.hush"
+                }
+            ]
+        },
+        {
             "name": "Hide AI sticker tools",
             "description": "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions. Long-press Messenger's home screen icon > Patch controls. Starts off.",
             "default": true,

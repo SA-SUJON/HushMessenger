@@ -288,7 +288,7 @@ public class CompatReport {
             "--bundle", bundle.toAbsolutePath().toString(), "--java",
             Path.of(System.getProperty("java.home"), "bin", "java").toString(), "--aapt2", aapt2));
         var names = new TreeSet<>(PATCHES.keySet());
-        names.addAll(List.of("Install beside Meta apps", "Restore screens on re-signed builds", "Material You theme"));
+        names.addAll(List.of("Install beside Meta apps", "Restore screens on re-signed builds", "Material You theme", CLONE));
         for (var name : names) { command.add("--enable"); command.add(name); }
         return new ProcessBuilder(command).inheritIO().start().waitFor() == 0;
     }
@@ -1256,6 +1256,46 @@ public class CompatReport {
             if (name.matches("classes[0-9]*\\.dex")) classes.addAll(container.getEntry(name).getDexFile().getClasses());
         }
         return classes;
+    }
+
+    static final String CLONE = "Clone install under another package name";
+
+    /**
+     * The two methods the clone patch edits (CloneInstallPatch.kt): the encrypted-backup preference lookup, a public
+     * no-argument constructor that reads getPackageName once, and the static attachment authority check.
+     */
+    static List<String> cloneSites(List<ClassDef> classes, List<String> failures) {
+        var lookups = new ArrayList<String>();
+        var checks = new ArrayList<String>();
+        for (var cls : classes) {
+            for (var method : cls.getMethods()) {
+                var impl = method.getImplementation();
+                if (impl == null) continue;
+                var strings = new ArrayList<String>();
+                int packageReads = 0;
+                for (var insn : impl.getInstructions()) {
+                    if (!(insn instanceof ReferenceInstruction ref)) continue;
+                    if (ref.getReference() instanceof StringReference s) strings.add(s.getString());
+                    if (ref.getReference() instanceof MethodReference m && "Landroid/content/Context;".equals(m.getDefiningClass()) &&
+                        "getPackageName".equals(m.getName())) packageReads++;
+                }
+                if (strings.contains("autobackupprefs") && strings.contains("fbautobackupprefs") && strings.contains("com.facebook.orca") &&
+                    "<init>".equals(method.getName()) && method.getParameterTypes().isEmpty() && AccessFlags.PUBLIC.isSet(method.getAccessFlags())) {
+                    if (packageReads != 1) failures.add(hookId(method) + " reads its package name " + packageReads + " times");
+                    lookups.add(hookId(method));
+                }
+                if (Collections.frequency(strings, "com.facebook.orca.tam-attachment") == 1 && strings.contains(".tam-attachment") &&
+                    strings.contains("com.facebook.katana.tam-attachment") && AccessFlags.STATIC.isSet(method.getAccessFlags()) &&
+                    "Z".equals(method.getReturnType()) && List.of("Ljava/lang/String;").equals(method.getParameterTypes().stream().map(Object::toString).toList())) {
+                    checks.add(hookId(method));
+                }
+            }
+        }
+        if (lookups.size() != 1) failures.add("expected one encrypted-backup lookup, found " + lookups.size());
+        if (checks.size() != 1) failures.add("expected one attachment authority check, found " + checks.size());
+        var sites = new ArrayList<String>(lookups);
+        sites.addAll(checks);
+        return sites;
     }
 
     static Method findSignerMethod(List<ClassDef> classes) {
@@ -2923,6 +2963,21 @@ public class CompatReport {
                 System.out.println("[FAIL] Restore screens on re-signed builds");
                 System.out.println("       No method found matching the signer lookup pattern");
                 blockers.add("Restore screens on re-signed builds");
+                anyFail = true;
+            }
+        }
+
+        // Check the clone patch's two DEX sites. CloneInstallPatch.kt pins each family's names.
+        {
+            var failures = new ArrayList<String>();
+            var sites = cloneSites(classes, failures);
+            if (failures.isEmpty()) {
+                System.out.println("[PASS] " + CLONE);
+                for (var site : sites) System.out.println("       " + site);
+            } else {
+                System.out.println("[FAIL] " + CLONE);
+                for (var f : failures) System.out.println("       " + f);
+                blockers.add(CLONE);
                 anyFail = true;
             }
         }

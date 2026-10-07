@@ -85,7 +85,7 @@ private fun fixtureCall(target: Any, name: String, vararg arguments: Any): Any? 
     }
 }.invoke(target, *arguments)
 
-internal fun lifecycleApk(directory: Path, classes: List<ClassDef>): File {
+internal fun lifecycleApk(directory: Path, classes: List<ClassDef>, manifestExtra: String = "", applicationExtra: String = ""): File {
     Files.createDirectories(directory)
     val resourceFixture = Path.of("../extensions/messenger/build/intermediates/linked_resources_binary_format/release/" +
         "processReleaseResources/linked-resources-binary-format-release.ap_").toFile()
@@ -110,8 +110,10 @@ internal fun lifecycleApk(directory: Path, classes: List<ClassDef>): File {
             <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.facebook.orca"
                 android:versionCode="346013440" android:versionName="580.0.0.49.91">
               <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="36"/>
+              $manifestExtra
               <application android:appComponentFactory="$APP_COMPONENT_FACTORY">
                 <activity android:name="stock.Main"/>
+                $applicationExtra
                 <activity android:name="$SCREEN_HOST" android:exported="false"
                     android:parentActivityName="com.facebook.messenger.neue.MainActivity">
                   <meta-data android:name="android.support.PARENT_ACTIVITY" android:value="com.facebook.messenger.neue.MainActivity"/>

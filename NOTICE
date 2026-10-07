@@ -4,7 +4,9 @@ Morphe NOTICE
 HushMessenger includes Messenger hook definitions adapted from
 RookieEnough/De-Vanced (0d01e3dd5ec82b6796b28b82c33fc6af4944b2e6),
 including its ReVanced contributions, and rushiranpise/morphe-patches
-(55ca6a05ea3559e95a0876316dcb7caad1f3c9cf), under GPL-3.0.
+(55ca6a05ea3559e95a0876316dcb7caad1f3c9cf), under GPL-3.0. The clone install's
+package rename and encrypted-backup fix are adapted from rushiranpise/morphe-patches
+(e3bb3af54e13ecfac60eb8bf9bdf287330f0529f), also under GPL-3.0.
 The bubble eligibility anchor originates from NeonOrbit/ChatHeadEnabler.
 The runtime settings and checked 580 integrations are HushMessenger changes.
 

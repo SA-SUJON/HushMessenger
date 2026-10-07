@@ -156,6 +156,21 @@ public final class HostScreens {
         if (started && !failed && Settings.installed.contains("material_you")) MaterialYouTheme.bind();
     }
 
+    /** The settings provider's authority is the package name plus this, on a clone install too. */
+    static final String SETTINGS_AUTHORITY_SUFFIX = ".hush.settings";
+
+    /** True when Android knows this app's own settings provider under the package name it runs as. */
+    static boolean settingsProviderFound(Context context) {
+        try {
+            String own = context.getPackageName();
+            android.content.pm.ProviderInfo provider =
+                context.getPackageManager().resolveContentProvider(own + SETTINGS_AUTHORITY_SUFFIX, 0);
+            return provider != null && own.equals(provider.packageName) && SettingsProvider.class.getName().equals(provider.name);
+        } catch (RuntimeException error) {
+            return false;
+        }
+    }
+
     /** True when PackageManager doesn't know HushMessenger's own activities, as on a Root Mount install. */
     static boolean hosted(Context context) {
         Intent settings = new Intent().setClassName(context.getPackageName(), SettingsActivity.class.getName());

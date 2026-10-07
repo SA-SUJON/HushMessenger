@@ -11,6 +11,9 @@ import com.android.tools.smali.dexlib2.iface.Method
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
+/** The settings provider's authority follows the package name, the way the extension's own build declares it. */
+internal const val SETTINGS_AUTHORITY_SUFFIX = ".hush.settings"
+
 internal fun Document.addSettingsEntry() {
     val applications = getElementsByTagName("application")
     if (applications.length != 1) throw PatchException("Messenger controls: expected one application")
@@ -28,7 +31,7 @@ internal fun Document.addSettingsEntry() {
         appendChild(node)
     }
     application.child("provider", "name" to "app.hushmessenger.extension.SettingsProvider",
-        "authorities" to "com.facebook.orca.hush.settings", "exported" to "false")
+        "authorities" to MessengerTarget.PACKAGE + SETTINGS_AUTHORITY_SUFFIX, "exported" to "false")
     application.child("activity", "name" to "app.hushmessenger.extension.SettingsActivity",
         "label" to "HushMessenger settings", "exported" to "true",
         "icon" to "@android:drawable/ic_menu_preferences", "taskAffinity" to "app.hushmessenger.settings")

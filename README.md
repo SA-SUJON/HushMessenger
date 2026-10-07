@@ -10,9 +10,9 @@
 
 # HushMessenger
 
-HushMessenger is a Morphe patch source for Facebook Messenger. It offers 34 patches. 31 of them are optional controls with searchable settings and long-press shortcuts, and the other three help a re-signed build install, open and reach those settings. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
+HushMessenger is a Morphe patch source for Facebook Messenger. It offers 35 patches. 31 of them are optional controls with searchable settings and long-press shortcuts. Three help a re-signed build install, open and reach those settings, and one installs a second copy under another package name. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-The source builds v0.21.1. The public download and Morphe source still serve v0.21.0 while development checks continue. With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)). Development also adds **Unlock app icons**, a switch that lets you pick any of Messenger's built-in app icons without a subscription ([#33](https://github.com/SysAdminDoc/HushMessenger/issues/33)).
+The source builds v0.21.1. The public download and Morphe source still serve v0.21.0 while development checks continue. With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)). Development also adds **Unlock app icons**, a switch that lets you pick any of Messenger's built-in app icons without a subscription ([#33](https://github.com/SysAdminDoc/HushMessenger/issues/33)), and **Clone install under another package name**, an optional patch that puts a second Messenger beside the first.
 
 v0.21.0 adds Messenger 581.0.0.49.91, every arm64 build APKMirror lists under that name ([#29](https://github.com/SysAdminDoc/HushMessenger/issues/29)). It also brings **Hide joined community chats**, a new switch that starts off and removes joined channels and announcements from the main Chats list on its next render. **Hide AI sticker tools** now covers the Generate buttons in the sticker keyboard, and **Allow screenshots** covers view-once media and Quicksnap. Settings give each control's full row one accessible touch target.
 
@@ -173,7 +173,7 @@ The closed [issue #22](https://github.com/SysAdminDoc/HushMessenger/issues/22) c
 
 ## What the patches change
 
-The [patch catalog](patches-list.json) lists all 34 development patches with their categories, default selections, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
+The [patch catalog](patches-list.json) lists all 35 development patches with their categories, default selections, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
 
 ### Independent optional controls
 
@@ -198,6 +198,14 @@ It makes one more exception. When a Facebook signed with your same key calls int
 ### Open settings from menu
 
 Always on. It adds a **HushMessenger** row right under Settings in Messenger's **Menu** tab, and Settings still opens Messenger's own settings. Accounts that get Messenger's folder grid instead of the list use a separate path that no test account has shown yet.
+
+### Clone install under another package name
+
+Off unless you select it. It installs a second Messenger beside the first, under its own package name and app name. The defaults are `com.facebook.orca.hush` and **Messenger Clone**, and Morphe lets you change both. It needs **Install beside Meta apps** and selects it for you.
+
+The patch moves Messenger's own permissions, provider authorities, task affinities and push categories to the new name. If any of them would still clash with Messenger, it stops before changing the manifest. Class names stay as they are, so Messenger's code and its app icon switch still find their screens. Messenger picks its encrypted chat backup settings by its own package name and crashes under any other, so at that one spot the copy still reads Messenger's name. That fix is adapted from [Doom's patches](https://github.com/rushiranpise/morphe-patches). Messenger's check of its attachment provider accepts the copy's own provider instead. HushMessenger's settings, launcher shortcuts and **Restore screens on re-signed builds** follow the new name, and the copy vouches only for itself, never for the Messenger installed beside it.
+
+Some things stay tied to Messenger's original name. Push notifications from Facebook's service may not reach the copy. Facebook's **Continue as** sign-in and other Meta apps won't see its account, and about a hundred spots in Messenger's code still name the original package. A Root Mount install keeps the original package, so it can't use this patch. Sign the copy with the same key as your other patched Meta apps, because they all declare the same two shared permissions.
 
 ## Supported Messenger builds
 
@@ -370,6 +378,7 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 - Inbox tabs, low-memory bubbles, group notifications and encrypted-group typing still need eligible account or device checks. Live screenshot notices need an owned protected-media fixture and a hardware capture.
 - The Generate-button, protected-viewer and joined-community routes pass native discovery checks. Their live layout, playback, cleanup and inbox checks inside a signed-in account remain open. Settings preview speech passed, but Messenger inbox speech and a physical keyboard still need separate checks.
 - Unlock app icons passes its native checks on all 37 builds. A signed-in account still has to show the App icon setting, apply a paid icon and keep it after Messenger closes.
+- Clone install under another package name passes its native checks on all 37 builds, and Morphe Desktop applies it with every other patch on one build of each family. A phone still has to install the copy beside Messenger, sign in, get a notification and restore encrypted history.
 - Keep unsent messages can't cover end-to-end encrypted chats. Messenger removes those messages below the part of the app HushMessenger can change.
 
 <p align="center">

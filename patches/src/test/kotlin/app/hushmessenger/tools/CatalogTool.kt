@@ -1,5 +1,6 @@
 package app.hushmessenger.tools
 
+import app.morphe.patcher.patch.Option
 import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.loadPatchesFromJar
 import com.android.tools.smali.dexlib2.ReferenceType
@@ -44,7 +45,7 @@ object CatalogTool {
         "NOTE" to JsonPrimitive("Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand."),
         "version" to JsonPrimitive(version),
         "patches" to JsonArray(patches.sortedBy { it.name }.map { patch ->
-            require(patch.name != null && patch.options.isEmpty()) { "Unnamed patches or options need explicit catalog support" }
+            require(patch.name != null) { "Unnamed patches need explicit catalog support" }
             JsonObject(linkedMapOf(
                 "name" to JsonPrimitive(patch.name),
                 "description" to JsonPrimitive(patch.description),
@@ -70,10 +71,26 @@ object CatalogTool {
                         )) }),
                     ))
                 }) } ?: JsonNull),
-                "options" to JsonArray(emptyList()),
+                "options" to JsonArray(patch.options.values.sortedBy { it.key }.map(::option)),
             ))
         }),
     ))
+
+    /** Free-text string options only. Anything else needs its own catalog support first. */
+    @Suppress("DEPRECATION")
+    private fun option(option: Option<*>): JsonObject {
+        require(option.type.classifier == String::class && option.values.isNullOrEmpty() && option.default is String?) {
+            "Only free-text string options have catalog support"
+        }
+        return JsonObject(linkedMapOf(
+            "key" to JsonPrimitive(option.key),
+            "title" to JsonPrimitive(option.title),
+            "description" to JsonPrimitive(option.description),
+            "required" to JsonPrimitive(option.required),
+            "type" to JsonPrimitive("String"),
+            "default" to JsonPrimitive(option.default as String?),
+        ))
+    }
 
     fun validateDefinitions(patchSource: String, uiSource: String, manifest: String, names: Set<String>): Int {
         val declarations = (Regex("""controlPatch\("([a-z_]+)",\s*"([^"]+)"""").findAll(patchSource)
@@ -97,7 +114,8 @@ object CatalogTool {
         require(uiKeys.size == keys.size && uiKeys.toSet() == keys.toSet()) { "Extension control keys differ from patches" }
         require(manifestKeys.size == keys.size && manifestKeys.toSet() == keys.toSet()) { "Manifest capabilities differ from patches" }
         require(declarations.map { it.second }.toSet().size == keys.size &&
-            names == declarations.map { it.second }.toSet() + "Install beside Meta apps" + "Open settings from menu" + "Restore screens on re-signed builds") { "Built patch names differ from control declarations" }
+            names == declarations.map { it.second }.toSet() + "Install beside Meta apps" + "Open settings from menu" + "Restore screens on re-signed builds" +
+            "Clone install under another package name") { "Built patch names differ from control declarations" }
         return keys.size
     }
 
