@@ -89,6 +89,7 @@ hook menu_settings LX/HBx;->Ax3(LX/0MG;)Ljava/util/ArrayList;
 hook menu_settings LX/Jpx;->onClick(Landroid/view/View;)V
 hook menu_settings LX/NjG;->CAp(LX/4k1;I)V
 hook menu_settings LX/WnD;->A0J(Ljava/util/List;)V
+hook message_log Lcom/facebook/messaging/notify/type/NewMessageNotification;-><init>(Lcom/facebook/messaging/accountswitch/model/MessengerAccountType;Lcom/facebook/messaging/model/messages/Message;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/5qK;LX/5Yg;Lcom/facebook/messaging/push/flags/ServerMessageAlertFlags;Lcom/facebook/push/constants/PushProperty;Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ZZZZZZZ)V
 hook moments LX/HC4;->A05()Z
 hook moments LX/Jdr;->A05()Z
 hook original_photo Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B

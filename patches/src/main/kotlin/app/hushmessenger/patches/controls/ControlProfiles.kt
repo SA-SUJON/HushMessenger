@@ -121,6 +121,7 @@ internal val PROFILE_346013370 = ControlProfile(
             "LX/9qQ;->A1i()V", "LX/HBx;->Ax3(LX/0MG;)Ljava/util/ArrayList;", "LX/Jpx;->onClick(Landroid/view/View;)V",
             "LX/NjG;->CAp(LX/4k1;I)V", "LX/WnD;->A0J(Ljava/util/List;)V",
         ),
+        "message_log" to setOf("Lcom/facebook/messaging/notify/type/NewMessageNotification;-><init>(Lcom/facebook/messaging/accountswitch/model/MessengerAccountType;Lcom/facebook/messaging/model/messages/Message;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/5qK;LX/5Yg;Lcom/facebook/messaging/push/flags/ServerMessageAlertFlags;Lcom/facebook/push/constants/PushProperty;Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ZZZZZZZ)V"),
         "moments" to setOf("LX/HC4;->A05()Z", "LX/Jdr;->A05()Z"),
         "original_photo" to setOf(
             "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
@@ -236,6 +237,7 @@ internal val PROFILE_346013423 = ControlProfile(
             "LX/9uD;->A1i()V", "LX/HB5;->AxC(LX/0MJ;)Ljava/util/ArrayList;", "LX/Jq9;->onClick(Landroid/view/View;)V",
             "LX/Wh6;->CB5(LX/4nF;I)V", "LX/Wh7;->A0I(Ljava/util/List;)V",
         ),
+        "message_log" to setOf(newMessageNotificationCtor("LX/5tX;", "LX/5bx;")),
         "moments" to setOf("LX/HBB;->A05()Z", "LX/JdK;->A05()Z"),
         "original_photo" to setOf(
             "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
@@ -351,6 +353,7 @@ internal val PROFILE_346013357 = ControlProfile(
             "LX/9rb;->A1i()V", "LX/HEw;->Ax2(LX/0MG;)Ljava/util/ArrayList;", "LX/JwE;->onClick(Landroid/view/View;)V",
             "LX/U8O;->CAm(LX/4jq;I)V", "LX/U8R;->A0J(Ljava/util/List;)V",
         ),
+        "message_log" to setOf(newMessageNotificationCtor("LX/5qB;", "LX/5YV;")),
         "moments" to setOf("LX/HEz;->A05()Z", "LX/JiI;->A05()Z"),
         "original_photo" to setOf(
             "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
@@ -466,6 +469,7 @@ internal val PROFILE_346013374 = ControlProfile(
             "LX/9se;->A1i()V", "LX/HKK;->Ax0(LX/0MG;)Ljava/util/ArrayList;", "LX/JyZ;->onClick(Landroid/view/View;)V",
             "LX/Khk;->CAn(LX/4lo;I)V", "LX/Khr;->A0I(Ljava/util/List;)V",
         ),
+        "message_log" to setOf(newMessageNotificationCtor("LX/5sJ;", "LX/5aT;")),
         "moments" to setOf("LX/HKQ;->A05()Z", "LX/Jk4;->A05()Z"),
         "original_photo" to setOf(
             "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
@@ -586,6 +590,7 @@ internal val PROFILE_346213494 = ControlProfile(
             "LX/8xS;->A1h()V", "LX/H6W;->AxP(LX/0MS;)Ljava/util/ArrayList;", "LX/HBV;->onClick(Landroid/view/View;)V",
             "LX/TZ0;->CBl(LX/4nf;I)V", "LX/TZ6;->A0I(Ljava/util/List;)V",
         ),
+        "message_log" to setOf(newMessageNotificationCtor("LX/93P;", "LX/5cA;")),
         "moments" to setOf("LX/H6Y;->A05()Z", "LX/HHT;->A05()Z"),
         "original_photo" to setOf(
             "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",

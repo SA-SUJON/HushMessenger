@@ -183,6 +183,7 @@ public class CompatReport {
         PATCHES.put("Send photos at original quality", List.of("original_photo"));
         PATCHES.put("Send videos without re-encoding", List.of("original_video"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
+        PATCHES.put("Keep a message log", List.of("message_log"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
@@ -1939,6 +1940,28 @@ public class CompatReport {
         return m.getName() + "(" + String.join("", m.getParameterTypes()) + ")" + m.getReturnType();
     }
 
+    // The message log's capture point: the one new-message notification constructor. Mirrors MessageLog.kt.
+    static final String NEW_MESSAGE_NOTIFICATION = "Lcom/facebook/messaging/notify/type/NewMessageNotification;";
+    static final String MESSENGER_ACCOUNT_TYPE = "Lcom/facebook/messaging/accountswitch/model/MessengerAccountType;";
+    static final String MESSAGE_TYPE = "Lcom/facebook/messaging/model/messages/Message;";
+    static final String THREAD_SUMMARY_TYPE = "Lcom/facebook/messaging/model/threads/ThreadSummary;";
+
+    /** The non-Parcel NewMessageNotification constructor, whose message and thread parameters the hook reads. */
+    static List<Method> messageLogHooks(List<ClassDef> classes) {
+        for (var cls : classes) {
+            if (!NEW_MESSAGE_NOTIFICATION.equals(cls.getType())) continue;
+            var ctors = new ArrayList<Method>();
+            for (var m : cls.getMethods()) {
+                var params = m.getParameterTypes();
+                if ("<init>".equals(m.getName()) && "V".equals(m.getReturnType()) && params.size() >= 3 &&
+                    MESSENGER_ACCOUNT_TYPE.contentEquals(params.get(0)) && MESSAGE_TYPE.contentEquals(params.get(1)) &&
+                    THREAD_SUMMARY_TYPE.contentEquals(params.get(2)) && m.getImplementation() != null) ctors.add(m);
+            }
+            return ctors.size() == 1 ? ctors : List.of();
+        }
+        return List.of();
+    }
+
     /**
      * Every upload entry point. Analytics2UploadService inherits its two from an obfuscated job service base, which
      * counts only while it's abstract, extends JobService directly and has no other subclass.
@@ -1979,6 +2002,7 @@ public class CompatReport {
         if (community != null) found.get("community_inbox").add(community.render());
         found.get("emoji_drawer").addAll(emojiDrawerReaders(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
+        found.get("message_log").addAll(messageLogHooks(classes));
         for (var cls : classes) for (var method : cls.getMethods())
             if (!screenshotViewerSites(method).isEmpty()) found.get("screenshot_viewers").add(method);
         var jewelCandidates = new ArrayList<Map.Entry<Method, Set<String>>>();

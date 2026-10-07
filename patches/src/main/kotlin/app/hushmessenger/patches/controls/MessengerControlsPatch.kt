@@ -97,6 +97,7 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         nativeBubbleActivityVerified = false
         nativeBubbleRoutesVerified = false
         communityInboxContract = null
+        messageLogContract = null
     }
 }
 
@@ -139,6 +140,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "emoji_typeface" -> method.validateEmojiTypeface()
             EMOJI_DRAWER -> method.validateEmojiDrawer()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
+            MESSAGE_LOG -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
             ORIGINAL_VIDEO -> method.validateOriginalVideo()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
@@ -179,6 +181,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "emoji_typeface" -> method.injectEmojiTypeface()
             EMOJI_DRAWER -> method.injectEmojiDrawer()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
+            MESSAGE_LOG -> method.injectMessageLog()
             "original_photo" -> method.injectOriginalPhoto()
             ORIGINAL_VIDEO -> method.injectOriginalVideo()
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
@@ -321,6 +324,11 @@ val originalPhotoPatch = controlPatch("original_photo", "Send photos at original
 val originalVideoPatch = controlPatch(ORIGINAL_VIDEO, "Send videos without re-encoding",
     "Sends a video file as it is when Messenger's own passthrough can take it, instead of a re-encoded copy. " +
         "Videos over 25 MB are still compressed, and so are trimmed or edited videos and formats Messenger won't pass through.", "Conversations")
+@Suppress("unused")
+val keepMessageLogPatch = controlPatch("message_log", "Keep a message log",
+    "Keeps a copy of each message as its notification arrives, so an unsend can't take it back. This is the only way " +
+        "that reaches end-to-end encrypted chats. The log stays on your phone, encrypted with a key that never leaves it, " +
+        "and holds only messages that raised a notification. Read it or clear it from the log in settings.", "Privacy")
 @Suppress("unused")
 val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytics uploads",
     "Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, " +

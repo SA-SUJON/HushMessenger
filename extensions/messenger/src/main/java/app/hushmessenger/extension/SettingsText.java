@@ -222,6 +222,16 @@ final class SettingsText {
         ENGLISH.put("results_one", "%d of %d installed control");
         ENGLISH.put("results_many", "%d of %d installed controls");
         ENGLISH.put("open_help", "Open Messenger from your app drawer");
+        ENGLISH.put("message_log_view", "View log");
+        ENGLISH.put("message_log_clear", "Clear log");
+        ENGLISH.put("message_log_close", "Close");
+        ENGLISH.put("message_log_title", "Message log");
+        ENGLISH.put("message_log_hint", "Newest first. This stays on your phone.");
+        ENGLISH.put("message_log_loading", "Loading...");
+        ENGLISH.put("message_log_empty", "No messages kept yet.");
+        ENGLISH.put("message_log_unknown_thread", "Unknown thread");
+        ENGLISH.put("message_log_no_text", "(no text)");
+        ENGLISH.put("message_log_cleared", "Message log cleared");
     }
 
     static String english(String id) {

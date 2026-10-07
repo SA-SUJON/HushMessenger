@@ -206,6 +206,12 @@ public final class Settings {
         if (comparison < 0 || bytes <= 0 || bytes > ORIGINAL_VIDEO_MAX_BYTES) return comparison;
         return enabled("original_video") ? -1 : comparison;
     }
+
+    /** The notification hook asks this before it reads a message, so nothing is read when the switch is off or paused. */
+    public static boolean logReceivedMessages() { return wouldUse("message_log"); }
+
+    /** The notification hook hands the message here; the log stores it off this thread and swallows its own failures. */
+    public static void recordReceivedMessage(String text, String thread) { MessageLog.record(text, thread); }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) {

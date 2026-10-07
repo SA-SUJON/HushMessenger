@@ -13,6 +13,7 @@
 - **Custom new-message sound** is a new patch that starts unselected ([#32](https://github.com/SysAdminDoc/HushMessenger/issues/32)). Pick an .ogg, .mp3, .m4a or .wav file of 1 MB or less when you patch, and it replaces Messenger's `new_message` sound, the one its message notifications use by default. With no file picked it changes nothing. A missing, empty, oversized or mislabeled file stops the patch with the reason.
 - **Restore old emoji drawer** is a new switch that starts off. It turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. Changes apply after **Restart Messenger**, and accounts Meta never moved to the redesign see no difference.
 - **Stop analytics uploads** is a new switch that starts off. It stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, and they can upload after you turn it off.
+- **Keep a message log** is a new switch that starts off. It copies each message as its notification arrives, so an unsend can't take it back, and it's the only switch that reaches end-to-end encrypted chats. The log holds only messages that raised a notification. It stays on your phone and is encrypted with a key kept in the Android keystore, so the copy never leaves the device. A new viewer in settings lists it newest first, and **Clear log** deletes the file and throws the key away. Nothing is stored while the switch is off or Pause or safe mode is on.
 
 ## 0.21.0 (2026-10-05)
 
