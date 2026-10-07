@@ -2,11 +2,11 @@ package app.hushmessenger.patches.controls
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction30t
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -69,18 +69,12 @@ internal fun MutableMethod.validateEmojiTypeface(): List<Int> {
 
 /**
  * Every return hands Messenger's typeface to the extension, which swaps in the phone's emoji (#34). A return can be a
- * branch target, and an insert before it would sit behind the branch, so each return becomes a jump to its own wrap.
+ * branch target, and an insert before it would sit behind the branch, so the return itself becomes the call.
  */
 internal fun MutableMethod.injectEmojiTypeface() {
-    val implementation = implementation!!
-    for (index in validateEmojiTypeface()) {
+    for (index in validateEmojiTypeface().reversed()) {
         val register = (getInstruction(index) as OneRegisterInstruction).registerA
-        val wrap = implementation.instructions.size
-        addInstructions(wrap, """
-            invoke-static/range {v$register .. v$register}, $EMOJI_TYPEFACE_CALL
-            move-result-object v$register
-            return-object v$register
-        """.trimIndent())
-        implementation.replaceInstruction(index, BuilderInstruction30t(Opcode.GOTO_32, implementation.newLabelForIndex(wrap)))
+        replaceInstruction(index, "invoke-static/range {v$register .. v$register}, $EMOJI_TYPEFACE_CALL")
+        addInstructions(index + 1, "move-result-object v$register\nreturn-object v$register")
     }
 }

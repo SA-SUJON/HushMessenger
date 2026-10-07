@@ -87,18 +87,19 @@ class EmojiFontTest {
         method.injectEmojiTypeface()
         val code = method.implementation!!.instructions.toList()
         val addresses = code.runningFold(0) { address, instruction -> address + instruction.codeUnits }
-        fun target(index: Int) = addresses.indexOf(addresses[index] + (code[index] as OffsetInstruction).codeOffset)
-        assertEquals(original.size + 3 * returns.size, code.size)
-        assertEquals(returns.first(), target(cacheBranch))
-        for (index in returns) {
-            assertEquals(Opcode.GOTO_32, code[index].opcode)
-            val wrap = target(index)
-            val register = (original[index] as OneRegisterInstruction).registerA
-            assertEquals(EMOJI_TYPEFACE_CALL, reference(code[wrap]))
-            assertEquals(register, (code[wrap] as RegisterRangeInstruction).startRegister)
-            assertEquals(listOf(Opcode.MOVE_RESULT_OBJECT, Opcode.RETURN_OBJECT), code.slice(wrap + 1..wrap + 2).map { it.opcode })
-            assertEquals(listOf(register, register), code.slice(wrap + 1..wrap + 2).map { (it as OneRegisterInstruction).registerA })
+        assertEquals(original.size + 2 * returns.size, code.size)
+        // Each return, shifted by the two instructions every earlier one gained, is now the call.
+        val calls = returns.mapIndexed { n, index -> index + 2 * n }
+        for ((n, at) in calls.withIndex()) {
+            val register = (original[returns[n]] as OneRegisterInstruction).registerA
+            assertEquals(EMOJI_TYPEFACE_CALL, reference(code[at]))
+            assertEquals(register, (code[at] as RegisterRangeInstruction).startRegister)
+            assertEquals(listOf(Opcode.MOVE_RESULT_OBJECT, Opcode.RETURN_OBJECT), code.slice(at + 1..at + 2).map { it.opcode })
+            assertEquals(listOf(register, register), code.slice(at + 1..at + 2).map { (it as OneRegisterInstruction).registerA })
         }
+        // The cache's branch to the shared return lands on the call, not past it.
+        val branch = cacheBranch + 2 * returns.count { it < cacheBranch }
+        assertEquals(addresses[calls.first()], addresses[branch] + (code[branch] as OffsetInstruction).codeOffset)
     }
 
     @Test fun theHolderPassesItsFontFileOnAfterTheObjectConstructor() {
@@ -145,9 +146,9 @@ class EmojiFontTest {
             val handlers = getter.implementation!!.tryBlocks.flatMap { block -> block.exceptionHandlers.map { it.handlerCodeAddress } }.size
             getter.injectEmojiTypeface()
             val after = getter.implementation!!.instructions.toList()
-            assertEquals(before.size + 3 * returns.size, after.size, code)
-            assertEquals(returns, after.indices.filter { after[it].opcode == Opcode.GOTO_32 && it < before.size }, code)
-            assertEquals(returns.size, after.count { it is ReferenceInstruction && reference(it) == EMOJI_TYPEFACE_CALL }, code)
+            assertEquals(before.size + 2 * returns.size, after.size, code)
+            assertEquals(returns.mapIndexed { n, index -> index + 2 * n },
+                after.indices.filter { after[it] is ReferenceInstruction && reference(after[it]) == EMOJI_TYPEFACE_CALL }, code)
             assertEquals(handlers, getter.implementation!!.tryBlocks.flatMap { block -> block.exceptionHandlers.map { it.handlerCodeAddress } }.size, code)
         }
     }
