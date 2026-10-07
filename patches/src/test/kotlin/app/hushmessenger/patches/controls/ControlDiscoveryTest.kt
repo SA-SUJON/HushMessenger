@@ -141,7 +141,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(117, found.values.sumOf { it.size })
+        assertEquals(ExpectedTotals.DISCOVERY_FIXTURE_HOOKS, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

@@ -30,9 +30,9 @@ class ControlProfileTest {
         }
         assertEquals(2, BASE_PROFILE.hooks.getValue(EMOJI_DRAWER).size)
         assertEquals(8, PROFILE_346213494.hooks.getValue(EMOJI_DRAWER).size)
-        assertEquals(117, PROFILE_346013370.hooks.values.sumOf { it.size })
-        assertEquals(117, PROFILE_346013423.hooks.values.sumOf { it.size })
-        assertEquals(123, PROFILE_346213494.hooks.values.sumOf { it.size })
+        assertEquals(ExpectedTotals.HOOKS_580, PROFILE_346013370.hooks.values.sumOf { it.size })
+        assertEquals(ExpectedTotals.HOOKS_580, PROFILE_346013423.hooks.values.sumOf { it.size })
+        assertEquals(ExpectedTotals.HOOKS_581, PROFILE_346213494.hooks.values.sumOf { it.size })
     }
 
     @Test fun theVersionCodePicksTheProfile() {
