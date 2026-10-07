@@ -10,6 +10,7 @@
 - **Spoof package version** is a new patch that starts unselected. It sets Messenger's version code to a number you choose, 2147483647 by default, so the Play Store stops offering Meta's updates over a patched build. Messenger may report that number to Meta. Later builds need the same number or higher to install over it. The patch catalog now lists each patch's options.
 - **Custom new-message sound** is a new patch that starts unselected ([#32](https://github.com/SysAdminDoc/HushMessenger/issues/32)). Pick an .ogg, .mp3, .m4a or .wav file of 1 MB or less when you patch, and it replaces Messenger's `new_message` sound, the one its message notifications use by default. With no file picked it changes nothing. A missing, empty, oversized or mislabeled file stops the patch with the reason.
 - **Restore old emoji drawer** is a new switch that starts off. It turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. Changes apply after **Restart Messenger**, and accounts Meta never moved to the redesign see no difference.
+- **Stop analytics uploads** is a new switch that starts off. It stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, and they can upload after you turn it off.
 
 ## 0.21.0 (2026-10-05)
 

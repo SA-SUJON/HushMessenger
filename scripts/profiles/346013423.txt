@@ -20,6 +20,15 @@ hook allow_screenshot LX/4qp;->A00(Landroid/view/Window;)V
 hook allow_screenshot LX/8zQ;->onScreenCaptured()V
 hook allow_screenshot LX/Pf4;->run()V
 hook allow_screenshot Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V
+hook analytics_uploads LX/0bw;->onStartCommand(Landroid/content/Intent;II)I
+hook analytics_uploads LX/0bw;->onStartJob(Landroid/app/job/JobParameters;)Z
+hook analytics_uploads Lcom/facebook/analytics2/logger/GooglePlayUploadService;->onStartCommand(Landroid/content/Intent;II)I
+hook analytics_uploads Lcom/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService;->onStartCommand(Landroid/content/Intent;II)I
+hook analytics_uploads Lcom/facebook/analytics2/logger/legacy/uploader/HighPriUploadRetryReceiver;->onReceive(Landroid/content/Context;Landroid/content/Intent;)V
+hook analytics_uploads Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;->onStartCommand(Landroid/content/Intent;II)I
+hook analytics_uploads Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;->onStartJob(Landroid/app/job/JobParameters;)Z
+hook analytics_uploads Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I
+hook analytics_uploads Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z
 hook anonymous_stories LX/NUZ;->C1g(Lcom/facebook/messaging/montage/model/MontageCard;Z)V
 hook app_icons LX/7Zm;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z
 hook app_icons LX/7Zm;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z

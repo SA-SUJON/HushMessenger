@@ -138,6 +138,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "delta_unsent" -> method.validateDeltaUnsent()
             "emoji_typeface" -> method.validateEmojiTypeface()
             EMOJI_DRAWER -> method.validateEmojiDrawer()
+            ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
             "original_photo" -> method.validateOriginalPhoto()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
@@ -176,6 +177,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
             EMOJI_DRAWER -> method.injectEmojiDrawer()
+            ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
             "original_photo" -> method.injectOriginalPhoto()
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
@@ -313,6 +315,10 @@ val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Offers S
 val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "Renders emoji with the phone's own font instead of Messenger's.", "Conversations", "emoji_typeface")
 @Suppress("unused")
 val originalPhotoPatch = controlPatch("original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata except the rotation tag. Videos and photos over 20 MB are still compressed.", "Conversations")
+@Suppress("unused")
+val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytics uploads",
+    "Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, " +
+        "and they can upload after you turn this off. Doesn't stop other logging.", "Privacy")
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. This doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")

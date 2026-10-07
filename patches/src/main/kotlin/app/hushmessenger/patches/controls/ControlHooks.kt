@@ -143,6 +143,17 @@ internal val expectedHooks = mapOf(
     "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
     "ai_search_chip" to setOf("LX/D8E;->render(LX/2MZ;)LX/1GG;"),
     "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
+    ANALYTICS_UPLOADS to setOf(
+        "LX/0c0;->onStartCommand(Landroid/content/Intent;II)I",
+        "LX/0c0;->onStartJob(Landroid/app/job/JobParameters;)Z",
+        "Lcom/facebook/analytics2/logger/GooglePlayUploadService;->onStartCommand(Landroid/content/Intent;II)I",
+        "Lcom/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService;->onStartCommand(Landroid/content/Intent;II)I",
+        "Lcom/facebook/analytics2/logger/legacy/uploader/HighPriUploadRetryReceiver;->onReceive(Landroid/content/Context;Landroid/content/Intent;)V",
+        "Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;->onStartCommand(Landroid/content/Intent;II)I",
+        "Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;->onStartJob(Landroid/app/job/JobParameters;)Z",
+        "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
+        "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
+    ),
     EMOJI_DRAWER to setOf("Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z",
         "LX/H1n;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
     "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
@@ -420,6 +431,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     }
     if (changedViewer) found.getValue("screenshot_viewers").clear()
     found.getValue(EMOJI_DRAWER).addAll(connectEmojiDrawer(drawerReaders, drawerAnchors))
+    found.getValue(ANALYTICS_UPLOADS).addAll(findAnalyticsUploads(classes))
     return found
 }
 

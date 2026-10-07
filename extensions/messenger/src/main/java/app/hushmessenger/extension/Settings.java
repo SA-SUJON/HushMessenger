@@ -194,6 +194,8 @@ public final class Settings {
     public static boolean hidePeopleSection(boolean original) { return original || enabled("people"); }
     public static boolean keepPeopleSection(boolean original) { return original && !enabled("people"); }
     public static boolean suppressTyping() { return enabled("typing"); }
+    /** Every analytics upload service, job and retry asks this as it starts, so a change applies to the next upload. */
+    public static boolean stopAnalyticsUploads() { return enabled("analytics_uploads"); }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) {

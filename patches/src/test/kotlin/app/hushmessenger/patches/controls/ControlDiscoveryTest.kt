@@ -29,7 +29,7 @@ class ControlDiscoveryTest {
     )
 
     private fun completeFixture(): List<MutableClass> {
-        val methods = expectedHooks.filter { it.key !in setOf("unsent_indicator", "delta_unsent", "ai_sticker_cell", "screenshot_viewers", COMMUNITY_INBOX, EMOJI_DRAWER) }.flatMap { (key, ids) ->
+        val methods = expectedHooks.filter { it.key !in setOf("unsent_indicator", "delta_unsent", "ai_sticker_cell", "screenshot_viewers", COMMUNITY_INBOX, EMOJI_DRAWER, ANALYTICS_UPLOADS) }.flatMap { (key, ids) ->
             ids.map { id ->
                 if (key == "people_jewel") return@map peopleJewelMethod()
                 if (key == "people_tab") return@map peopleTabMethod()
@@ -116,7 +116,7 @@ class ControlDiscoveryTest {
             fixtureMethod("$IMMUTABLE_LIST->copyOf(Ljava/util/Collection;)$IMMUTABLE_LIST",
                 "const/4 v0, 0x0\nreturn-object v0", flags = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value),
         )), peopleJewelKeyHolder(), storyCardKeyHolder(), debugDumperFixture(), messageWrapperFixture(type = "LX/K1Y;"), searchFieldFixture()) +
-            aiStickerCellFixture() + communityInboxFixture().filter { it.type != IMMUTABLE_LIST } + emojiDrawerFixture() +
+            aiStickerCellFixture() + communityInboxFixture().filter { it.type != IMMUTABLE_LIST } + emojiDrawerFixture() + analyticsUploadFixture() +
             expectedHooks.getValue("screenshot_viewers").map { screenshotViewerFixture(it) }
                 .groupBy { it.definingClass }.map { (type, group) -> fixtureClass(type, group) }
     }
@@ -140,7 +140,7 @@ class ControlDiscoveryTest {
     @Test fun discoversTheCompleteHookUnionThroughRealClassDefinitions() {
         val found = findControls(completeFixture())
         validateControls(found)
-        assertEquals(105, found.values.sumOf { it.size })
+        assertEquals(114, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
     }
 

@@ -181,6 +181,7 @@ public class CompatReport {
         PATCHES.put("Allow chat bubbles", List.of("bubbles", "bubble_mode"));
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Send photos at original quality", List.of("original_photo"));
+        PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
@@ -1919,6 +1920,52 @@ public class CompatReport {
         return connected ? readers : List.of();
     }
 
+    // The analytics logger's upload components and the entry points Android starts them through. Mirrors AnalyticsUploads.kt.
+    static final String ANALYTICS2_UPLOAD_SERVICE = "Lcom/facebook/analytics2/logger/legacy/uploader/Analytics2UploadService;";
+    static final String START_COMMAND = "onStartCommand(Landroid/content/Intent;II)I";
+    static final String START_JOB = "onStartJob(Landroid/app/job/JobParameters;)Z";
+    static final Map<String, Set<String>> ANALYTICS_UPLOAD_ENTRIES = Map.of(
+        "Lcom/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService;", Set.of(START_COMMAND),
+        "Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;", Set.of(START_COMMAND, START_JOB),
+        "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;", Set.of(START_COMMAND, START_JOB),
+        "Lcom/facebook/analytics2/logger/GooglePlayUploadService;", Set.of(START_COMMAND),
+        "Lcom/facebook/analytics2/logger/legacy/uploader/HighPriUploadRetryReceiver;",
+            Set.of("onReceive(Landroid/content/Context;Landroid/content/Intent;)V"));
+
+    static String entryPoint(Method m) {
+        return m.getName() + "(" + String.join("", m.getParameterTypes()) + ")" + m.getReturnType();
+    }
+
+    /**
+     * Every upload entry point. Analytics2UploadService inherits its two from an obfuscated job service base, which
+     * counts only while it's abstract, extends JobService directly and has no other subclass.
+     */
+    static List<Method> analyticsUploads(List<ClassDef> classes) {
+        var found = new ArrayList<Method>();
+        ClassDef uploader = null;
+        for (var cls : classes) {
+            var entries = ANALYTICS_UPLOAD_ENTRIES.get(cls.getType());
+            if (entries != null) for (var m : cls.getMethods())
+                if (entries.contains(entryPoint(m)) && !AccessFlags.STATIC.isSet(m.getAccessFlags()) && m.getImplementation() != null) found.add(m);
+            if (ANALYTICS2_UPLOAD_SERVICE.equals(cls.getType())) uploader = cls;
+        }
+        if (uploader == null || uploader.getSuperclass() == null) return found;
+        var jobs = Set.of(START_COMMAND, START_JOB);
+        for (var m : uploader.getMethods()) if (jobs.contains(entryPoint(m))) return found;
+        var base = uploader.getSuperclass();
+        ClassDef baseClass = null;
+        int subclasses = 0;
+        for (var cls : classes) {
+            if (base.equals(cls.getType())) baseClass = cls;
+            if (base.equals(cls.getSuperclass())) subclasses++;
+        }
+        if (baseClass == null || !AccessFlags.ABSTRACT.isSet(baseClass.getAccessFlags()) ||
+            !"Landroid/app/job/JobService;".equals(baseClass.getSuperclass()) || subclasses != 1) return found;
+        for (var m : baseClass.getMethods())
+            if (jobs.contains(entryPoint(m)) && !AccessFlags.STATIC.isSet(m.getAccessFlags()) && m.getImplementation() != null) found.add(m);
+        return found;
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -1928,6 +1975,7 @@ public class CompatReport {
         var community = communityInbox(classes);
         if (community != null) found.get("community_inbox").add(community.render());
         found.get("emoji_drawer").addAll(emojiDrawerReaders(classes));
+        found.get("analytics_uploads").addAll(analyticsUploads(classes));
         for (var cls : classes) for (var method : cls.getMethods())
             if (!screenshotViewerSites(method).isEmpty()) found.get("screenshot_viewers").add(method);
         var jewelCandidates = new ArrayList<Map.Entry<Method, Set<String>>>();
