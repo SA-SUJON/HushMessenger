@@ -8,6 +8,7 @@
 - With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)).
 - With **Use system emoji** on, a Like in the chat list shows Messenger's thumbs-up again instead of an empty box ([#34](https://github.com/SysAdminDoc/HushMessenger/issues/34)). The phone's emoji font doesn't have Messenger's own Like character, so on Android 10 and newer that character now comes from Messenger's emoji font while every other emoji keeps the phone's look.
 - **Spoof package version** is a new patch that starts unselected. It sets Messenger's version code to a number you choose, 2147483647 by default, so the Play Store stops offering Meta's updates over a patched build. Messenger may report that number to Meta. Later builds need the same number or higher to install over it. The patch catalog now lists each patch's options.
+- **Custom new-message sound** is a new patch that starts unselected ([#32](https://github.com/SysAdminDoc/HushMessenger/issues/32)). Pick an .ogg, .mp3, .m4a or .wav file of 1 MB or less when you patch, and it replaces Messenger's `new_message` sound, the one its message notifications use by default. With no file picked it changes nothing. A missing, empty, oversized or mislabeled file stops the patch with the reason.
 
 ## 0.21.0 (2026-10-05)
 

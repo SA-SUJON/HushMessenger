@@ -48,6 +48,9 @@ object CatalogTool {
         else -> throw IllegalArgumentException("Option values of ${value.javaClass.name} need explicit catalog support")
     }
 
+    // Patcher 1.15 deprecates Option.title in favor of name, but its option builders still take a
+    // separate key and title, and name returns the key for those options.
+    @Suppress("DEPRECATION")
     private fun options(patch: Patch<*>): JsonArray = JsonArray(patch.options.values.sortedBy { it.key }.map { option ->
         require(option.key.isNotBlank() && !option.title.isNullOrBlank() && !option.description.isNullOrBlank()) {
             "Options need a key, title and description for the public catalog"
@@ -65,7 +68,7 @@ object CatalogTool {
 
     /** Visible patches that are neither a settings control nor one of the always-on fixes. */
     val NON_CONTROL_PATCHES = setOf("Install beside Meta apps", "Open settings from menu", "Restore screens on re-signed builds",
-        "Spoof package version", "Clone install under another package name")
+        "Spoof package version", "Clone install under another package name", "Custom new-message sound")
 
     fun catalog(version: String, patches: Set<Patch<*>>): JsonObject = JsonObject(linkedMapOf(
         "NOTE" to JsonPrimitive("Generated locally from the built MPP with :patches:generatePatchCatalog. Do not edit by hand."),

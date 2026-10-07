@@ -10,9 +10,9 @@
 
 # HushMessenger
 
-HushMessenger is a Morphe patch source for Facebook Messenger. It offers 36 patches. 31 of them are optional controls with searchable settings and long-press shortcuts. Three help a re-signed build install, open and reach those settings. The last two start unselected: one installs a second copy under another package name, and **Spoof package version** stops Play Store update offers. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
+HushMessenger is a Morphe patch source for Facebook Messenger. It offers 37 patches. 31 of them are optional controls with searchable settings and long-press shortcuts. Three help a re-signed build install, open and reach those settings. The other three start unselected and change the app package itself: one installs a second copy under another package name, **Spoof package version** stops Play Store update offers, and **Custom new-message sound** swaps in a sound file you choose. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
 
-The source builds v0.21.1. The public download and Morphe source still serve v0.21.0 while development checks continue. With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)). Development also adds **Unlock app icons**, a switch that lets you pick any of Messenger's built-in app icons without a subscription ([#33](https://github.com/SysAdminDoc/HushMessenger/issues/33)), and **Clone install under another package name**, an optional patch that puts a second Messenger beside the first. **Spoof package version** gives Messenger a very high version code so the Play Store stops offering updates.
+The source builds v0.21.1. The public download and Morphe source still serve v0.21.0 while development checks continue. With **Hide People You May Know** on, the chat list no longer keeps a loading circle under your chats after Messenger restarts ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)). Development also adds **Unlock app icons**, a switch that lets you pick any of Messenger's built-in app icons without a subscription ([#33](https://github.com/SysAdminDoc/HushMessenger/issues/33)). **Clone install under another package name** puts a second Messenger beside the first, **Spoof package version** gives Messenger a very high version code so the Play Store stops offering updates, and **Custom new-message sound** plays your own file ([#32](https://github.com/SysAdminDoc/HushMessenger/issues/32)).
 
 v0.21.0 adds Messenger 581.0.0.49.91, every arm64 build APKMirror lists under that name ([#29](https://github.com/SysAdminDoc/HushMessenger/issues/29)). It also brings **Hide joined community chats**, a new switch that starts off and removes joined channels and announcements from the main Chats list on its next render. **Hide AI sticker tools** now covers the Generate buttons in the sticker keyboard, and **Allow screenshots** covers view-once media and Quicksnap. Settings give each control's full row one accessible touch target.
 
@@ -173,7 +173,7 @@ The closed [issue #22](https://github.com/SysAdminDoc/HushMessenger/issues/22) c
 
 ## What the patches change
 
-The [patch catalog](patches-list.json) lists all 36 development patches with their categories, default selections, options, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
+The [patch catalog](patches-list.json) lists all 37 development patches with their categories, default selections, options, dependency identities and supported-build details. It's generated locally from the built bundle and retains dependencies of hidden dependencies. Settings switches still start off, even when a patch is selected by default in Morphe.
 
 ### Independent optional controls
 
@@ -212,6 +212,12 @@ Some things stay tied to Messenger's original name. Push notifications from Face
 Starts unselected, and it has no switch in settings. It changes the version code in Messenger's manifest to the number in its **Version code** option, 2147483647 unless you pick another one from 1 up. The Play Store compares that number with its own Messenger and stops offering Meta's updates when yours is higher. The version name stays 581.0.0.49.91 or 580.0.0.49.91, and the patch checks that the manifest still holds the code it was built from before it changes anything.
 
 Messenger reads its own version code in several places, so it may report this number to Meta, for example in crash reports. Android won't install a lower version code over a higher one. Keep the patch selected with the same number when you patch a later build. Going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone.
+
+### Custom new-message sound
+
+Starts unselected, and it has no switch in settings. Pick a sound in its **Sound file** option when you patch: an .ogg, .mp3, .m4a or .wav file of 1 MB (1,048,576 bytes) or less. The patch puts that file's bytes in place of Messenger's `new_message` sound and keeps the resource's name and path, so everything in Messenger that plays that sound plays yours, including the default sound of its message notifications ([#32](https://github.com/SysAdminDoc/HushMessenger/issues/32)). Messenger's other sounds, such as `in_app_notification` and the sent and typing sounds, stay as they are.
+
+With no file picked the patch changes nothing. It refuses a file that's missing, empty, too large, of another type or not shaped like its extension. It finds Messenger's sound by its exact bytes, which are the same in every supported build, and stops if it finds no copy or more than one. If you've already picked a sound for Messenger's notifications in Android's settings, Android keeps playing that one.
 
 ## Supported Messenger builds
 
