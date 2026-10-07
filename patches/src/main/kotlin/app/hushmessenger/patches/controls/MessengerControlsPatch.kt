@@ -321,7 +321,7 @@ val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "
 @Suppress("unused")
 val originalPhotoPatch = controlPatch("original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata except the rotation tag. Videos and photos over 20 MB are still compressed.", "Conversations")
 @Suppress("unused")
-val originalVideoPatch = controlPatch(ORIGINAL_VIDEO, "Send videos without re-encoding",
+val originalVideoPatch = controlPatch("original_video", "Send videos without re-encoding",
     "Sends a video file as it is when Messenger's own passthrough can take it, instead of a re-encoded copy. " +
         "Videos over 25 MB are still compressed, and so are trimmed or edited videos and formats Messenger won't pass through.", "Conversations")
 @Suppress("unused")
