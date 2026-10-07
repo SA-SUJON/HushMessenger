@@ -196,6 +196,16 @@ public final class Settings {
     public static boolean suppressTyping() { return enabled("typing"); }
     /** Every analytics upload service, job and retry asks this as it starts, so a change applies to the next upload. */
     public static boolean stopAnalyticsUploads() { return enabled("analytics_uploads"); }
+    /** Messenger's own original-upload check allows 25 MB, so a bigger video keeps its re-encode. */
+    static final long ORIGINAL_VIDEO_MAX_BYTES = 25L * 1024 * 1024;
+    /**
+     * The video transcoder's size check before it re-encodes. A negative answer sends the file through Messenger's own
+     * passthrough. Off, Pause, safe mode and a file over 25 MB get Messenger's comparison back unchanged.
+     */
+    public static int videoPassthrough(int comparison, long bytes) {
+        if (comparison < 0 || bytes <= 0 || bytes > ORIGINAL_VIDEO_MAX_BYTES) return comparison;
+        return enabled("original_video") ? -1 : comparison;
+    }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) {

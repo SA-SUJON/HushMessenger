@@ -157,6 +157,7 @@ internal val expectedHooks = mapOf(
     EMOJI_DRAWER to setOf("Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z",
         "LX/H1n;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
     "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
+    ORIGINAL_VIDEO to setOf(VIDEO_TRANSCODE),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
         "LX/9rv;->A1i()V",
@@ -328,6 +329,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
                 instructions.any { (it as? NarrowLiteralInstruction)?.narrowLiteral == FLAG_SECURE } &&
                 refs.any { it.toString() == "Landroid/view/Window;->addFlags(I)V" }) add("allow_screenshot")
             if (cls.type == MEDIA_TRANSCODER && method.hookId().let { it == TRANSCODE_IMAGE || it == TRANSCODE_IMAGE_ASYNC }) add("original_photo")
+            if (method.isVideoTranscode(strings)) add(ORIGINAL_VIDEO)
             if (method.returnType == "V" && method.parameterTypes.size == 3 &&
                 method.parameterTypes[0] == "Landroid/content/Intent;" &&
                 strings.any { "ACTION_REVOKE_MESSAGE" in it }) add("keep_unsent")

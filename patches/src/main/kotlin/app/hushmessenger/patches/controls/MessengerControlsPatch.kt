@@ -140,6 +140,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             EMOJI_DRAWER -> method.validateEmojiDrawer()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
             "original_photo" -> method.validateOriginalPhoto()
+            ORIGINAL_VIDEO -> method.validateOriginalVideo()
             "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
             "typing_mailbox" -> method.validateOutgoingTyping()
             "anonymous_stories" -> method.validateStorySeen()
@@ -179,6 +180,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             EMOJI_DRAWER -> method.injectEmojiDrawer()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
             "original_photo" -> method.injectOriginalPhoto()
+            ORIGINAL_VIDEO -> method.injectOriginalVideo()
             "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
             "typing_mailbox" -> method.injectOutgoingTyping()
             "anonymous_stories" -> method.injectStorySeen()
@@ -315,6 +317,10 @@ val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Offers S
 val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "Renders emoji with the phone's own font instead of Messenger's.", "Conversations", "emoji_typeface")
 @Suppress("unused")
 val originalPhotoPatch = controlPatch("original_photo", "Send photos at original quality", "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata except the rotation tag. Videos and photos over 20 MB are still compressed.", "Conversations")
+@Suppress("unused")
+val originalVideoPatch = controlPatch(ORIGINAL_VIDEO, "Send videos without re-encoding",
+    "Sends a video file as it is when Messenger's own passthrough can take it, instead of a re-encoded copy. " +
+        "Videos over 25 MB are still compressed, and so are trimmed or edited videos and formats Messenger won't pass through.", "Conversations")
 @Suppress("unused")
 val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytics uploads",
     "Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, " +

@@ -181,6 +181,7 @@ public class CompatReport {
         PATCHES.put("Allow chat bubbles", List.of("bubbles", "bubble_mode"));
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Send photos at original quality", List.of("original_photo"));
+        PATCHES.put("Send videos without re-encoding", List.of("original_video"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
@@ -195,6 +196,8 @@ public class CompatReport {
     static final Set<String> ORIGINAL_PHOTO_HOOKS = Set.of(
         "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImage(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;)[B",
         "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->transcodeImageAsync(Ljava/lang/String;DDLjava/lang/String;Ljava/util/Map;Lcom/facebook/msys/mci/TranscodeImageCompletionCallback;)V");
+    static final String ORIGINAL_VIDEO_HOOK = "Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;->A05(" +
+        "Lcom/facebook/msys/mci/TranscodeVideoCompletionCallback;Lcom/facebook/msys/mci/VideoEdits;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V";
 
     /** Every control key, in patch order. */
     static final Set<String> CONTROL_KEYS = new LinkedHashSet<>();
@@ -2330,6 +2333,12 @@ public class CompatReport {
                 if ("Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;".equals(cls.getType()) &&
                     !isStatic && ORIGINAL_PHOTO_HOOKS.contains(hookId(method))) {
                     found.get("original_photo").add(method);
+                }
+
+                // original_video: the video transcoder's private worker, which holds the passthrough size check
+                if ("Lcom/facebook/msys/mci/transcoder/DefaultMediaTranscoder;".equals(cls.getType()) && !isStatic &&
+                    ORIGINAL_VIDEO_HOOK.equals(hookId(method)) && strings.contains("mci_video_passthrough")) {
+                    found.get("original_video").add(method);
                 }
 
                 // emoji_typeface: Messenger's emoji getter, counted only when its downloaded font holder proves out (#34)
