@@ -464,6 +464,16 @@ public final class Settings {
     /** Messenger's emoji font holder hands over its font file as Messenger builds it. */
     public static void messengerEmojiFont(java.io.File file) {
         messengerEmojiFile = file;
+        logEmoji("Messenger emoji font " + (file == null ? "null" : file.getName() + " " + file.length() + " bytes"));
+    }
+
+    static volatile String lastEmojiLog;
+
+    /** One line per change, so a report's logcat shows which emoji path a phone took. */
+    static void logEmoji(String state) {
+        if (state.equals(lastEmojiLog)) return;
+        lastEmojiLog = state;
+        android.util.Log.i("HushMessenger", "use_system_emoji: " + state);
     }
 
     /**
@@ -474,7 +484,11 @@ public final class Settings {
         android.graphics.Typeface system = systemEmojiTypeface();
         if (system == null) return messenger;
         java.io.File file = messengerEmojiFile;
-        if (messenger == null || file == null || android.os.Build.VERSION.SDK_INT < 29) return system;
+        if (messenger == null || file == null || android.os.Build.VERSION.SDK_INT < 29) {
+            logEmoji("phone emoji only (" + (messenger == null ? "no Messenger typeface" : file == null ? "no Messenger font file"
+                : "Android " + android.os.Build.VERSION.SDK_INT) + "), source " + systemEmojiSource);
+            return system;
+        }
         synchronized (Settings.class) {
             if (!file.equals(mergedEmojiFile)) {
                 mergedEmojiFile = file;
@@ -486,6 +500,8 @@ public final class Settings {
                     hookFailedPrivately("use_system_emoji", "Can't add Messenger's emoji font behind the phone's", error);
                 }
             }
+            logEmoji(mergedEmoji != null ? "phone emoji with Messenger's font behind it, source " + systemEmojiSource
+                : "phone emoji only (merge failed), source " + systemEmojiSource);
             return mergedEmoji != null ? mergedEmoji : system;
         }
     }

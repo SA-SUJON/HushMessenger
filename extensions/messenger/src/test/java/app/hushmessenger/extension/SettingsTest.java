@@ -500,6 +500,9 @@ public class SettingsTest {
             android.graphics.Typeface merged = Settings.systemEmojiTypeface(messenger);
             assertNotSame(system, merged);
             assertSame(merged, Settings.systemEmojiTypeface(messenger));
+            // One line per change of path, so a report's logcat shows which one the phone took.
+            assertEquals(1, org.robolectric.shadows.ShadowLog.getLogsForTag("HushMessenger").stream()
+                .filter(log -> log.msg.startsWith("use_system_emoji: phone emoji with Messenger's font behind it")).count());
             paint.setTypeface(system);
             assertFalse(paint.hasGlyph(like));
             paint.setTypeface(merged);
@@ -542,6 +545,7 @@ public class SettingsTest {
         Settings.messengerEmojiFile = null;
         Settings.mergedEmojiFile = null;
         Settings.mergedEmoji = null;
+        Settings.lastEmojiLog = null;
         Settings.hookErrors.remove("use_system_emoji");
     }
 
