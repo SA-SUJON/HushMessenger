@@ -8,6 +8,16 @@
   <img src="https://img.shields.io/badge/status-preview-8A2BE2" alt="Preview release">
 </p>
 
+<p align="center">
+  <a href="https://ko-fi.com/X8K126YVER">
+    <img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi" />
+  </a>
+</p>
+
+<p align="center">
+  <sub><em>If HushMessenger makes Messenger better for you, a coffee helps me keep testing patches and maintaining them as Messenger changes.</em></sub>
+</p>
+
 # HushMessenger
 
 HushMessenger is a Morphe patch source for Facebook Messenger. It offers 43 patches. 37 of them are optional controls with searchable settings and long-press shortcuts. Three help a re-signed build install, open and reach those settings. The other three start unselected and change the app package itself: one installs a second copy under another package name, **Spoof package version** stops Play Store update offers, and **Custom new-message sound** swaps in a sound file you choose. You bring the original Messenger APK. This repository provides the patch code and a `.mpp` bundle.
@@ -403,7 +413,3 @@ HushMessenger starts from the [Morphe patches template](https://github.com/Morph
 - Clone install under another package name passes its native checks on all 37 builds, and Morphe Desktop applies it with every other patch on one build of each family. A phone still has to install the copy beside Messenger, sign in, get a notification and restore encrypted history.
 - Restore old emoji drawer, Keep emoji search on emoji, Stop analytics uploads, Send videos without re-encoding, Keep a message log and Use the phone's camera app pass the native discovery and patch checks on all 37 builds. None of them has been tried on a phone yet.
 - Keep unsent messages can't cover end-to-end encrypted chats, because Messenger removes those messages below the part of the app HushMessenger can change. Keep a message log takes a different route. It copies each message from the notification that announces it, so it covers encrypted chats too, but only messages that raised a notification.
-
-<p align="center">
-  <a href="https://ko-fi.com/X8K126YVER"><img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi"></a>
-</p>
