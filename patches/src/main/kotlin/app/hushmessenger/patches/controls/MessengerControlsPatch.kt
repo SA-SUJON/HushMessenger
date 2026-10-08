@@ -382,15 +382,20 @@ val anonymousStoriesPatch = bytecodePatch(
     dependsOn(settingsExtension, anonymousStoriesResources)
     execute {
         validateControls(discoveredControls, setOf("anonymous_stories"))
-        val handler = discoveredControls.getValue("anonymous_stories").single().let { original ->
+        val handler = discoveredControls.getValue("anonymous_stories").single { it.definingClass != MONTAGE_BUCKET_PREVIEW }.let { original ->
             mutableClassDefBy(original.definingClass).methods.single { it.hookId() == original.hookId() }
         }
-        // The read set is checked before the first edit, so a build that moved it fails with the APK untouched.
+        // The read set and the story preview are checked before the first edit, so a build that moved either fails
+        // with the APK untouched.
         val readSetClass = mutableClassDefBy(handler.storyReadSetAdd().definingClass)
         val readSet = readSetClass.validateStoryReadSet(handler.storyReadSetAdd())
+        val previewClass = mutableClassDefBy(MONTAGE_BUCKET_PREVIEW)
+        val ring = previewClass.validateStoryRing()
         injectControl("anonymous_stories", mapOf("anonymous_stories" to listOf(handler)))
         readSetClass.methods.single { it.hookId() == readSet.add }.injectStoryReadSetAdd(readSet)
         readSetClass.methods.single { it.name == "<init>" }.injectStoryReadSetSeed(readSet)
+        // The chat list's ring reads the preview, which Messenger fills from the server's seen state alone (#35).
+        previewClass.injectStoryRing(ring, readSet.cardId)
         recordControl("anonymous_stories")
         anonymousStoriesApplied = true
     }

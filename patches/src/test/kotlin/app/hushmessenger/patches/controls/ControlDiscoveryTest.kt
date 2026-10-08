@@ -38,6 +38,7 @@ class ControlDiscoveryTest {
                 if (key == INBOX_REFRESH_HOOK) return@map inboxItemsMethod()
                 if (key == "bubbles") return@map bubbleEligibilityMethod()
                 if (key == "bubble_mode") return@map nativeBubbleModeMethod()
+                if (id == STORY_PREVIEW_INIT) return@map fixtureMethod(id, STORY_PREVIEW_INIT_BODY, registers = 23)
                 val body = when (key) {
                     in pluginGates -> pluginBody(pluginGates.getValue(key).anchors.first())
                     "stories" -> """
@@ -143,6 +144,24 @@ class ControlDiscoveryTest {
         validateControls(found)
         assertEquals(ExpectedTotals.DISCOVERY_FIXTURE_HOOKS, found.values.sumOf { it.size })
         for (key in expectedHooks.keys) validateControls(found, setOf(key))
+    }
+
+    @Test fun theStoryRingHookIsOnlyThePreviewConstructorThatTakesTheCard() {
+        val fixture = completeFixture()
+        validateControls(findControls(fixture), setOf("anonymous_stories"))
+        val withoutPreview = findControls(fixture.filter { it.type != MONTAGE_BUCKET_PREVIEW })
+        assertEquals(listOf(STORY_MARK_READ_HOOK), withoutPreview.getValue("anonymous_stories").map { it.hookId() })
+        assertFailsWith<PatchException> { validateControls(withoutPreview, setOf("anonymous_stories")) }
+        // A preview constructor without the card, or the same constructor shape on another class, doesn't count.
+        val noCard = fixtureMethod("$MONTAGE_BUCKET_PREVIEW-><init>(Landroid/os/Parcel;)V", "return-void", 2)
+        val elsewhere = fixtureMethod(STORY_PREVIEW_INIT.replace("$MONTAGE_BUCKET_PREVIEW->", "LX/Zz9;->"), "return-void", 23)
+        val moved = fixture.filter { it.type != MONTAGE_BUCKET_PREVIEW } +
+            fixtureClass(MONTAGE_BUCKET_PREVIEW, listOf(noCard)) + fixtureClass("LX/Zz9;", listOf(elsewhere))
+        assertFailsWith<PatchException> { validateControls(findControls(moved), setOf("anonymous_stories")) }
+        // A second constructor that takes a card makes the set differ from the build's, so the control stops.
+        val extra = fixtureMethod("$MONTAGE_BUCKET_PREVIEW-><init>($MONTAGE_CARD)V", "return-void", 2)
+        val doubled = fixture.map { if (it.type == MONTAGE_BUCKET_PREVIEW) fixtureClass(it.type, it.methods.toList() + extra) else it }
+        assertFailsWith<PatchException> { validateControls(findControls(doubled), setOf("anonymous_stories")) }
     }
 
     @Test fun aChangedViewerLeavesOnlyScreenshotDiscoveryUnavailable() {

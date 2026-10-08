@@ -78,6 +78,7 @@ public class CompatReport {
     static final String IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;";
     static final String PREFERENCES = "Lcom/facebook/prefs/shared/FbSharedPreferences;";
     static final String MONTAGE_CARD = "Lcom/facebook/messaging/montage/model/MontageCard;";
+    static final String MONTAGE_BUCKET_PREVIEW = "Lcom/facebook/messaging/montage/model/MontageBucketPreview;";
     static final String ANIMATION = "Landroid/view/animation/Animation;";
     static final String FRAGMENT_ANIMATION = "Landroidx/fragment/app/Fragment;->onCreateAnimation(IZI)" + ANIMATION;
     static final String PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segments/friendrequests/usecase/"
@@ -2451,6 +2452,11 @@ public class CompatReport {
                 // anonymous_stories: the story mark-read handler that reports a viewed card
                 if ("V".equals(method.getReturnType()) && paramTypes.equals(List.of(MONTAGE_CARD, "Z")) &&
                     !isStatic && strings.contains("MontageMsysMarkReadHandler")) {
+                    found.get("anonymous_stories").add(method);
+                }
+
+                // anonymous_stories: the story preview's constructor, where a card opened anonymously loses its new-story ring (#35)
+                if (MONTAGE_BUCKET_PREVIEW.equals(cls.getType()) && "<init>".equals(method.getName()) && paramTypes.contains(MONTAGE_CARD)) {
                     found.get("anonymous_stories").add(method);
                 }
 

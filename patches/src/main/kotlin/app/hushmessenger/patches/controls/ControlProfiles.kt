@@ -79,7 +79,10 @@ internal val PROFILE_346013370 = ControlProfile(
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
         ),
-        "anonymous_stories" to setOf("LX/Ncx;->C1W(Lcom/facebook/messaging/montage/model/MontageCard;Z)V"),
+        "anonymous_stories" to setOf(
+            "LX/Ncx;->C1W(Lcom/facebook/messaging/montage/model/MontageCard;Z)V",
+            "Lcom/facebook/messaging/montage/model/MontageBucketPreview;-><init>(Lcom/facebook/messaging/montage/model/MontageBucketKey;Lcom/facebook/messaging/montage/model/MontageBucketLooperLoggingItem;Lcom/facebook/messaging/montage/model/MontageCard;Lcom/facebook/user/model/UserKey;Lcom/google/common/collect/ImmutableList;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZZZZZ)V",
+        ),
         "app_icons" to setOf(
             "LX/7X5;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z",
             "LX/7X5;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z",
@@ -197,7 +200,10 @@ internal val PROFILE_346013423 = ControlProfile(
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
         ),
-        "anonymous_stories" to setOf("LX/NUZ;->C1g(Lcom/facebook/messaging/montage/model/MontageCard;Z)V"),
+        "anonymous_stories" to setOf(
+            "LX/NUZ;->C1g(Lcom/facebook/messaging/montage/model/MontageCard;Z)V",
+            "Lcom/facebook/messaging/montage/model/MontageBucketPreview;-><init>(Lcom/facebook/messaging/montage/model/MontageBucketKey;Lcom/facebook/messaging/montage/model/MontageBucketLooperLoggingItem;Lcom/facebook/messaging/montage/model/MontageCard;Lcom/facebook/user/model/UserKey;Lcom/google/common/collect/ImmutableList;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZZZZZ)V",
+        ),
         "app_icons" to setOf(
             "LX/7Zm;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z",
             "LX/7Zm;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z",
@@ -315,7 +321,10 @@ internal val PROFILE_346013357 = ControlProfile(
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
         ),
-        "anonymous_stories" to setOf("LX/HMz;->C1T(Lcom/facebook/messaging/montage/model/MontageCard;Z)V"),
+        "anonymous_stories" to setOf(
+            "LX/HMz;->C1T(Lcom/facebook/messaging/montage/model/MontageCard;Z)V",
+            "Lcom/facebook/messaging/montage/model/MontageBucketPreview;-><init>(Lcom/facebook/messaging/montage/model/MontageBucketKey;Lcom/facebook/messaging/montage/model/MontageBucketLooperLoggingItem;Lcom/facebook/messaging/montage/model/MontageCard;Lcom/facebook/user/model/UserKey;Lcom/google/common/collect/ImmutableList;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZZZZZ)V",
+        ),
         "app_icons" to setOf(
             "LX/7YA;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z",
             "LX/7YA;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z",
@@ -433,7 +442,10 @@ internal val PROFILE_346013374 = ControlProfile(
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
         ),
-        "anonymous_stories" to setOf("LX/NFK;->C1U(Lcom/facebook/messaging/montage/model/MontageCard;Z)V"),
+        "anonymous_stories" to setOf(
+            "LX/NFK;->C1U(Lcom/facebook/messaging/montage/model/MontageCard;Z)V",
+            "Lcom/facebook/messaging/montage/model/MontageBucketPreview;-><init>(Lcom/facebook/messaging/montage/model/MontageBucketKey;Lcom/facebook/messaging/montage/model/MontageBucketLooperLoggingItem;Lcom/facebook/messaging/montage/model/MontageCard;Lcom/facebook/user/model/UserKey;Lcom/google/common/collect/ImmutableList;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZZZZZ)V",
+        ),
         "app_icons" to setOf(
             "LX/7Z6;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z",
             "LX/7Z6;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z",
@@ -551,7 +563,10 @@ internal val PROFILE_346213494 = ControlProfile(
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
             "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
         ),
-        "anonymous_stories" to setOf("LX/N1f;->C2P(Lcom/facebook/messaging/montage/model/MontageCard;Z)V"),
+        "anonymous_stories" to setOf(
+            "LX/N1f;->C2P(Lcom/facebook/messaging/montage/model/MontageCard;Z)V",
+            "Lcom/facebook/messaging/montage/model/MontageBucketPreview;-><init>(Lcom/facebook/messaging/montage/model/MontageBucketKey;Lcom/facebook/messaging/montage/model/MontageBucketLooperLoggingItem;Lcom/facebook/messaging/montage/model/MontageCard;Lcom/facebook/user/model/UserKey;Lcom/google/common/collect/ImmutableList;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZZZZZ)V",
+        ),
         "app_icons" to setOf(
             "LX/7ho;->A02(Lcom/facebook/auth/usersession/FbUserSession;)Z",
             "LX/7ho;->A03(Lcom/facebook/auth/usersession/FbUserSession;)Z",

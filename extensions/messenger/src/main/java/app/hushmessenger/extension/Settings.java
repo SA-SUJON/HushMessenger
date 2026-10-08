@@ -8,9 +8,11 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -307,8 +309,75 @@ public final class Settings {
                 kept.add(card + now);
                 preferences.edit().putStringSet(SEEN_STORIES, kept).apply();
             }
+            clearStoryRings(cardId);
         } catch (RuntimeException error) {
             hookFailed("anonymous_stories", "Can't keep a story marked seen", error);
+        }
+    }
+
+    static final int STORY_RING_CARDS = 512;
+    private static final int STORY_RING_COPIES = 8;
+    /**
+     * Story previews Messenger built while their card was still new, by card ID. Messenger keeps a preview in its
+     * story cache once it's built, so opening the card has to clear the ring of the ones still around.
+     */
+    static final Map<String, List<WeakReference<Object>>> storyRings =
+        new LinkedHashMap<String, List<WeakReference<Object>>>(16, 0.75f, true) {
+            @Override protected boolean removeEldestEntry(Map.Entry<String, List<WeakReference<Object>>> eldest) {
+                return size() > STORY_RING_CARDS;
+            }
+        };
+    /** The patch adds this static method to Messenger's story preview. It asks storyRingSeen, then clears the ring. */
+    static final String STORY_RING_HELPER = "hushmessengerStoryRing";
+
+    /**
+     * Messenger built a story preview, and the new-story ring in the chat list reads it. Messenger sets that ring from
+     * the server's seen state and never looks at the cards read on this phone, so with the switch on a card kept here
+     * counts as seen. Card IDs don't depend on the account, so a card any account here opened counts.
+     */
+    public static boolean storyRingSeen(Object preview, String cardId) {
+        if (preview == null || cardId == null || cardId.isEmpty()) return false;
+        try {
+            if (!wouldUse("anonymous_stories")) return false;
+            if (storyKept(cardId, System.currentTimeMillis())) return enabled("anonymous_stories");
+            synchronized (storyRings) {
+                List<WeakReference<Object>> previews = storyRings.get(cardId);
+                if (previews == null) storyRings.put(cardId, previews = new ArrayList<>());
+                previews.removeIf(ref -> ref.get() == null || ref.get() == preview);
+                if (previews.size() >= STORY_RING_COPIES) previews.remove(0);
+                previews.add(new WeakReference<>(preview));
+            }
+            return false;
+        } catch (RuntimeException error) {
+            hookFailed("anonymous_stories", "Can't check a story ring", error);
+            return false;
+        }
+    }
+
+    static boolean storyKept(String cardId, long now) {
+        for (String entry : preferences.getStringSet(SEEN_STORIES, Collections.emptySet())) {
+            int card = entry.indexOf(':');
+            int time = entry.lastIndexOf(':');
+            if (card >= 0 && time > card && entry.substring(card + 1, time).equals(cardId) && !seenStoryExpired(entry, now)) return true;
+        }
+        return false;
+    }
+
+    /** Runs the preview's own helper again on each preview still around for a card that was just kept. */
+    private static void clearStoryRings(String cardId) {
+        List<WeakReference<Object>> previews;
+        synchronized (storyRings) {
+            previews = storyRings.remove(cardId);
+        }
+        if (previews == null) return;
+        for (WeakReference<Object> ref : previews) {
+            Object preview = ref.get();
+            if (preview == null) continue;
+            try {
+                preview.getClass().getMethod(STORY_RING_HELPER, preview.getClass()).invoke(null, preview);
+            } catch (ReflectiveOperationException | RuntimeException error) {
+                hookFailed("anonymous_stories", "Can't clear a story ring", error);
+            }
         }
     }
 

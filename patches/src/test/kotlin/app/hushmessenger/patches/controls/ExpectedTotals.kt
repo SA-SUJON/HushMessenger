@@ -10,8 +10,8 @@ internal object ExpectedTotals {
     /** Controls whose description sends people to the home screen icon's Patch controls shortcut. */
     const val DIRECTED_CONTROLS = 36
     /** Hook methods per 580 build, and per 581 build, which reads the emoji drawer flag in eight places where 580 has two. */
-    const val HOOKS_580 = 118
-    const val HOOKS_581 = 124
+    const val HOOKS_580 = 119
+    const val HOOKS_581 = 125
     /** The complete synthetic discovery fixture, one method per expected hook. */
-    const val DISCOVERY_FIXTURE_HOOKS = 118
+    const val DISCOVERY_FIXTURE_HOOKS = 119
 }
