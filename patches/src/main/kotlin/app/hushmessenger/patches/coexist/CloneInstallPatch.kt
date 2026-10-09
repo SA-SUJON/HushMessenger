@@ -462,12 +462,7 @@ internal val cloneResources = resourcePatch(description = "Move Messenger's mani
 @Suppress("unused")
 val cloneInstallPatch = bytecodePatch(
     name = CLONE_PATCH_NAME,
-    description = "Installs a second copy of Messenger beside the first, under its own package name and app name. " +
-        "Messenger's own permissions, providers, task affinities and push categories move to the new name, and encrypted " +
-        "chat backups still find their settings. Push notifications may not reach the copy. Facebook's sign-in shortcut " +
-        "and other Meta apps won't see its account, and a Root Mount install can't use it. Sign it with the same key as " +
-        "your other patched Meta apps. It has no switch and isn't selected by default, so turn on Expert mode in Morphe " +
-        "Manager to pick it.",
+    description = "Installs a second copy of Messenger beside the first, with its own app name. Push notifications may not reach the copy. Pick it in Morphe Manager's Expert mode. Works as soon as you patch it in, with no switch.",
     default = false,
 ) {
     category("Fixes")

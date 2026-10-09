@@ -94,11 +94,11 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Hide inbox ads | Filters Messenger's typed inbox ad cards. Meta stopped selling Messenger inbox ads in November 2025, so it's a guard in case they come back. |
 | Hide joined community chats | Starts off. Hides joined channels and announcements from the main Chats list (the All chip) on its next render. Other chips such as Channels, search, community folders and the original unread counts keep every row. |
 | Hide People You May Know | Removes suggested people from chats (the end of the chat list too), search and stories, and from the People and Notifications tabs. |
-| Hide friend request cards | Hides inbox cards without accepting or rejecting requests. |
+| Hide friend request cards | Hides friend request cards in the chat list. It doesn't accept or decline anyone. |
 | Hide growth prompts | Removes the inbox's add-more-people promotion unit. It also hides the tip sheets notes pop up, like **Make my notes public** and **Add lyrics to your music note**, and the **Share your own story** card after someone else's stories. |
-| Hide inbox promotions | Hides quick-promotion banners in the chat list. |
-| Hide stories and notes | Hides the horizontal tray above chats. |
-| Hide inbox tabs | Hides the Home and Channels subtabs. |
+| Hide inbox promotions | Hides promotion banners in the chat list. |
+| Hide stories and notes | Hides the row of stories and notes above your chats. |
+| Hide inbox tabs | Hides the Home and Channels tabs inside the inbox. |
 | Hide Facebook shortcuts | Removes Facebook toolbar, profile and sharing shortcuts, and the "Also from Meta" section in the Menu tab (Muse, Subscriptions, Facebook Reels and the rest). |
 | Hide Meta AI | Hides the floating button, toolbar button, AI menu entries and the Meta AI tab some accounts get in the bottom bar, plus the "Ask Meta AI" button in search and the AI agent behind it. People, message and group results still show, and existing AI chats stay available. The tab changes after **Restart Messenger**. |
 | Hide Chat Moments | Removes Chat Moments from the menu. |
@@ -107,10 +107,10 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Hide avatar stickers | Hides the avatar tab in the sticker keyboard, including Messenger's newer keyboard. |
 | Restore old emoji drawer | Starts off. Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. It takes effect after **Restart Messenger**, and accounts Meta never moved to the redesign see no difference. |
 | Keep emoji search on emoji | Starts off. Typing while the emoji keyboard is open no longer switches it to sticker search, so the keyboard stays on emoji. It takes effect right away. |
-| Hide chat promotions | Hides quick-promotion banners inside conversations. |
-| Hide business reply suggestions | Hides suggested replies in business chats. |
-| Hide business typing suggestions | Hides business suggestions as you type. |
-| Hide event prompts | Hides event quick-promotion prompts inside chats. |
+| Hide chat promotions | Hides promotion banners inside conversations. |
+| Hide business reply suggestions | Hides suggested replies in conversations with businesses. |
+| Hide business typing suggestions | Hides business suggestions that pop up as you type. |
+| Hide event prompts | Hides event promotion prompts inside chats. |
 | Hide typing indicator | Stops others from seeing that you're typing, including in end-to-end encrypted chats. |
 | Stop analytics uploads | Starts off. Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, and they can upload after you turn this off. Other logging keeps going. |
 | Keep a message log | Starts off. Keeps a copy of each message as its notification arrives, so an unsend can't take it back. This is the only switch that reaches end-to-end encrypted chats. The log holds only messages that raised a notification, stays on your phone, and is encrypted with a key that never leaves it. View log opens it, newest first. Clear log deletes it and throws the key away. |
@@ -123,7 +123,7 @@ The **Controls** tab has **All**, **Inbox**, **Chats** and **More** filters. Use
 | Send photos at original quality | With HD on, a JPEG photo goes out with its own image data instead of Messenger's smaller re-encoded copy. Its metadata, such as location and camera details, is left out, as it is from Messenger's copy. Only the tag that turns a sideways photo upright stays. Photos over 20 MB and videos still get Messenger's compression. |
 | Send videos without re-encoding | Starts off. Messenger already sends a video untouched when it's close to the size a re-encode would give. With this on, a video up to 25 MB takes that same route instead of being re-encoded. Videos over 25 MB still get Messenger's compression. So do trimmed or edited videos and formats Messenger won't pass through. |
 | Use the phone's camera app | Starts off. The camera button in a chat opens your phone's own camera app instead of Messenger's camera. The photo you take comes back into Messenger's photo editor for that chat, the same one a photo picked from another app opens in, and you send it from there. It takes photos only, so videos still need Messenger's camera. If Messenger doesn't have camera access yet, it asks first. A Root Mount install keeps Messenger's camera, since Android doesn't know the screen this adds there. |
-| Open web links externally | Uses the stock external-browser branch for HTTP and HTTPS. |
+| Open web links externally | Opens http and https links in your default browser instead of inside Messenger. Other link types work as before. |
 | Slide chats in and out | Slides a chat in from the side when you open it from the chat list or search, and back out when you go back, while the screen underneath holds still. Right-to-left languages slide from the left. Chat heads and bubbles keep their own animations, and Android's **Remove animations** setting turns this off too. |
 | Allow chat bubbles | Settings offer Stock, Chat Heads and Native Bubbles on Android 11 or newer when the host routes are verified. Native mode uses Messenger's conversation notifications and keeps its account eligibility check. Android permissions still apply. |
 | Unlock app icons | Starts off. Every icon in Messenger's App icon setting becomes selectable without a subscription, and Messenger applies it with the same launcher switch it uses for a free icon. The icons are already in the APK. Messenger still decides whether the App icon setting shows on your account, and after you turn this off it may put its default icon back the next time it closes. Your launcher can take a moment to show a new icon. |

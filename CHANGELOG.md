@@ -3,7 +3,7 @@
 ## Unreleased
 
 - **Material You theme** is now in Morphe Manager's default selection, so every control is there without Expert mode. Its switch is under Theme on the Controls page and starts off, so a build patched with the defaults looks like Messenger until you turn it on. **Clone install under another package name**, **Spoof package version** and **Custom new-message sound** still need Expert mode, because they change the package or need a file you pick.
-- Each control's description in Morphe Manager now says which group on the Controls page holds its switch.
+- Every patch description in Morphe Manager now says in plain words what the patch changes and why you might want it. It ends with where to turn it on, or says it works as soon as you patch it in.
 
 ## 0.22.0 (2026-10-08)
 

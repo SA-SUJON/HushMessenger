@@ -75,7 +75,7 @@ class DefaultSelectionPolicyTest {
             val name = patch.name()
             val description = patch.getValue("description").jsonPrimitive.content
             if (name in keptOptIn) {
-                assertTrue("isn't selected by default" in description, "$name should say it isn't selected by default")
+                assertTrue("Expert mode" in description, "$name should say where to pick it")
                 continue
             }
             for (phrase in stale) assertFalse(phrase in description, "$name still says \"$phrase\"")

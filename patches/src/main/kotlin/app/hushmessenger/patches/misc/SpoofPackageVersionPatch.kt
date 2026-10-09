@@ -40,10 +40,7 @@ private fun refuse(reason: String): Nothing =
 @Suppress("unused")
 val spoofPackageVersionPatch = resourcePatch(
     name = SPOOF_VERSION_PATCH,
-    description = "Gives Messenger a very high version code, so the Play Store stops offering Meta's updates over it. " +
-        "Messenger may report this number to Meta. Later builds need the same number or higher to install over it, " +
-        "so going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone. It has no " +
-        "switch and isn't selected by default, so turn on Expert mode in Morphe Manager to pick it.",
+    description = "Gives Messenger a high version number so the Play Store stops offering Meta's updates. Messenger may report it to Meta. Going back means uninstalling first, which erases its data. Pick it in Expert mode. Works as soon as you patch it in, with no switch.",
     default = false,
 ) {
     category("Updates")
