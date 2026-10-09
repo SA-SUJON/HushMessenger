@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a detailed Messenger internals audit with ad and tracking paths, native settings screenshots, the boundaries of all 37 controls, and patch candidates with acceptance criteria. A reusable 581 DEX query batch accompanies the report. The audit identifies a conditional analytics Binder entry outside the existing guards and documents message-log isolation and retention limits. No patch behavior changed.
+
 - The README now points to the patch code, in-app settings, build profiles and catalog checks. It also walks through adding a control or a supported Messenger version.
 - **Material You theme** is now in Morphe Manager's default selection, so every control is there without Expert mode. Its switch is under Theme on the Controls page and starts off, so a build patched with the defaults looks like Messenger until you turn it on. **Clone install under another package name**, **Spoof package version** and **Custom new-message sound** still need Expert mode, because they change the package or need a file you pick.
 - Every patch description in Morphe Manager now says in plain words what the patch changes and why you might want it. It ends with where to turn it on, or says it works as soon as you patch it in.
