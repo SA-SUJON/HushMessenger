@@ -75,7 +75,8 @@ val customMessageSoundPatch = resourcePatch(
     name = MESSAGE_SOUND_PATCH,
     description = "Swaps Messenger's new-message sound for an .ogg, .mp3, .m4a or .wav file of 1 MB or less that you choose. " +
         "Everything in Messenger that plays that sound plays yours. Leave the file empty to keep Messenger's sound. " +
-        "A sound picked for Messenger in Android's notification settings still takes its place. Starts unselected.",
+        "A sound picked for Messenger in Android's notification settings still takes its place. It has no switch and " +
+        "isn't selected by default, so turn on Expert mode in Morphe Manager to pick it and choose the file.",
     default = false,
 ) {
     category("Sounds")

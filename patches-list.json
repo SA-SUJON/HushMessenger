@@ -132,7 +132,7 @@
         },
         {
             "name": "Clone install under another package name",
-            "description": "Installs a second copy of Messenger beside the first, under its own package name and app name. Messenger's own permissions, providers, task affinities and push categories move to the new name, and encrypted chat backups still find their settings. Push notifications may not reach the copy. Facebook's sign-in shortcut and other Meta apps won't see its account, and a Root Mount install can't use it. Sign it with the same key as your other patched Meta apps.",
+            "description": "Installs a second copy of Messenger beside the first, under its own package name and app name. Messenger's own permissions, providers, task affinities and push categories move to the new name, and encrypted chat backups still find their settings. Push notifications may not reach the copy. Facebook's sign-in shortcut and other Meta apps won't see its account, and a Root Mount install can't use it. Sign it with the same key as your other patched Meta apps. It has no switch and isn't selected by default, so turn on Expert mode in Morphe Manager to pick it.",
             "default": false,
             "category": "Fixes",
             "dependencies": [
@@ -215,7 +215,7 @@
         },
         {
             "name": "Custom new-message sound",
-            "description": "Swaps Messenger's new-message sound for an .ogg, .mp3, .m4a or .wav file of 1 MB or less that you choose. Everything in Messenger that plays that sound plays yours. Leave the file empty to keep Messenger's sound. A sound picked for Messenger in Android's notification settings still takes its place. Starts unselected.",
+            "description": "Swaps Messenger's new-message sound for an .ogg, .mp3, .m4a or .wav file of 1 MB or less that you choose. Everything in Messenger that plays that sound plays yours. Leave the file empty to keep Messenger's sound. A sound picked for Messenger in Android's notification settings still takes its place. It has no switch and isn't selected by default, so turn on Expert mode in Morphe Manager to pick it and choose the file.",
             "default": false,
             "category": "Sounds",
             "dependencies": [],
@@ -1785,8 +1785,8 @@
         },
         {
             "name": "Material You theme",
-            "description": "Gives Messenger's dark mode the colors of your wallpaper on Android 12 and newer, and a fixed blue palette on Android 11. Light mode stays as it is. Turn on dark mode in Messenger first.",
-            "default": false,
+            "description": "Gives Messenger's dark mode the colors of your wallpaper on Android 12 and newer, and a fixed blue palette on Android 11. Light mode stays as it is. Turn on dark mode in Messenger first. Long-press Messenger's home screen icon > Patch controls. Its switch is under Theme on the Controls page and starts off.",
+            "default": true,
             "category": "Theme",
             "dependencies": [
                 {
@@ -2348,7 +2348,7 @@
         },
         {
             "name": "Spoof package version",
-            "description": "Gives Messenger a very high version code, so the Play Store stops offering Meta's updates over it. Messenger may report this number to Meta. Later builds need the same number or higher to install over it, so going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone. Starts unselected.",
+            "description": "Gives Messenger a very high version code, so the Play Store stops offering Meta's updates over it. Messenger may report this number to Meta. Later builds need the same number or higher to install over it, so going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone. It has no switch and isn't selected by default, so turn on Expert mode in Morphe Manager to pick it.",
             "default": false,
             "category": "Updates",
             "dependencies": [],

@@ -42,7 +42,8 @@ val spoofPackageVersionPatch = resourcePatch(
     name = SPOOF_VERSION_PATCH,
     description = "Gives Messenger a very high version code, so the Play Store stops offering Meta's updates over it. " +
         "Messenger may report this number to Meta. Later builds need the same number or higher to install over it, " +
-        "so going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone. Starts unselected.",
+        "so going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone. It has no " +
+        "switch and isn't selected by default, so turn on Expert mode in Morphe Manager to pick it.",
     default = false,
 ) {
     category("Updates")

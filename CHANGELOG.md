@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Material You theme** is now in Morphe Manager's default selection, so every control is there without Expert mode. Its switch is under Theme on the Controls page and starts off, so a build patched with the defaults looks like Messenger until you turn it on. **Clone install under another package name**, **Spoof package version** and **Custom new-message sound** still need Expert mode, because they change the package or need a file you pick.
+
 ## 0.22.0 (2026-10-08)
 
 - **Keep emoji search on emoji** is a new switch under Stickers that starts off. With it on, typing while the emoji keyboard is open no longer flips it over to sticker search, so you stay on emoji. It takes effect right away, with no restart.

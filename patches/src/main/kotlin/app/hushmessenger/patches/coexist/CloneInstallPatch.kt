@@ -466,7 +466,8 @@ val cloneInstallPatch = bytecodePatch(
         "Messenger's own permissions, providers, task affinities and push categories move to the new name, and encrypted " +
         "chat backups still find their settings. Push notifications may not reach the copy. Facebook's sign-in shortcut " +
         "and other Meta apps won't see its account, and a Root Mount install can't use it. Sign it with the same key as " +
-        "your other patched Meta apps.",
+        "your other patched Meta apps. It has no switch and isn't selected by default, so turn on Expert mode in Morphe " +
+        "Manager to pick it.",
     default = false,
 ) {
     category("Fixes")
