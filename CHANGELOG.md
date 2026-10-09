@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extended the app audit with actual Messenger packet observations, background job and CPU measurements, and physically unplugged battery readings. Revision 2 includes aggregate data, a charge-counter chart and a repeatable procedure. It distinguishes shared encrypted hosts from specific tracking operations and documents the limits of short observations on a paused installation. No patch behavior changed.
+
 - Added a detailed Messenger internals audit with ad and tracking paths, native settings screenshots, the boundaries of all 37 controls, and patch candidates with acceptance criteria. A reusable 581 DEX query batch accompanies the report. The audit identifies a conditional analytics Binder entry outside the existing guards and documents message-log isolation and retention limits. No patch behavior changed.
 
 - The README now points to the patch code, in-app settings, build profiles and catalog checks. It also walks through adding a control or a supported Messenger version.

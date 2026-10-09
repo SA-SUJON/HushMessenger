@@ -451,11 +451,11 @@ An untouched file prints `Good "hushmessenger-release" signature for SysAdminDoc
 
 ## Messenger internals and patch opportunities
 
-Audit revision 1, October 9, 2026. This reference covers Messenger's Android client, the boundaries of HushMessenger v0.22.0, and current development source. It combines an untouched APK inspection with a signed-in screen survey. It is intended for finding hooks, reviewing patch claims and updating exact-build mappings.
+Audit revision 2, October 9, 2026. This reference covers Messenger's Android client, the boundaries of HushMessenger v0.22.0, and current development source. It combines an untouched APK inspection, a signed-in screen survey and measured network/background activity with physically unplugged battery observations. It is intended for finding hooks, reviewing patch claims and updating exact-build mappings.
 
 The main finding is that several different systems sit behind the word "ads." The current inbox patch removes a particular row type. Business-ad navigation, ad-context queries, attribution requests and analytics have other paths. Hiding a surface does not establish that its request or event was prevented. The strongest new candidates are a missing analytics entry guard, a gesture-specific disappearing-message control, account separation for the message log, and narrower controls for attribution and business-ad banners.
 
-Jump to [evidence](#audit-evidence-and-baselines), [app inventory](#apk-and-architecture-inventory), [screens and native settings](#screen-survey-and-native-controls), [ads](#how-ads-and-business-context-reach-messenger), [tracking](#tracking-and-data-flows), [existing hooks](#coverage-map-for-existing-controls), [opportunities](#prioritized-patch-opportunities), [reported issues](#issue-intake-and-disposition), or [reproduction](#reproduce-and-refresh-the-audit).
+Jump to [evidence](#audit-evidence-and-baselines), [app inventory](#apk-and-architecture-inventory), [screens and native settings](#screen-survey-and-native-controls), [ads](#how-ads-and-business-context-reach-messenger), [tracking](#tracking-and-data-flows), [runtime measurements](#measured-network-background-and-battery-activity), [existing hooks](#coverage-map-for-existing-controls), [opportunities](#prioritized-patch-opportunities), [reported issues](#issue-intake-and-disposition), or [reproduction](#reproduce-and-refresh-the-audit).
 
 ### Audit evidence and baselines
 
@@ -466,7 +466,8 @@ Jump to [evidence](#audit-evidence-and-baselines), [app inventory](#apk-and-arch
 | **Patch source** | Main through `f3e9e8b`, 43 catalog entries and 37 controls | What the injected helpers change, their guards and existing test contracts. Tests were read, not rerun for this documentation change. |
 | **Observed UI** | Samsung SM-S908U1, Android 16/API 36, Messenger 581/code 346213494 with Hush 0.22.0 installed | Signed-in navigation and native settings with Pause enabled followed by a process restart. Original theme and Pause state were restored afterward. |
 | **Observed scheduler** | Same paused installation | An Analytics2 upload job was scheduled and waiting for its timing constraint. This is evidence of scheduling, not an upload or a battery loop. |
-| **Unverified behavior** | Actual ad delivery, network payloads, server receipt, comparative battery consumption, remote read/typing effects | No such result is claimed by this audit. |
+| **Measured runtime** | Samsung SM-S938B, Android 16, Messenger 580/code 346013440 with Hush 0.21.0 paused and restarted | Package-filtered encrypted traffic, Wi-Fi UID byte deltas, scheduler/CPU/wakelock observations and physically unplugged whole-device charge-counter changes. The exact conditions and limitations are below. |
+| **Unverified behavior** | Actual ad delivery, decrypted request payloads, telemetry server receipt, causal patch battery effects, remote read/typing effects | No such result is claimed by this audit. |
 
 A paused Hush installation still contains injected code, signature workarounds and any package/resource changes. It is not a factory install. The untouched 581 APK installed into the clean API 36 x86_64 emulator, but crashed in `libsuperpack-jni.so` under ARM translation before a usable login screen. The arm64 emulator image cannot run on this x64 emulator host. That failed launch supplies no UI or network baseline. Existing phone accounts and signing keys were preserved.
 
@@ -611,7 +612,7 @@ Browser exit also passes `messenger_ads_tracking_code`, source type and landing-
 
 The guards run before worker dispatch on those routes. For example, `LX/4Po.A02` acquires an `UploadServiceLogic` partial wake lock after the guarded service entry. Off, Pause and safe mode retain the stock body. `onCreate`, job scheduling, event collection and queue storage remain. A worker already past the entry guard is not canceled by toggling the switch. Previously collected events may upload when sending resumes.
 
-On the paused phone, an enabled `LollipopUploadService` job required a validated network. It had a 15-minute minimum latency, a 45-minute maximum delay and a 30-second initial backoff. It did not require charging, device idle or battery-not-low. It was waiting for timing eligibility, not actively uploading at capture. The snapshot also showed enabled overrides for the other Analytics2 service variants. These observations justify measuring wakeups and queue behavior. They do not explain a battery report by themselves.
+On the paused S22 installation, an enabled `LollipopUploadService` job required a validated network. It had a 15-minute minimum latency, a 45-minute maximum delay and a 30-second initial backoff. It did not require charging, device idle or battery-not-low. It was waiting for timing eligibility, not actively uploading at capture. The snapshot also showed enabled overrides for the other Analytics2 service variants. The later [S25 runtime measurements](#measured-network-background-and-battery-activity) showed that the pending schedule can change after backgrounding. Neither a pending job nor that change explains a battery report by itself.
 
 #### A conditional route bypasses the current guard
 
@@ -696,6 +697,139 @@ The known external dispatch can precede native in-app-browser warning completion
 
 End-to-end encryption protects personal conversation content in transit between participants. It does not remove account identifiers, operational metadata or every optional telemetry path from the application. Meta's [encryption overview](https://about.fb.com/news/2023/12/default-end-to-end-encryption-on-messenger/) describes the content boundary, including reporting exceptions. The [security architecture article](https://engineering.fb.com/2023/12/06/security/building-end-to-end-security-for-messenger/) gives broader context. Neither article proves what this account transmitted during this audit.
 
+### Measured network, background and battery activity
+
+Revision 2 adds an actual packet capture and physically unplugged power observations from October 9, 2026. These measurements used a Galaxy S25 Ultra, SM-S938B, Android 16, build `BP4A.251205.006/S938BXXUACZF1`. Its existing installation was Messenger **580.0.0.49.91 / 346013440 with Hush 0.21.0**, which has 30 installed controls. Pause was enabled and the process restarted before measurement. The 19 saved enabled choices were preserved. This is a different installation from the 581 static input and the S22 screen survey.
+
+Pause provides a useful observation of the app with runtime controls bypassed. Injected hooks and signing workarounds remain in the APK. These numbers are therefore a paused-installation reference, not a factory-stock baseline or a measurement of current Hush 0.22.0's analytics control. No account was reset, no conversation was sent, and no suggested person was opened.
+
+#### Measurement setup
+
+USB was physically disconnected. Battery Service reported AC, USB and wireless power false and status 3 throughout every completed window. Wireless debugging remained connected. Battery Saver was off. Existing adaptive brightness, Always On Display and the ten-minute screen timeout were preserved. Other installed apps and system services remained present, so physical charge-counter changes cover the whole phone, including the observation tools.
+
+[PCAPdroid 2.0.2](https://github.com/emanuele-f/PCAPdroid/releases/tag/v2.0.2) captured only the Messenger package through its local VPN. Both IP families were enabled. QUIC was allowed, TLS application decryption was disabled, and no certificate was installed. Private DNS was already off and wasn't changed. The classic PCAP used a 4,096-byte snapshot limit and a 20 MiB file cap. The completed file was 3,594,504 bytes, safely below that cap, and its phone and local SHA-256 hashes matched. Raw packets and device diagnostics stay private. Only aggregate measurements are included here.
+
+Each interval has separate before/after network polls, battery statistics, scheduler state and service snapshots. Battery charge, temperature and charging state were sampled about every 30 seconds. The final screen-off repeat also sampled power/display state at each step. Battery history was preserved. No battery reset, simulated unplug, forced Doze, forced upload job or traffic-blocking rule was used.
+
+The first background attempt had mixed display use. Android recorded roughly four minutes of screen-on time while Messenger remained in the background. A subsequent attempt woke within about two seconds and was excluded from the comparison. The final repeat was started after those conditions were identified. A sleep command alone is not proof of a screen-off run.
+
+#### Captured traffic
+
+| Observation | Duration | Packets in file | Sent IP bytes, original record length | Received IP bytes, original record length | Five-tuples |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| A. Foreground inbox | 180.170 seconds | 1,263 | 567,402 | 198,740 | 58 |
+| B. Background, mixed display | 600.251 seconds | 485 | 148,217 | 70,511 | 39 |
+| B2. Background, display on | 180.255 seconds | 0 | 0 | 0 | 0 |
+
+These are packet-file windows, with setup traffic and the gaps between phases excluded. Host observation times were aligned to the phone's packet timestamps using two clock probes. The assumed phone offset was about +186 milliseconds, with a sampled range of +122 to +249 milliseconds. The boundary sensitivity check left the foreground and follow-up counts unchanged. It could add one 40-byte outbound packet to the background count. There wasn't a clock probe before capture, so clock stability during the earlier interval remains an assumption.
+
+The complete file contains 4,713 packets across 135 five-tuples, including the setup period. There are 89 UDP five-tuples and 46 TCP five-tuples. It contains 4,639 IPv4 packets and 74 IPv6 packets. Saved IP data totals 3,519,072 bytes. Original record lengths total 3,863,559 bytes. Seventy packets were truncated by the packet limit, chiefly affecting outbound data. The foreground window saved 340,794 outbound IP bytes while its original record lengths represented 567,402 outbound IP bytes. This distinction matters when reproducing totals.
+
+The file's last packet precedes the follow-up window. Its empty follow-up window is also supported by unchanged Messenger UID histories for Wi-Fi, VPN and mobile during that interval. A fresh positive capture-health check wasn't taken at both follow-up boundaries. The narrow conclusion is that the file contains no packets in that window and Android's relevant UID histories didn't increase. It doesn't establish long-term network silence. The analytics job had already been rescheduled, so this follow-up didn't establish coverage of a scheduled analytics upload.
+
+PCAPdroid's non-root mode uses a proxy and synthesizes parts of the received IP/TCP/UDP headers. Its packet lengths describe the capture view. They don't measure original radio frames or physical-wire traffic. Five-tuples are flow aggregates and can merge sequential connections. [PCAPdroid packet analysis](https://emanuele-f.github.io/PCAPdroid/quick_start.html#14-packet-analysis).
+
+#### Visible destinations and protocols
+
+Fifteen hostnames were recovered from TLS or QUIC ClientHello messages. DNS question sections contained sixteen names. Every visible name ended in facebook.com or fbcdn.net. That describes the visible names in this sample and doesn't establish that all possible app traffic uses those domains.
+
+| Host or family | Evidence in this capture | Interpretation boundary |
+| --- | --- | --- |
+| graph.facebook.com | QUIC ClientHello, DNS, foreground and background flow traffic | A shared API destination. Encrypted GraphQL operations and event contents remain unknown. |
+| b-graph.facebook.com | QUIC ClientHello and DNS, including background traffic | The hostname doesn't identify whether a request was essential synchronization or optional telemetry. |
+| b-www.facebook.com | TLS ClientHello and DNS | Its two foreground TCP five-tuples carried 411,024 outbound and 18,254 inbound original-record IP bytes. Their application purpose wasn't decrypted. |
+| z-m-gateway.facebook.com | TLS and QUIC ClientHello, DNS | Multiple transport paths were active. The background window included nine TCP five-tuples associated with this name. This alone doesn't prove a retry fault. |
+| edge-mqtt.facebook.com | TLS ClientHello and DNS, including background traffic | Consistent with messaging transport naming. Preserve it in any proposed domain policy unless a specific optional operation has been isolated. |
+| payments-graph.facebook.com | QUIC ClientHello and DNS | An observed connection doesn't prove a payment or financial transaction occurred. |
+| scontent hostnames under fbcdn.net | TLS/QUIC ClientHello and DNS | These destinations can serve ordinary app images and media. The capture doesn't identify which encrypted objects were ads. |
+| web.facebook.com and www.facebook.com | QUIC ClientHello and DNS in the complete capture | Setup-period evidence. They weren't assigned traffic in the timed foreground/background windows merely because they appeared elsewhere in the file. |
+| chat-e2ee-mini.facebook.com | DNS question only | A DNS name alone doesn't prove a completed connection or transferred application data. |
+
+The exact CDN names were scontent-mia3-1.xx.fbcdn.net, scontent-mia3-2.xx.fbcdn.net, scontent-mia3-3.xx.fbcdn.net, scontent-mia5-1.xx.fbcdn.net, scontent-mia5-2.xx.fbcdn.net, scontent-ord5-1.xx.fbcdn.net and scontent.xx.fbcdn.net.
+
+Twenty QUIC version 1 client Initial packets authenticated during offline inspection. One Meta mvfst 0xfaceb002 Initial also authenticated, with graph.facebook.com as SNI and h3-fb-05 as its offered ALPN. Its Initial salt and labels were checked against Meta's implementation. Other offered ALPN values included h2, http/1.1 and h3-alias-02. ClientHello offers don't prove which protocol a server selected. Recovering public Initial handshake metadata doesn't decrypt the application's subsequent traffic. [QUIC Initial protection](https://www.rfc-editor.org/rfc/rfc9001.html#section-7), [Meta version and salt selection](https://github.com/facebook/mvfst/blob/main/quic/handshake/HandshakeLayer.cpp), [Meta salt constants](https://github.com/facebook/mvfst/blob/main/quic/handshake/HandshakeLayer.h).
+
+In the background window, the graph.facebook.com UDP flow accounted for 122,016 sent and 50,918 received original-record IP bytes. The z-m-gateway.facebook.com TCP group accounted for 15,784 sent and 7,884 received bytes. Four of that group's five-tuples contained new outbound SYN packets during the window. The other five already had traffic earlier. These are useful targets for a controlled comparison, but neither hostname separates tracking from ordinary account or message synchronization. Paired reset flags in a proxy capture also don't establish a real-server reset fault. Per-host flow totals, protocol metadata and the complete reviewed name list are available in the [network aggregate JSON](assets/audit-runtime/580-346013440-network.json).
+
+#### Android UID counters are a separate measurement
+
+| Observation | Wi-Fi-attributed sent bytes | Wi-Fi-attributed received bytes | VPN/tunnel sent bytes | VPN/tunnel received bytes |
+| --- | ---: | ---: | ---: | ---: |
+| A. Foreground inbox | 578,501 | 202,187 | 609,067 | 202,847 |
+| B. Background, mixed display | 149,191 | 69,958 | 166,443 | 70,238 |
+| B2. Background, display on | 0 | 0 | 0 | 0 |
+
+D, the completed ambient/sleep repeat after stopping capture, added **135,919 sent bytes and 11,876 received bytes** in Android's Wi-Fi history, with 132 sent and 45 received packets. VPN and mobile histories were unchanged. There is no packet file or per-host attribution for D. It followed the earlier windows with different display and process history, so its totals cannot isolate the cost of the capture VPN.
+
+All mobile deltas were zero in these three observations. The Wi-Fi and VPN columns must remain separate. Android's VPN accounting attributes usage to the underlying network while retaining normal tunnel accounting. Summing both views counts overlapping traffic twice. An early combined total was discarded after this was identified. The Wi-Fi-attributed column is the appropriate counter view for comparing the app's Wi-Fi usage between these runs. It still isn't a direct wire-byte measurement.
+
+These counters span explicit netstats polls rather than precisely the same timestamp boundaries used for packet windows. Kernel accounting, proxy behavior and poll timing can also make their totals differ from the file. [Android 16 VPN accounting](https://android.googlesource.com/platform/packages/modules/Connectivity/+/refs/heads/android16-release/framework-t/src/android/net/NetworkStats.java), [accounting caller](https://android.googlesource.com/platform/packages/modules/Connectivity/+/refs/heads/android16-release/service-t/src/com/android/server/net/NetworkStatsFactory.java), [Wi-Fi network template selection](https://android.googlesource.com/platform/packages/modules/Connectivity/+/refs/heads/android16-release/framework-t/src/android/net/NetworkTemplate.java).
+
+#### Ads, tracking and patch opportunities
+
+The live evidence confirms background traffic through shared Meta API and messaging destinations. It doesn't identify an ad response, an analytics event, an uploaded identifier or a message payload. HTTPS paths and application bodies remained encrypted. No conclusion about the analytics patch's effectiveness follows from these bytes alone, especially because Pause was enabled.
+
+Static findings about Analytics2, native XAnalytics, crash reporting, attribution and advertising identifiers remain separate evidence. They identify paths in the audited stock Messenger 581 fixture. The Messenger 580 live capture doesn't establish that each path exists unchanged or ran during the observation.
+
+The next useful comparison should change one control at a time and use the same device, account, network and foreground activity. Optional event production and specific uploader boundaries are better patch candidates than broad blocks on graph.facebook.com, gateway or CDN hosts. Shared hosts can carry the app's main messaging and media functions. For the gateway's repeated flow activity, compare the same interval without the capture VPN before diagnosing a reconnect loop. Verify scheduler eligibility and completion separately from packet timing.
+
+Longer counter-only background runs are needed for battery conclusions because the capture VPN itself adds work. The three-minute foreground and ten-minute background observations here describe this run. They don't establish a battery-drain cause or a reliable daily consumption estimate.
+
+#### Battery and background activity
+
+| Window | Duration | Whole-device charge loss | UID-accounted CPU | Partial wakelocks | Screen on / off | Android UID estimate change |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| A. Cold start and foreground | 180.1 s | 9.8 mAh | 3.941 s | 0 ms | 181.6 / 0.0 s | +6.31 mAh |
+| B. Background, mixed display state | 600.2 s | 14.7 mAh | 6.863 s | 221 ms | 252.3 / 349.3 s | +0.4 mAh |
+| B2. Background follow-up, display on | 180.2 s | 4.9 mAh | 0.000 s | 0 ms | 181.6 / 0.0 s | +0.1 mAh |
+| D. Background, capture stopped | 600.6 s | 9.8 mAh | 0.813 s | 46 ms | 0.9 / 601.4 s | +0 mAh |
+
+Battery durations use the first and last samples. The activity timers include roughly one to two additional seconds of checkpoint work. A through B2 used a local capture VPN. The no-capture follow-up ran after its capture service and VPN interface were stopped. Display checks were added to those 30-second samples. An earlier attempt, C, was aborted after the phone woke soon after its sleep request and was excluded from the comparison.
+
+The fuel-gauge changes were coarse, with observed 4.9 mAh steps. An unchanged counter cannot establish zero consumption. Whole-device loss includes the display, other apps and the measurement tools. Android's UID figures are estimates with screen attribution. Some historical component estimates changed during this run. They should not be treated as directly measured Messenger-only battery use or projected into daily battery life. The foreground estimate included about 6.02 mAh assigned to the screen.
+
+Background activity was present. In B, two overlapping worker jobs and one conditional worker completed, one MQTT wakeup alarm accrued, and aggregated background partial wakelocks increased by 221 ms. B2 added no UID CPU or partial-lock time, although its per-process records advanced by 190 ms. That counter disagreement limits a zero-activity claim.
+
+D completed 600.6 seconds without the capture VPN. All 21 sampled power states were Dozing, while Android device-idle mode remained false. The checkpoint timers recorded 0.915 seconds of screen-on transition time and 601.405 seconds off. This was a noninteractive background observation, not a forced deep-Doze test. Its charge counter stayed flat until the final sample, when it fell by 9.8 mAh in one reported update. Messenger accrued 0.813 seconds of UID CPU time, 46 ms of partial wakelocks and two MQTT wakeup alarms. No new job execution or completion was recorded. The rounded total UID energy estimate remained unchanged despite component increases. That estimate does not override the physical whole-phone counter.
+
+No new **LollipopUploadService job execution** was recorded in A, B, B2 or D. Other Analytics2, native or Binder delivery routes require separate evidence. The pending job changed from a 15-minute minimum / 45-minute deadline to a **3-hour minimum / 4-hour deadline** shortly after the app entered the background. Replacing that pending registration did not add a canceled-running-job completion. The short follow-up did not cover its new eligibility window. At D's endpoint, that job also lacked its required connectivity constraint. This job-specific snapshot does not mean that the phone transferred no Wi-Fi data during the interval.
+
+B included about 252 seconds of screen-on time, and B2 was screen-on throughout while Messenger remained cached. D provides the completed ambient/sleep repeat. These sequential observations do not isolate the battery effect of the capture VPN, Hush, or a particular patch. Matched, repeated patch-state comparisons over longer background intervals are still needed for the reported four-hour drain.
+
+Measurement definitions follow the [Android BatteryManager reference](https://developer.android.com/reference/android/os/BatteryManager) and [Android power accounting documentation](https://source.android.com/docs/core/power).
+
+<img src="assets/audit-runtime/580-346013440-charge.png" alt="Four separate charge-counter observation windows, with coarse steps and different display and capture conditions" width="1100">
+
+The [power aggregate and sampled series](assets/audit-runtime/580-346013440-power.json) preserve the relative timings behind this chart. Flat counter samples don't establish zero consumption.
+
+#### Repeat the measurements for a future patch
+
+Use an exclusive device lease and record the exact installed APK, signer, build, account state, patch capabilities and saved preferences. Preserve the account. Compare patch-omitted, selected-off, enabled and Pause installations with matching signatures when that is possible. A paused older bundle cannot stand in for a current-bundle on/off comparison.
+
+The useful read-only checkpoints are below. `$device` must identify the reserved device and `$package` is `com.facebook.orca`. Save each output locally before and after the same bounded workload.
+
+```powershell
+adb -s $device shell dumpsys battery
+adb -s $device shell dumpsys batterystats --sync
+adb -s $device shell dumpsys netstats --poll
+adb -s $device shell dumpsys netstats --uid
+adb -s $device shell dumpsys batterystats --charged $package
+adb -s $device shell dumpsys batterystats -c $package
+adb -s $device shell dumpsys jobscheduler $package
+adb -s $device shell dumpsys activity services $package
+adb -s $device shell dumpsys power
+```
+
+The network poll and dump are separate commands. On this platform, combining their options did not produce the required complete history dump. `-c` requests battery CSV output, not a battery reset. Do not substitute `--checkin`, `--reset` or simulated battery commands. Some Samsung service dumps include information about other apps despite a package argument, so raw output needs private storage.
+
+Resolve the app's current UID for every install. From UID network history, count tag `0x0`, ordinary `DEFAULT` and `FOREGROUND` sets, and the intended underlying network only. This run used Wi-Fi identity type 1. VPN identity type 17 also contained the app's traffic and must not be added to Wi-Fi. Exclude `DBG_VPN_IN`/`DBG_VPN_OUT` adjustment records. [Android's VPN accounting implementation](https://android.googlesource.com/platform/packages/modules/Connectivity/+/refs/heads/android16-release/service-t/src/com/android/server/net/NetworkStatsFactory.java) explains why app traffic can appear against both the tunnel and its underlying network. Keep mobile history separate and disclose any network transition.
+
+Keep the battery-history origin unchanged across checkpoints. Use the UID CPU counters and deduplicated partial-wakelock timer. Individual overlapping wake-lock and job tags cannot safely be summed. Scheduler history distinguishes a pending registration, execution, cancellation and successful completion. A registered service's age is not CPU time. Android's [dumpsys guide](https://developer.android.com/tools/dumpsys) describes the diagnostic interfaces, but fields and estimates still need validation on the actual OS build.
+
+For capture, record the package filter, capture limits, IP families, VPN state and decryption settings. Keep a host/device clock bracket before and after the run when possible. Stop the capture and verify the service and tunnel are gone before a no-capture repeat. Poll display state during every background interval and check accumulated display timers at the end. Reject or relabel interrupted intervals instead of assuming Home plus Sleep worked.
+
+Keep the same workload and compare repeated, counterbalanced runs. Add longer untouched background observations spanning real scheduler eligibility before diagnosing delayed upload or overnight drain. Preserve expected incoming notifications and messaging while investigating repeated work. Packet counts alone cannot decide whether an operation is optional telemetry, and a short quiet window does not establish that background work is gone.
+
 ### Coverage map for existing controls
 
 These are source-verified boundaries, not new device-effectiveness claims. The 37 controls already have user descriptions above. This table gives patch authors the key and a useful 581 starting point. Full method signatures and the complete multi-site set remain in the generated profile.
@@ -762,6 +896,8 @@ Compare the same harmless video acquired through a browser and a camera. Track p
 
 Use matched build/account/network/screen conditions. Separate cold start from settled foreground and background. Measure process CPU, thread stacks, row rebuilds, allocations, jobs, wake-lock duration and network bytes. Compare omitted versus selected-off as well as on/Pause. Acceptance identifies the first repeated work and removes it without losing delivery, notifications, pagination or account state. Battery percentages provide context, not a causal trace.
 
+The [runtime observations](#measured-network-background-and-battery-activity) now provide measured charge-counter, UID network, CPU and scheduler references on a paused 580 installation. They do not isolate a patch's cost or reproduce the reported long-duration drain. Use the published conditions and aggregate data to avoid mixing an older paused bundle, capture overhead and changing display state into a patch comparison.
+
 **Analytics Binder entry.** Guard only the Google Play uploader branch described above, with a successful completion policy and exactly-once task acknowledgement. Test start-service and bound-task entries, Off/Pause, an unrelated GCM task, repeated delivery and cleanup. Resolve all six naming families before claiming supported-build coverage. The default-disabled state lowers observed exposure but doesn't make the code path covered.
 
 #### P2 Add a gesture-only disappearing-message control
@@ -827,7 +963,7 @@ Tracker snapshot from October 9, 2026. All open issues and their comments were r
 | Issue | Current evidence | Disposition |
 | --- | --- | --- |
 | [#38 Videos cannot be sent](https://github.com/SysAdminDoc/HushMessenger/issues/38) | Gallery-downloaded-video symptom, no exact format/patch-state evidence yet | P1 stage-by-stage import/send investigation above |
-| [#37 Battery drain](https://github.com/SysAdminDoc/HushMessenger/issues/37) | Community patch initially suspected. Reporter later says high drain persists without it | P1 matched profiling with multiple patch states. Cause remains unknown |
+| [#37 Battery drain](https://github.com/SysAdminDoc/HushMessenger/issues/37) | Reporter says high drain persists without the community patch. This audit adds short paused-installation power/network observations | P1 matched profiling with multiple patch states and longer background windows. Cause remains unknown |
 | [#36 Disable disappearing-message swipe](https://github.com/SysAdminDoc/HushMessenger/issues/36) | Directly connected gesture code found | P2 gesture-specific patch with cleanup and timer acceptance |
 | [#34 Like rendering](https://github.com/SysAdminDoc/HushMessenger/issues/34) | Fix shipped in 0.22.0, reporter confirmation still absent in snapshot | Retain first-start/font-load regression checks |
 | [#33 App icons](https://github.com/SysAdminDoc/HushMessenger/issues/33) | Original reporter confirmed it works on October 9 | Record confirmed behavior. No further implementation requested here |
@@ -864,7 +1000,7 @@ For each future Messenger APK:
 7. Exercise the affected account/surface. Use controlled peers for sending, receipts, stories and timers. Compare selected-off against patch-omitted where overhead matters.
 8. Redact account identifiers, tokens, notification text, chat content and raw request bodies from shared diagnostics. Retain operation names, timings, result categories and counts needed to explain the result.
 
-Important acceptance boundaries remain open: a working stock-signed UI baseline on native hardware, actual inbox or business-ad exposure, telemetry payload/queue measurements, native packed-code coverage, cold/background battery comparisons, controlled media delivery, remote privacy effects, account-dependent surfaces, and full accessibility behavior. The evidence above provides entry points and expected invariants for that work without treating those results as already established.
+Important acceptance boundaries remain open: a working stock-signed UI baseline on native hardware, actual inbox or business-ad exposure, telemetry payload/queue measurements, native packed-code coverage, matched patch-state battery comparisons over longer intervals, controlled media delivery, remote privacy effects, account-dependent surfaces, and full accessibility behavior. The measured short runtime windows provide a reference for that work. They do not establish those remaining results.
 
 
 ## Research and credits
