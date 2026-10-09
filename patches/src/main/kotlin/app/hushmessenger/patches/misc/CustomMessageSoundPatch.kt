@@ -83,7 +83,7 @@ val customMessageSoundPatch = resourcePatch(
         key = MESSAGE_SOUND_KEY,
         default = null,
         title = "Sound file",
-        description = "An .ogg, .mp3, .m4a or .wav file of 1 MB (1,048,576 bytes) or less. Leave it empty to keep Messenger's sound.",
+        description = "Your .ogg, .mp3, .m4a or .wav file, 1 MB or smaller. Leave it empty to keep Messenger's own sound.",
         required = false,
     ) { it.isNullOrBlank() || File(it.trim()).extension.lowercase() in MESSAGE_SOUND_FORMATS }
 

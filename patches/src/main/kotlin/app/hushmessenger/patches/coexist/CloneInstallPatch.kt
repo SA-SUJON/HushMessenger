@@ -473,7 +473,7 @@ val cloneInstallPatch = bytecodePatch(
         key = "clonePackageName",
         default = CLONE_DEFAULT_PACKAGE,
         title = "Package name",
-        description = "The copy's package name, such as com.facebook.orca.hush. It can't be Messenger's own or another Meta app's.",
+        description = "The copy's unique app ID, like com.facebook.orca.hush. Use words joined by dots, each starting with a letter. It can't match Messenger or another Meta app.",
         required = true,
     ) { isClonePackage(it) }
 
@@ -481,7 +481,7 @@ val cloneInstallPatch = bytecodePatch(
         key = "cloneAppName",
         default = CLONE_DEFAULT_LABEL,
         title = "App name",
-        description = "The name under the copy's home screen icon. Up to 40 letters, numbers, spaces and simple punctuation.",
+        description = "The name shown under the copy's home screen icon. Up to 40 characters, starting with a letter or number.",
         required = true,
     ) { isCloneLabel(it) }
 

@@ -49,9 +49,8 @@ val spoofPackageVersionPatch = resourcePatch(
     val versionCode by intOption(
         key = SPOOF_VERSION_KEY,
         default = HIGHEST_VERSION_CODE,
-        title = "Version code",
-        description = "A whole number from 1 to $HIGHEST_VERSION_CODE. It has to be higher than the Play Store's Messenger " +
-            "to stop update offers. The default is the highest Android allows.",
+        title = "Version number",
+        description = "A whole number from 1 to $HIGHEST_VERSION_CODE. Pick one higher than Messenger's version in the Play Store, or it will keep offering updates. The default is the highest Android allows.",
         required = true,
     ) { validSpoofedVersionCode(it) }
 

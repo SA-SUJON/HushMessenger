@@ -196,7 +196,7 @@
                 {
                     "key": "cloneAppName",
                     "title": "App name",
-                    "description": "The name under the copy's home screen icon. Up to 40 letters, numbers, spaces and simple punctuation.",
+                    "description": "The name shown under the copy's home screen icon. Up to 40 characters, starting with a letter or number.",
                     "required": true,
                     "type": "kotlin.String",
                     "default": "Messenger Clone",
@@ -205,7 +205,7 @@
                 {
                     "key": "clonePackageName",
                     "title": "Package name",
-                    "description": "The copy's package name, such as com.facebook.orca.hush. It can't be Messenger's own or another Meta app's.",
+                    "description": "The copy's unique app ID, like com.facebook.orca.hush. Use words joined by dots, each starting with a letter. It can't match Messenger or another Meta app.",
                     "required": true,
                     "type": "kotlin.String",
                     "default": "com.facebook.orca.hush",
@@ -252,7 +252,7 @@
                 {
                     "key": "soundFile",
                     "title": "Sound file",
-                    "description": "An .ogg, .mp3, .m4a or .wav file of 1 MB (1,048,576 bytes) or less. Leave it empty to keep Messenger's sound.",
+                    "description": "Your .ogg, .mp3, .m4a or .wav file, 1 MB or smaller. Leave it empty to keep Messenger's own sound.",
                     "required": false,
                     "type": "kotlin.String",
                     "default": null,
@@ -2384,8 +2384,8 @@
             "options": [
                 {
                     "key": "versionCode",
-                    "title": "Version code",
-                    "description": "A whole number from 1 to 2147483647. It has to be higher than the Play Store's Messenger to stop update offers. The default is the highest Android allows.",
+                    "title": "Version number",
+                    "description": "A whole number from 1 to 2147483647. Pick one higher than Messenger's version in the Play Store, or it will keep offering updates. The default is the highest Android allows.",
                     "required": true,
                     "type": "kotlin.Int",
                     "default": 2147483647,

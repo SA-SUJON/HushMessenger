@@ -228,7 +228,7 @@ Some things stay tied to Messenger's original name. Push notifications from Face
 
 ### Spoof package version
 
-Starts unselected, and it has no switch in settings. It changes the version code in Messenger's manifest to the number in its **Version code** option, 2147483647 unless you pick another one from 1 up. The Play Store compares that number with its own Messenger and stops offering Meta's updates when yours is higher. The version name stays 581.0.0.49.91 or 580.0.0.49.91, and the patch checks that the manifest still holds the code it was built from before it changes anything.
+Starts unselected, and it has no switch in settings. It changes the version code in Messenger's manifest to the number in its **Version number** option, 2147483647 unless you pick another one from 1 up. The Play Store compares that number with its own Messenger and stops offering Meta's updates when yours is higher. The version name stays 581.0.0.49.91 or 580.0.0.49.91, and the patch checks that the manifest still holds the code it was built from before it changes anything.
 
 Messenger reads its own version code in several places, so it may report this number to Meta, for example in crash reports. Android won't install a lower version code over a higher one. Keep the patch selected with the same number when you patch a later build. Going back to Meta's number means uninstalling first, which deletes Messenger's data on your phone.
 

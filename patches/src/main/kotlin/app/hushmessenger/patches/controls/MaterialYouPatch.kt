@@ -109,7 +109,7 @@ val materialYouPatch = bytecodePatch(
         }
 
         val resolver = classDefBy(DARK_SCHEME).methods.filter(::isTokenColorMethod).singleOrNull()
-            ?: throw app.morphe.patcher.patch.PatchException("DarkColorScheme's colour token method not found")
+            ?: throw app.morphe.patcher.patch.PatchException("DarkColorScheme's color token method not found")
         planReturns(resolver, "mig(I)I")
 
         val fdsMethods = classDefBy(FDS_COLORS).methods.filter {
@@ -162,7 +162,7 @@ val materialYouPatch = bytecodePatch(
                         val expectedRegisters = if (contextCall) 2 else 1
                         if (instruction.opcode != expectedOpcode || (range?.registerCount ?: invoke?.registerCount) != expectedRegisters ||
                             (range != null && range.startRegister + range.registerCount > implementation.registerCount)) {
-                            throw app.morphe.patcher.patch.PatchException("Invalid colour call in ${method.hookId()}")
+                            throw app.morphe.patcher.patch.PatchException("Invalid color call in ${method.hookId()}")
                         }
                         val call = if (range != null) {
                             "invoke-static/range {v${range.startRegister} .. v${range.startRegister + range.registerCount - 1}}"
@@ -175,7 +175,7 @@ val materialYouPatch = bytecodePatch(
             }
         }
         if (surfaceCount == 0 || colorCount == 0) {
-            throw app.morphe.patcher.patch.PatchException("Missing Material You surface or colour-call route")
+            throw app.morphe.patcher.patch.PatchException("Missing Material You surface or color-call route")
         }
 
         // Resolve every editable target before the first edit. Apply backwards so original

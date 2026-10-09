@@ -6,6 +6,7 @@
 - Every patch description in Morphe Manager now says in plain words what the patch changes and why you might want it. It ends with where to turn it on, or says it works as soon as you patch it in.
 - Every switch in HushMessenger settings now explains in plain words what it does and what you'll notice. The pages, the setup panel and the bubble and app icon help text got the same plain wording.
 - Messages in HushMessenger settings are clearer. Saving and restoring your choices, update checks, the camera notice and the setup help now say what happened and what to do next.
+- The options you fill in when patching are easier to read. Clone install, Custom new-message sound and Spoof package version now explain what to type, and the version code option is called Version number.
 
 ## 0.22.0 (2026-10-08)
 
