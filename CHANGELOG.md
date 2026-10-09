@@ -5,6 +5,7 @@
 - **Material You theme** is now in Morphe Manager's default selection, so every control is there without Expert mode. Its switch is under Theme on the Controls page and starts off, so a build patched with the defaults looks like Messenger until you turn it on. **Clone install under another package name**, **Spoof package version** and **Custom new-message sound** still need Expert mode, because they change the package or need a file you pick.
 - Every patch description in Morphe Manager now says in plain words what the patch changes and why you might want it. It ends with where to turn it on, or says it works as soon as you patch it in.
 - Every switch in HushMessenger settings now explains in plain words what it does and what you'll notice. The pages, the setup panel and the bubble and app icon help text got the same plain wording.
+- Messages in HushMessenger settings are clearer. Saving and restoring your choices, update checks, the camera notice and the setup help now say what happened and what to do next.
 
 ## 0.22.0 (2026-10-08)
 

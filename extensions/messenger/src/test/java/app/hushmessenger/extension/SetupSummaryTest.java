@@ -146,7 +146,7 @@ public class SetupSummaryTest {
         Settings.activeAt.put("hide_read_receipts", System.currentTimeMillis());
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
             String report = copiedSetup(screen.get().getWindow().getDecorView());
-            assertTrue(report.contains("Activity records show a control ran. They don't verify its visible effect or privacy protection.\n"));
+            assertTrue(report.contains("Activity notes only show that a control ran. They don't prove it had a visible effect or protected your privacy.\n"));
             for (String[] control : SettingsActivity.CONTROLS)
                 assertTrue(control[0], report.contains(", scope=" + control[2] + "\n"));
             assertTrue(report.matches("(?s).*hide_read_receipts: installed=true, selected=true, active=true, last_active=\\d+s ago, scope=.*"));

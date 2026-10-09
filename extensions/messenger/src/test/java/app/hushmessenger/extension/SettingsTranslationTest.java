@@ -242,7 +242,7 @@ public class SettingsTranslationTest {
             String report = screen.get().getSystemService(android.content.ClipboardManager.class)
                 .getPrimaryClip().getItemAt(0).getText().toString();
             String prefix = translated ? "ES " : "";
-            assertTrue(report.contains(prefix + "Activity records show a control ran. They don't verify its visible effect or privacy protection.\n"));
+            assertTrue(report.contains(prefix + "Activity notes only show that a control ran. They don't prove it had a visible effect or protected your privacy.\n"));
             for (String[] control : SettingsActivity.CONTROLS)
                 assertTrue(control[0], report.contains(", scope=" + prefix + control[2] + "\n"));
             assertEquals(before, Settings.preferences.getAll());
