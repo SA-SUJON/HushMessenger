@@ -4,7 +4,7 @@
     "patches": [
         {
             "name": "Allow chat bubbles",
-            "description": "Offers Stock, Chat Heads and Native Bubbles on verified Messenger routes on Android 11 and newer. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Offers Stock, Chat Heads and Native Bubbles on verified Messenger routes on Android 11 and newer. Long-press Messenger's home screen icon > Patch controls. Its switch is under Links and bubbles on the Controls page and starts off.",
             "default": true,
             "category": "Links and bubbles",
             "dependencies": [
@@ -68,7 +68,7 @@
         },
         {
             "name": "Allow screenshots",
-            "description": "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. This doesn't add replay or saving. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Lets you screenshot protected chat media, including view-once media and Quicksnap, and stops screenshot notices. This doesn't add replay or saving. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -262,7 +262,7 @@
         },
         {
             "name": "Hide AI sticker tools",
-            "description": "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the Generate AI sticker buttons, generated-sticker tab and AI sticker suggestions. Long-press Messenger's home screen icon > Patch controls. Its switch is under Stickers on the Controls page and starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [
@@ -326,7 +326,7 @@
         },
         {
             "name": "Hide Chat Moments",
-            "description": "Hides the Chat Moments entry in the menu. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the Chat Moments entry in the menu. Long-press Messenger's home screen icon > Patch controls. Its switch is under Navigation on the Controls page and starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -390,7 +390,7 @@
         },
         {
             "name": "Hide Facebook shortcuts",
-            "description": "Hides Facebook toolbar, profile and sharing shortcuts, and Also from Meta in the Menu tab. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides Facebook toolbar, profile and sharing shortcuts, and Also from Meta in the Menu tab. Long-press Messenger's home screen icon > Patch controls. Its switch is under Navigation on the Controls page and starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -454,7 +454,7 @@
         },
         {
             "name": "Hide Meta AI",
-            "description": "Hides the floating button, toolbar button, Meta AI tab, menu entries and search AI. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the floating button, toolbar button, Meta AI tab, menu entries and search AI. Long-press Messenger's home screen icon > Patch controls. Its switch is under Navigation on the Controls page and starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -518,7 +518,7 @@
         },
         {
             "name": "Hide People You May Know",
-            "description": "Hides suggested people in chats, search and stories, and on the People and Notifications tabs. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides suggested people in chats, search and stories, and on the People and Notifications tabs. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -582,7 +582,7 @@
         },
         {
             "name": "Hide Reels badge",
-            "description": "Hides the Reels notification badge. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the Reels notification badge. Long-press Messenger's home screen icon > Patch controls. Its switch is under Navigation on the Controls page and starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -646,7 +646,7 @@
         },
         {
             "name": "Hide avatar stickers",
-            "description": "Hides the avatar tab in the sticker keyboard. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the avatar tab in the sticker keyboard. Long-press Messenger's home screen icon > Patch controls. Its switch is under Stickers on the Controls page and starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [
@@ -710,7 +710,7 @@
         },
         {
             "name": "Hide business reply suggestions",
-            "description": "Hides suggested replies in business conversations. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides suggested replies in business conversations. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -774,7 +774,7 @@
         },
         {
             "name": "Hide business typing suggestions",
-            "description": "Hides business suggestions as you type. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides business suggestions as you type. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -838,7 +838,7 @@
         },
         {
             "name": "Hide chat promotions",
-            "description": "Hides Messenger quick-promotion banners inside conversations. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides Messenger quick-promotion banners inside conversations. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -902,7 +902,7 @@
         },
         {
             "name": "Hide event prompts",
-            "description": "Hides event quick-promotion prompts inside chats. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides event quick-promotion prompts inside chats. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -966,7 +966,7 @@
         },
         {
             "name": "Hide friend request cards",
-            "description": "Hides friend request cards inside the inbox. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides friend request cards inside the inbox. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1030,7 +1030,7 @@
         },
         {
             "name": "Hide growth prompts",
-            "description": "Hides the inbox's add-more-people promotion unit. Also hides the tip sheets in notes, like Make my notes public, and the Share your own story card after someone else's stories. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the inbox's add-more-people promotion unit. Also hides the tip sheets in notes, like Make my notes public, and the Share your own story card after someone else's stories. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1094,7 +1094,7 @@
         },
         {
             "name": "Hide inbox ads",
-            "description": "Filters typed inbox ad items, in case Meta brings back the inbox ads it stopped selling in November 2025. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Filters typed inbox ad items, in case Meta brings back the inbox ads it stopped selling in November 2025. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1158,7 +1158,7 @@
         },
         {
             "name": "Hide inbox promotions",
-            "description": "Hides Messenger quick-promotion banners in the chat list. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides Messenger quick-promotion banners in the chat list. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1222,7 +1222,7 @@
         },
         {
             "name": "Hide inbox tabs",
-            "description": "Hides the Home and Channels subtabs. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the Home and Channels subtabs. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1286,7 +1286,7 @@
         },
         {
             "name": "Hide joined community chats",
-            "description": "Hides joined community-chat rows from the main inbox on its next render. Keeps Search, community folders, delivery and unread counts unchanged. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides joined community-chat rows from the main inbox on its next render. Keeps Search, community folders, delivery and unread counts unchanged. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1350,7 +1350,7 @@
         },
         {
             "name": "Hide read receipts",
-            "description": "Stops sending read receipts. Opened encrypted chats can stay unread on this phone. Replying or switching this off may notify the sender. Group coverage isn't verified. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Stops sending read receipts. Opened encrypted chats can stay unread on this phone. Replying or switching this off may notify the sender. Group coverage isn't verified. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -1414,7 +1414,7 @@
         },
         {
             "name": "Hide stories and notes",
-            "description": "Hides the horizontal tray above chats. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Hides the horizontal tray above chats. Long-press Messenger's home screen icon > Patch controls. Its switch is under Inbox on the Controls page and starts off.",
             "default": true,
             "category": "Inbox",
             "dependencies": [
@@ -1478,7 +1478,7 @@
         },
         {
             "name": "Hide typing indicator",
-            "description": "Suppresses your outgoing active-typing signal, including in end-to-end encrypted chats. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Suppresses your outgoing active-typing signal, including in end-to-end encrypted chats. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -1593,7 +1593,7 @@
         },
         {
             "name": "Keep a message log",
-            "description": "Keeps a copy of each message as its notification arrives, so an unsend can't take it back. This is the only way that reaches end-to-end encrypted chats. The log stays on your phone, encrypted with a key that never leaves it, and holds only messages that raised a notification. Read it or clear it from the log in settings. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Keeps a copy of each message as its notification arrives, so an unsend can't take it back. This is the only way that reaches end-to-end encrypted chats. The log stays on your phone, encrypted with a key that never leaves it, and holds only messages that raised a notification. Read it or clear it from the log in settings. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -1657,7 +1657,7 @@
         },
         {
             "name": "Keep emoji search on emoji",
-            "description": "Typing while the emoji keyboard is open no longer switches it to sticker search. The keyboard stays on emoji. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Typing while the emoji keyboard is open no longer switches it to sticker search. The keyboard stays on emoji. Long-press Messenger's home screen icon > Patch controls. Its switch is under Stickers on the Controls page and starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [
@@ -1721,7 +1721,7 @@
         },
         {
             "name": "Keep unsent messages",
-            "description": "Preserves messages on verified legacy unsend routes. End-to-end encrypted chats are unsupported, and group coverage is unverified. Activity records intercepted legacy unsends, not chat support. Your own unsend may be limited. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Preserves messages on verified legacy unsend routes. End-to-end encrypted chats are unsupported, and group coverage is unverified. Activity records intercepted legacy unsends, not chat support. Your own unsend may be limited. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -1913,7 +1913,7 @@
         },
         {
             "name": "Open web links externally",
-            "description": "Uses Messenger's external-browser branch for HTTP and HTTPS links. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Uses Messenger's external-browser branch for HTTP and HTTPS links. Long-press Messenger's home screen icon > Patch controls. Its switch is under Links and bubbles on the Controls page and starts off.",
             "default": true,
             "category": "Links and bubbles",
             "dependencies": [
@@ -1977,7 +1977,7 @@
         },
         {
             "name": "Restore old emoji drawer",
-            "description": "Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. Changes apply after Restart Messenger. Accounts Meta never moved to the redesign see no difference. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Turns off Meta's redesigned emoji drawer, so the emoji keyboard keeps its earlier layout. Changes apply after Restart Messenger. Accounts Meta never moved to the redesign see no difference. Long-press Messenger's home screen icon > Patch controls. Its switch is under Stickers on the Controls page and starts off.",
             "default": true,
             "category": "Stickers",
             "dependencies": [
@@ -2092,7 +2092,7 @@
         },
         {
             "name": "Save any story",
-            "description": "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -2156,7 +2156,7 @@
         },
         {
             "name": "Send photos at original quality",
-            "description": "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata except the rotation tag. Videos and photos over 20 MB are still compressed. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "With HD on, sends a JPEG photo's own image data instead of a re-encoded copy, without its metadata except the rotation tag. Videos and photos over 20 MB are still compressed. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -2220,7 +2220,7 @@
         },
         {
             "name": "Send videos without re-encoding",
-            "description": "Sends a video file as it is when Messenger's own passthrough can take it, instead of a re-encoded copy. Videos over 25 MB are still compressed, and so are trimmed or edited videos and formats Messenger won't pass through. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Sends a video file as it is when Messenger's own passthrough can take it, instead of a re-encoded copy. Videos over 25 MB are still compressed, and so are trimmed or edited videos and formats Messenger won't pass through. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -2284,7 +2284,7 @@
         },
         {
             "name": "Slide chats in and out",
-            "description": "Slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. Chat heads and bubbles keep their own animations. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. Chat heads and bubbles keep their own animations. Long-press Messenger's home screen icon > Patch controls. Its switch is under Navigation on the Controls page and starts off.",
             "default": true,
             "category": "Navigation",
             "dependencies": [
@@ -2395,7 +2395,7 @@
         },
         {
             "name": "Stop analytics uploads",
-            "description": "Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, and they can upload after you turn this off. Doesn't stop other logging. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Stops the background services Messenger's analytics logger uploads through. Messenger still records those events on your phone, and they can upload after you turn this off. Doesn't stop other logging. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [
@@ -2459,7 +2459,7 @@
         },
         {
             "name": "Unlock app icons",
-            "description": "Makes every icon in Messenger's App icon setting selectable without a subscription. Messenger applies the icon with its own launcher switch. Messenger still decides whether that setting shows on your account, and switching this off can bring its default icon back. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Makes every icon in Messenger's App icon setting selectable without a subscription. Messenger applies the icon with its own launcher switch. Messenger still decides whether that setting shows on your account, and switching this off can bring its default icon back. Long-press Messenger's home screen icon > Patch controls. Its switch is under Theme on the Controls page and starts off.",
             "default": true,
             "category": "Theme",
             "dependencies": [
@@ -2523,7 +2523,7 @@
         },
         {
             "name": "Use system emoji",
-            "description": "Renders emoji with the phone's own font instead of Messenger's. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Renders emoji with the phone's own font instead of Messenger's. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -2587,7 +2587,7 @@
         },
         {
             "name": "Use the phone's camera app",
-            "description": "The camera button in a chat opens your phone's own camera app instead of Messenger's camera. The photo you take opens in Messenger's editor for that chat, ready to send. Photos only. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "The camera button in a chat opens your phone's own camera app instead of Messenger's camera. The photo you take opens in Messenger's editor for that chat, ready to send. Photos only. Long-press Messenger's home screen icon > Patch controls. Its switch is under Conversations on the Controls page and starts off.",
             "default": true,
             "category": "Conversations",
             "dependencies": [
@@ -2651,7 +2651,7 @@
         },
         {
             "name": "View stories anonymously",
-            "description": "Opens other people's stories without adding you to their viewer list. Stories you open this way are marked as seen on your side. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+            "description": "Opens other people's stories without adding you to their viewer list. Stories you open this way are marked as seen on your side. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
             "default": true,
             "category": "Privacy",
             "dependencies": [

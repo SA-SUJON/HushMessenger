@@ -219,7 +219,8 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
     }
     return bytecodePatch(
         name = title,
-        description = "$summary Long-press Messenger's home screen icon > Patch controls. Starts off.",
+        description = "$summary Long-press Messenger's home screen icon > Patch controls. Its switch is under " +
+            "$group on the Controls page and starts off.",
         default = true,
     ) {
         category(group)
@@ -374,7 +375,7 @@ private val anonymousStoriesResources = resourcePatch(description = "Record Hush
 @Suppress("unused")
 val anonymousStoriesPatch = bytecodePatch(
     name = "View stories anonymously",
-    description = "Opens other people's stories without adding you to their viewer list. Stories you open this way are marked as seen on your side. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+    description = "Opens other people's stories without adding you to their viewer list. Stories you open this way are marked as seen on your side. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
     default = true,
 ) {
     category("Privacy")
@@ -417,7 +418,7 @@ private val saveStoriesResources = resourcePatch(description = "Record HushMesse
 @Suppress("unused")
 val saveStoriesPatch = bytecodePatch(
     name = "Save any story",
-    description = "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+    description = "Adds Save to the More options menu on other people's stories. The photo or video goes to your phone the same way Messenger saves your own. Long-press Messenger's home screen icon > Patch controls. Its switch is under Privacy on the Controls page and starts off.",
     default = true,
 ) {
     category("Privacy")
@@ -469,7 +470,7 @@ private val chatAnimationResources = resourcePatch(description = "Record HushMes
 @Suppress("unused")
 val chatAnimationPatch = bytecodePatch(
     name = "Slide chats in and out",
-    description = "Slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. Chat heads and bubbles keep their own animations. Long-press Messenger's home screen icon > Patch controls. Starts off.",
+    description = "Slides a chat in from the side when you open it and back out when you go back, while the screen underneath holds still. Chat heads and bubbles keep their own animations. Long-press Messenger's home screen icon > Patch controls. Its switch is under Navigation on the Controls page and starts off.",
     default = true,
 ) {
     category("Navigation")
