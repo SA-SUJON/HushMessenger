@@ -530,10 +530,24 @@ public final class Settings {
     static java.io.File mergedEmojiFile;
     static android.graphics.Typeface mergedEmoji;
 
+    /** Where Messenger's emoji font was the last time it loaded, kept across runs. */
+    static final String EMOJI_FONT_PATH = "messenger_emoji_font";
+
     /** Messenger's emoji font holder hands over its font file as Messenger builds it. */
     public static void messengerEmojiFont(java.io.File file) {
         messengerEmojiFile = file;
         logEmoji("Messenger emoji font " + (file == null ? "null" : file.getName() + " " + file.length() + " bytes"));
+        SharedPreferences prefs = preferences;
+        if (file != null && prefs != null && !file.getPath().equals(prefs.getString(EMOJI_FONT_PATH, null)))
+            prefs.edit().putString(EMOJI_FONT_PATH, file.getPath()).apply();
+    }
+
+    /** The font file Messenger loaded on an earlier run, while it's still there. */
+    static java.io.File rememberedEmojiFont() {
+        SharedPreferences prefs = preferences;
+        String path = prefs == null ? null : prefs.getString(EMOJI_FONT_PATH, null);
+        java.io.File file = path == null ? null : new java.io.File(path);
+        return file != null && file.isFile() ? file : null;
     }
 
     static volatile String lastEmojiLog;
@@ -553,9 +567,12 @@ public final class Settings {
         android.graphics.Typeface system = systemEmojiTypeface();
         if (system == null) return messenger;
         java.io.File file = messengerEmojiFile;
-        if (messenger == null || file == null || android.os.Build.VERSION.SDK_INT < 29) {
-            logEmoji("phone emoji only (" + (messenger == null ? "no Messenger typeface" : file == null ? "no Messenger font file"
-                : "Android " + android.os.Build.VERSION.SDK_INT) + "), source " + systemEmojiSource);
+        // After an update Messenger can ask before its font has loaded and keeps that first answer for the whole run, so
+        // the chat list would lose the Like until the next restart. The font file from the last run stands in until then.
+        if (file == null) file = rememberedEmojiFont();
+        if (file == null || android.os.Build.VERSION.SDK_INT < 29) {
+            logEmoji("phone emoji only (" + (file == null ? "no Messenger font file yet" : "Android " + android.os.Build.VERSION.SDK_INT)
+                + "), source " + systemEmojiSource);
             return system;
         }
         synchronized (Settings.class) {
