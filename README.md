@@ -161,7 +161,7 @@ The new inbox ad filter checks a current list-processing path instead of the abs
 
 File operations show progress and a **Cancel file operation** action. An active save continues if you rotate the phone or close settings, then reports whether it finished. Closing settings cancels a restore. The original 30-second deadline still applies to both operations, including a save finishing in the background. If you cancel a save, save again before you rely on that file. If earlier operations haven't stopped, a message asks you to wait for the storage app. A restore won't replace choices you changed while the file was loading. Restore the file again if you want to apply it. A picker result that points at a private file is rejected. Saves also reject media entries owned by Messenger or whose ownership Android can't verify. Choose a new document in your storage app if that happens.
 
-On the **App** tab, copy choices through the clipboard or use **Save choices to a file** and **Restore choices from a file**. Files use Android's picker and need no storage-wide permission. Both paths use UTF-8 with the exact `hushmessenger:choices:v1` header and a 16 KiB limit. The original `hushmessenger:choices` header is still accepted. A document's declared slice keeps its absolute start even if the storage app supplies an already positioned file. Invalid headers, duplicate keys, invalid booleans and oversized input leave everything unchanged. Omitted choices and choices absent from the installed bundle keep their saved values; unknown keys are reported separately. The backup contains installed control choices and Pause, with no chats, accounts, crash records or signing material. If settings reopen while the picker is active, choose the file again.
+On the **App** tab, copy choices through the clipboard or use **Save choices to a file** and **Restore choices from a file**. Files use Android's picker and need no storage-wide permission. Both paths use UTF-8 with the exact `hushmessenger:choices:v1` header and a 16 KiB limit. The original `hushmessenger:choices` header is still accepted. A document's declared slice keeps its absolute start even if the storage app supplies an already positioned file. Invalid headers, duplicate keys, invalid booleans and oversized input leave everything unchanged. Omitted choices and choices absent from the installed bundle keep their saved values. Unknown keys are reported separately. The backup contains installed control choices and Pause, with no chats, accounts, crash records or signing material. If settings reopen while the picker is active, choose the file again.
 
 ### Alerts from only some chats
 
@@ -336,6 +336,56 @@ The supported tool baseline is [Morphe Manager 1.34.0](https://github.com/Morphe
 ```
 
 This command lists patches. Source updates and Messenger installation are separate steps.
+
+### Repository map
+
+`patches/src/main/kotlin/app/hushmessenger/patches/` contains the Morphe patch definitions. `MessengerTarget.kt` names the package, Android floor, supported version names and accepted stock signers. `controls/ControlProfiles.kt` maps exact version codes to checked hook shapes. `controls/MessengerControlsPatch.kt` wires settings into Messenger and hosts the shared control lifecycle. `controls/ControlHooks.kt` discovers hook sites, validates their contracts and applies bytecode edits. More specialized control patches sit beside those files. Package coexistence and other one-off changes live in `coexist/` and `misc/`.
+
+`extensions/messenger/src/main/java/app/hushmessenger/extension/` holds the Java code that runs inside Messenger. `SettingsActivity.java` owns the installed control list and builds the settings pages. `Settings.java` reads the host's feature metadata and private preferences. `SettingsUi.java` supplies framework-only widgets, colors and focus styles, so the extension doesn't depend on Messenger resources. `SettingsText.java` and `SettingsTranslations.java` supply user-facing copy. `HostScreens.java` handles Messenger host activities, shortcuts and settings startup. Helpers such as `MessageLog.java`, `OriginalPhoto.java`, `CameraActivity.java`, `MaterialYouTheme.java` and `CrashGuard.java` contain behavior used by specific controls.
+
+The extension manifest is also used for a standalone settings preview. Its `hush.preview` and `hush.feature.*` values expose every row to that preview. A patched Messenger gets its components from `MessengerControlsPatch.kt`, and each selected control adds its own `hush.feature.<key>` capability. Do not read the preview manifest as proof that a capability is present in a Messenger APK.
+
+Each exact stock APK has one generated record under `scripts/profiles/`. The records include the APK hash, version code, checked hooks and selected DEX sites. `scripts/CompatReport.java` is a separate verifier with its own explicit patch and control maps. Keep those maps in sync with new hook sites. Never hand-edit a profile record. `patches-list.json` is the generated patch catalog. `patches-bundle.json` is the Morphe source feed. They are different files with different jobs.
+
+The root Gradle settings pin the Morphe patch plugin and extension namespace. `patches/build.gradle.kts` configures the patch bundle, dependency locks and local inspection and catalog tasks. `extensions/messenger/build.gradle.kts` configures the in-process Android extension and its Robolectric tests. Dependency versions are in `gradle/libs.versions.toml`. Lockfiles live beside their Gradle projects, and `gradle/verification-metadata.xml` records artifact hashes. The extension is loaded into a patched Messenger APK. It is not a separate messenger client.
+
+| Change | Main source | Keep in sync |
+| --- | --- | --- |
+| Add or change a control hook | `patches/.../controls/` | Hook contract tests, extension behavior, `CompatReport.java`, catalog checks |
+| Add or change a settings row | `SettingsActivity.java` | Feature key, preference behavior, translations, `FIELD_CONTROLS`, extension tests |
+| Support a Messenger build | `MessengerTarget.kt` | Generated profile, `ControlProfiles.kt`, compatibility tests, supported-build table |
+| Change a published patch list | Patch definitions | `patches-list.json`, generated catalog checks, release source metadata |
+| Change a dependency or toolchain | Gradle files and version catalog | Lockfiles, verification metadata, build commands and recorded compatibility |
+
+`patches-list.json` is generated from the built bundle by `:patches:generatePatchCatalog`. `:patches:check` checks the committed catalog and its 37 control keys against the bundle and extension. Do not edit generated catalog data by hand. `patches-bundle.json` is the separate Morphe source index. Changing it is a release action, not part of routine patch development.
+
+Tests follow the module they protect. `patches/src/test/kotlin/` covers hook discovery, bytecode edits, profiles and catalog validation. `extensions/messenger/src/test/java/` uses Robolectric for settings and runtime behavior. `scripts/tests/` covers release and compatibility utilities. Small synthetic DEX fixtures are checked in with the patch tests. Whole-APK compatibility checks need private stock APKs through `HUSH_NATIVE_FIXTURES`.
+
+### How control patches run
+
+HushMessenger is a set of Morphe patches applied to stock Messenger. Morphe selection decides which patch code is written into the APK. The 37 control patches are selected by default, but their switches start off in Messenger. A control patch depends on the shared settings extension. Before it edits bytecode, it resolves and validates every hook against the exact APK profile. Only after that control succeeds does it add its key to the bundled control list and its manifest capability. This keeps a failed or omitted control out of the settings page.
+
+Keep these three states distinct when debugging a control:
+
+1. **Selected for the build.** Morphe applies the patch definition to the input APK.
+2. **Installed in the APK.** The patch adds `hush.feature.<key>` after its edits succeed. `Settings.java` reads that metadata, and `SettingsActivity.java` only shows installed rows.
+3. **Enabled at runtime.** The private preference must be on. Global Pause must be off, and CrashGuard safe mode must be clear. A preference cannot activate a patch that is missing from the APK.
+
+Most hooks read their preference when the relevant event occurs. The Meta AI tab and redesigned emoji drawer keep a startup decision until Messenger restarts. Bubbles and inbox changes also have restart guidance in the app.
+
+A zero-patch build has no HushMessenger extension or feature controls. It also omits **Restore screens on re-signed builds**, which Messenger needs to pass its own signer check in a re-signed APK. Use an unmodified Meta-signed APK for a true factory baseline. A build with the default HushMessenger selection is different. It has the extension and patch hooks installed, with the optional control switches off.
+
+### Adding a control or supported APK
+
+For a new control:
+
+1. Start with the exact stock APK. `:patches:scanDex -PapkPath=<apk> -Pfeature=all` runs the built-in scans for secure-window flags, read receipts, unsend and vanish mode. Its feature values are `flag_secure`, `read_receipt`, `anti_unsend`, `vanish` and `all`. Use `:patches:inspectDex -PapkPath=<apk> -Ptarget=<query>` for a focused DEX lookup. Queries include `class:LX/Foo;`, `method:LX/Foo;->A01`, `callers:LX/Foo;->A01`, `strings:<text>`, `reads:LX/Foo;->A01`, `writes:LX/Foo;->A01` and `impl:LX/Interface;`. For a batch, put one query per line in a file and pass `-Ptarget=@<file>`.
+2. Define the patch and its hook contract in `controls/MessengerControlsPatch.kt` or a focused file under `controls/`. Record the method signature, instruction shape, branch and register use that the edit depends on.
+3. Make discovery validate every affected site before the first mutation. An unexpected or ambiguous shape should leave the host bytecode and capability metadata unchanged.
+4. Implement runtime behavior in the extension. Add the row and stable key in `SettingsActivity.java`, preference handling in the relevant runtime class, and user copy in `SettingsText.java` and `SettingsTranslations.java`.
+5. Add patcher and extension tests for the expected output, missing and ambiguous hook shapes, disabled behavior, and any restart or recovery path. Keep `PATCHES` and `FIELD_CONTROLS` in `scripts/CompatReport.java` aligned. `CatalogTool.kt` verifies patch names, settings keys and manifest capabilities.
+
+For a new Messenger APK, add its exact version code and version name to `MessengerTarget.kt`. Run `CompatReport` against the stock APK so it discovers and applies every patch. Save the profile only after a full patch run rebuilds an APK and passes the manifest, resource and DEX checks. Apply the generated Kotlin mapping to `ControlProfiles.kt` and update permission-site mappings when the inspected contract changes. Keep the generated profile, supported-build table, tests and catalog evidence aligned. Never infer compatibility from the marketing version alone. The exact APK hash and version code are part of the profile.
 
 To build the bundle on Windows, use JDK 21, Android SDK 36 and the Gradle wrapper. The build pins Morphe Patcher 1.15.1 and `com.github.MorpheApp:ARSCLib:9b742c412d`. Android tooling uses AGP 9.4.1 and Android Test Engine for device tests. Those host tools aren't bundled into Messenger. Set `ANDROID_HOME` to your SDK directory. The Morphe Gradle plugin needs GitHub Packages credentials:
 
