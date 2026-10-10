@@ -1893,24 +1893,20 @@ public class CompatReport {
         }
         if (subscribe == null) return null;
         var body = instructions(subscribe);
-        // The observer's constructor: through 581 one class serves several lambdas picked by an int, and 582 gives the
-        // observer a class of its own that takes only the supplier. Mirrors OBSERVER_INITS in InboxRefresh.kt.
-        int at = -1, registers = 0;
+        // The observer has a class of its own, built from the supplier alone. Mirrors OBSERVER_INIT in InboxRefresh.kt.
+        int at = -1;
         for (int i = 0; i < body.size(); i++) {
             if (body.get(i).getOpcode() == Opcode.INVOKE_DIRECT && body.get(i) instanceof ReferenceInstruction ri &&
-                ri.getReference() instanceof MethodReference mr && "<init>".equals(mr.getName()) && "V".equals(mr.getReturnType())) {
-                var params = inboxParams(mr);
-                int expected = params.equals(List.of("Ljava/lang/Object;", "I")) ? 3 : params.equals(List.of(INBOX_SUPPLIER)) ? 2 : 0;
-                if (expected == 0) continue;
+                ri.getReference() instanceof MethodReference mr && "<init>".equals(mr.getName()) && "V".equals(mr.getReturnType()) &&
+                inboxParams(mr).equals(List.of(INBOX_SUPPLIER))) {
                 if (at >= 0) return null;
                 at = i;
-                registers = expected;
             }
         }
         if (at < 1 || body.get(at - 1).getOpcode() != Opcode.NEW_INSTANCE) return null;
         var init = (FiveRegisterInstruction) body.get(at);
         var observerType = ((TypeReference) ((ReferenceInstruction) body.get(at - 1)).getReference()).getType();
-        if (init.getRegisterCount() != registers || register(body.get(at - 1)) != init.getRegisterC() ||
+        if (init.getRegisterCount() != 2 || register(body.get(at - 1)) != init.getRegisterC() ||
             !observerType.equals(((MethodReference) ((ReferenceInstruction) body.get(at)).getReference()).getDefiningClass())) return null;
         var observer = byType.get(observerType);
         if (observer == null) return null;

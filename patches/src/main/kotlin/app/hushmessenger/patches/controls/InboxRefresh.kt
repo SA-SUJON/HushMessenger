@@ -32,11 +32,8 @@ internal const val INBOX_SUBSCRIBE_WARNING =
 internal const val INBOX_REFRESH = "Lapp/hushmessenger/extension/InboxRefresh;"
 internal const val INBOX_ITEMS_CALL = "$INBOX_REFRESH->onInboxItems(Ljava/lang/Object;)V"
 internal const val INBOX_REFRESH_ROUTE = "$HOST_SCREENS->inboxRefreshRoute()Ljava/lang/String;"
-/**
- * The list observer's constructor and its register count with the new instance: through 581 one class serves several
- * lambdas picked by an int, and 582 gives the observer a class of its own that takes only the supplier.
- */
-private val OBSERVER_INITS = mapOf("<init>(Ljava/lang/Object;I)V" to 3, "<init>($INBOX_SUPPLIER)V" to 2)
+/** The list observer has a class of its own, built from the supplier alone. */
+private const val OBSERVER_INIT = "<init>($INBOX_SUPPLIER)V"
 
 /** The supplier's static subscribe call and the int its list observer sets once rows arrive, as the extension reads them. */
 internal data class InboxRefreshRoute(val subscribe: String, val listed: String) {
@@ -83,12 +80,12 @@ internal fun resolveInboxRefresh(items: Method, classOf: (String) -> ClassDef?):
     fun signature(i: Instruction) = ((i as? ReferenceInstruction)?.reference as? MethodReference)?.let {
         "${it.name}(${it.parameterTypes.joinToString("")})${it.returnType}"
     }
-    val at = code.indices.filter { i -> code[i].opcode == Opcode.INVOKE_DIRECT && signature(code[i]) in OBSERVER_INITS }.singleOrNull()
+    val at = code.indices.filter { i -> code[i].opcode == Opcode.INVOKE_DIRECT && signature(code[i]) == OBSERVER_INIT }.singleOrNull()
         ?: routeChanged()
     val init = code[at] as FiveRegisterInstruction
     val created = code.getOrNull(at - 1)
     val observerType = ((created as? ReferenceInstruction)?.reference as? TypeReference)?.type
-    if (created?.opcode != Opcode.NEW_INSTANCE || init.registerCount != OBSERVER_INITS[signature(code[at])] ||
+    if (created?.opcode != Opcode.NEW_INSTANCE || init.registerCount != 2 ||
         (created as OneRegisterInstruction).registerA != init.registerC ||
         observerType != ((code[at] as ReferenceInstruction).reference as MethodReference).definingClass) routeChanged()
     val observer = classOf(observerType!!) ?: routeChanged()

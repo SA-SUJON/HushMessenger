@@ -127,10 +127,10 @@ internal fun screenHostClasses() = listOf(
 
 internal const val INBOX_ITEMS_HOOK = "$INBOX_SUPPLIER->A0B()$IMMUTABLE_LIST"
 internal const val INBOX_OBSERVER = "LX/34A;"
-/** What every supported build resolves: 346013440's subscribe call A04 and listed count A00. */
+/** What every supported build resolves: the subscribe call A04 and the listed count A00. */
 internal val INBOX_ROUTE = InboxRefreshRoute("$INBOX_SUPPLIER->A04($INBOX_SUPPLIER)V", "$INBOX_SUPPLIER->A00:I")
 
-/** The chat list supplier's items read as 346013440 starts it: the trace, then a check of the listed count. */
+/** The chat list supplier's items read as Messenger starts it: the trace, then a check of the listed count. */
 internal fun inboxItemsMethod(
     trace: String = INBOX_ITEMS_TRACE,
     listed: String = "A00",
@@ -151,14 +151,13 @@ internal fun inboxItemsMethod(
     """.trimIndent(), registers = 3, flags = flags)
 }
 
-/** The supplier's static subscribe call, cut down to its warning and the observer it creates for the loader. */
+/** The supplier's static subscribe call, cut down to its warning and the observer it builds from the supplier alone. */
 internal fun inboxSubscribeMethod(
     warning: String = INBOX_SUBSCRIBE_WARNING,
-    init: String = "<init>(Ljava/lang/Object;I)V",
+    init: String = "<init>($INBOX_SUPPLIER)V",
     between: String = "",
     name: String = "A04",
-    // 582's observer has a class of its own and takes only the supplier.
-    args: String = "v1, v2, v4",
+    args: String = "v1, v2",
 ) = fixtureMethod("$INBOX_SUPPLIER->$name($INBOX_SUPPLIER)V", """
     move-object v2, p0
     const-string v0, "$warning"
@@ -177,7 +176,7 @@ internal fun inboxSupplierClass(
 ) = fixtureClass(INBOX_SUPPLIER, listOf(items) + subscribe, flags = flags,
     extraFields = listOf("A00", "A01", "A02", "A03").map { ImmutableField(INBOX_SUPPLIER, it, "I", AccessFlags.PUBLIC.value, null, null, null) })
 
-/** The observer's list callback as 346013440 has it: the size, then 5 or 1 into the listed count. */
+/** The observer's list callback as Messenger has it: the size, then 5 or 1 into the listed count. */
 internal fun inboxObserverClass(
     high: Int = 5,
     low: Int = 1,
@@ -186,7 +185,7 @@ internal fun inboxObserverClass(
     secondWrite: Boolean = false,
     callbacks: Int = 1,
 ) = fixtureClass(INBOX_OBSERVER, listOf(
-    fixtureMethod("$INBOX_OBSERVER-><init>(Ljava/lang/Object;I)V", "invoke-direct {p0}, Ljava/lang/Object;-><init>()V\nreturn-void", 3),
+    fixtureMethod("$INBOX_OBSERVER-><init>($INBOX_SUPPLIER)V", "invoke-direct {p0}, Ljava/lang/Object;-><init>()V\nreturn-void", 2),
 ) + (0 until callbacks).map { index ->
     val again = if (!secondWrite) "" else """
         const/4 v2, 0x5
