@@ -226,7 +226,7 @@ final class SettingsText {
         ENGLISH.put("message_log_clear", "Clear log");
         ENGLISH.put("message_log_close", "Close");
         ENGLISH.put("message_log_title", "Message log");
-        ENGLISH.put("message_log_hint", "Newest first. This stays on your phone.");
+        ENGLISH.put("message_log_hint", "Newest first, kept for 30 days. This stays on your phone. Turning the switch off stops saving new messages but keeps these until you clear the log or they're 30 days old.");
         ENGLISH.put("message_log_loading", "Loading...");
         ENGLISH.put("message_log_empty", "No messages kept yet.");
         ENGLISH.put("message_log_unknown_thread", "Unknown chat");

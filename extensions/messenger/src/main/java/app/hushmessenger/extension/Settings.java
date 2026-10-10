@@ -51,6 +51,7 @@ public final class Settings {
         installed = Collections.unmodifiableSet(features);
         // Set last: a hook that sees preferences also sees the installed controls.
         preferences = appContext.getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
+        if (installed.contains(MessageLog.KEY)) MessageLog.scheduleExpiry();
     }
 
     static Set<String> bundled(String list) {
