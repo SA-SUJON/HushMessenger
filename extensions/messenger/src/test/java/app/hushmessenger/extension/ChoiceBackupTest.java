@@ -946,6 +946,8 @@ public class ChoiceBackupTest {
             if (toast != null && toast.startsWith(prefix)) return;
             Thread.sleep(20);
         } while (System.currentTimeMillis() < deadline);
-        fail("Missing document result: " + prefix);
+        StringBuilder logged = new StringBuilder();
+        for (var item : org.robolectric.shadows.ShadowLog.getLogsForTag("HushMessenger")) logged.append(" | ").append(item.msg);
+        fail("Missing document result: " + prefix + "; latest toast: " + ShadowToast.getTextOfLatestToast() + "; log" + logged);
     }
 }
