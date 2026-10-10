@@ -56,6 +56,17 @@ $work = Join-Path $root "build/release/$Version"
 $assets = Join-Path $work 'assets'
 $statePath = Join-Path $work 'state.json'
 
+# Run from a pwsh prompt, this script shares the prompt's process, so it puts back the variables it sets.
+$savedEnvironment = @{}
+foreach ($name in 'HUSHMESSENGER_BUILD_WRAPPER', 'BUILD_QUEUE_SCRIPT', 'HUSH_NATIVE_FIXTURES',
+        'HUSHMESSENGER_DESKTOP_JAR', 'HUSHMESSENGER_COMPAT_CLASSPATH', 'BUILD_QUEUE_PRIORITY') {
+    $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+}
+function Restore-Environment {
+    foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process') }
+}
+trap { Restore-Environment; break }
+
 foreach ($name in 'HUSHMESSENGER_BUILD_WRAPPER', 'BUILD_QUEUE_SCRIPT', 'HUSH_NATIVE_FIXTURES',
         'HUSHMESSENGER_DESKTOP_JAR', 'HUSHMESSENGER_COMPAT_CLASSPATH') {
     if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue)) {
@@ -96,9 +107,11 @@ function Invoke-Queued([string]$Label, [scriptblock]$Block) {
     $queue = $env:BUILD_QUEUE_SCRIPT
     if (-not $queue) { Invoke-Checked $Label $Block; return }
     if (-not (Test-Path -LiteralPath $queue)) { throw "BUILD_QUEUE_SCRIPT names $queue, which is not there." }
+    # Dot-sourcing binds the queue's own parameters here, and before 2026-10-09 one of them was $Label.
+    $what = $Label
     . $queue
-    $code = Invoke-InBuildQueue -Label $Label -ScriptBlock $Block
-    if ($code) { throw "$Label failed (exit $code)." }
+    $code = Invoke-InBuildQueue -Label $what -ScriptBlock $Block
+    if ($code) { throw "$what failed (exit $code)." }
 }
 
 function Invoke-Python {
@@ -230,7 +243,13 @@ switch ($Stage) {
         }
 
         Write-Step 'bundle and catalog (one Gradle run)'
-        Invoke-Gradle @(':patches:buildAndroid', ':patches:generatePatchCatalog', '--no-configuration-cache')
+        try {
+            Invoke-Gradle @(':patches:buildAndroid', ':patches:generatePatchCatalog', '--no-configuration-cache')
+        } catch {
+            # Put the cut back, so prepare starts again from a clean tree after the fix.
+            if ($heading -eq 'Unreleased') { & git -C $root checkout -- gradle.properties CHANGELOG.md README.md patches-bundle.json }
+            throw
+        }
         $digest = Get-FileSha256 (Join-Path $root "patches/build/libs/$bundleName")
         $readme = Get-Content -LiteralPath $readmePath -Raw
         $line = [regex]"(?m)^[a-f0-9]{64}  $([regex]::Escape($bundleName))(\r?)$"
@@ -310,9 +329,13 @@ switch ($Stage) {
             $receipt = Join-Path $receipts "$code.json"
             $apk = Get-StockApk $code
             $stock = Get-FileSha256 $apk
+            $recorded = Join-Path $root "scripts/profiles/$code.txt"
+            # CompatReport writes LF; a checkout can hold the record with CRLF.
+            $profileText = (Get-Content -LiteralPath $recorded -Raw) -replace "`r`n", "`n"
+            $profileHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($profileText))).ToLowerInvariant()
             if (Test-Path -LiteralPath $receipt) {
                 $kept = Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
-                if ($kept.bundle_sha256 -eq $digest -and $kept.stock_sha256 -eq $stock) {
+                if ($kept.bundle_sha256 -eq $digest -and $kept.stock_sha256 -eq $stock -and $kept.profile_sha256 -eq $profileHash) {
                     Write-Step "$code already patched with this bundle"
                     continue
                 }
@@ -327,15 +350,13 @@ switch ($Stage) {
                     & $Java -Xmx1024m -XX:ActiveProcessorCount=2 -cp $CompatClasspath scripts/CompatReport.java $apk --save $scratch $DesktopJar $bundle
                 }
             } finally { Pop-Location }
-            $recorded = Join-Path $root "scripts/profiles/$code.txt"
             $fresh = Join-Path $scratch "$code.txt"
             if (-not (Test-Path -LiteralPath $fresh)) { throw "CompatReport wrote no profile for $code." }
-            # CompatReport writes LF; a checkout can hold the record with CRLF.
-            if (((Get-Content -LiteralPath $fresh -Raw) -replace "`r`n", "`n") -ne ((Get-Content -LiteralPath $recorded -Raw) -replace "`r`n", "`n")) {
+            if (((Get-Content -LiteralPath $fresh -Raw) -replace "`r`n", "`n") -ne $profileText) {
                 throw "The $code profile from this bundle differs from scripts/profiles/$code.txt. Compare $fresh."
             }
             Remove-Item -LiteralPath $scratch -Recurse -Force
-            [ordered]@{ code = $code; bundle_sha256 = $digest; stock_sha256 = $stock; commit = $commit; profile = 'identical' } |
+            [ordered]@{ code = $code; bundle_sha256 = $digest; stock_sha256 = $stock; profile_sha256 = $profileHash; commit = $commit; profile = 'identical' } |
                 ConvertTo-Json | Set-Content -LiteralPath $receipt -Encoding utf8
         }
         Save-Stage 'build' @{ commit = $commit; sha256 = $digest }
@@ -402,3 +423,4 @@ switch ($Stage) {
         Write-Step "done. Manager now offers $Version."
     }
 }
+Restore-Environment
