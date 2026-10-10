@@ -861,6 +861,35 @@ public class ChoiceBackupTest {
         } finally { Files.deleteIfExists(file); }
     }
 
+    @Test @Config(sdk = {28, 29, 36}) public void aNonSeekableSliceWithAStartOffsetRestoresChoices() throws Exception {
+        var file = Files.createTempFile("choices-pipe-slice", ".txt");
+        byte[] prefix = "provider framing ".getBytes(StandardCharsets.UTF_8);
+        byte[] payload = (ChoiceCodec.HEADER + "\nstories=true\n").getBytes(StandardCharsets.UTF_8);
+        var bytes = new java.io.ByteArrayOutputStream();
+        bytes.write(prefix);
+        bytes.write(payload);
+        bytes.write("trailing provider bytes".getBytes(StandardCharsets.UTF_8));
+        Files.write(file, bytes.toByteArray());
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup();
+             var descriptor = ParcelFileDescriptor.open(file.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)) {
+            Settings.installed = new HashSet<>(Set.of("stories"));
+            SeekableOs.errno = android.system.OsConstants.ESPIPE;
+            // The host file can seek, so stand in for a pipe on Android 9 and 10: their input stream skips to the
+            // start before it knows the length, which on a pipe reads nothing, and so starts at the front.
+            DocumentResolver.opener = (uri, signal) -> new AssetFileDescriptor(descriptor, prefix.length, payload.length) {
+                @Override public java.io.FileInputStream createInputStream() throws java.io.IOException {
+                    return android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R
+                        ? new ParcelFileDescriptor.AutoCloseInputStream(descriptor) : super.createInputStream();
+                }
+            };
+            startFile(screen.get(), false, Uri.parse("content://choices/pipe-slice"));
+            awaitToast("Restored 1 choice");
+            finishWorkers();
+            assertTrue(Settings.preferences.getBoolean("stories", false));
+            assertArrayEquals(bytes.toByteArray(), Files.readAllBytes(file));
+        } finally { Files.deleteIfExists(file); }
+    }
+
     @Test @Config(sdk = 36, qualifiers = "w411dp-h914dp-mdpi")
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     public void cancelFileActionIsReachableWithNativeRenderingAndLargeText() throws Exception {

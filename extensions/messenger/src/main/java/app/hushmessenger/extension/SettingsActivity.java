@@ -1481,6 +1481,7 @@ public final class SettingsActivity extends Activity {
                             output.write(bytes);
                         }
                     } else {
+                        boolean pipe = false;
                         if (opened.getDeclaredLength() >= 0) {
                             // Older AssetFileDescriptor input skips relative to the provider's position.
                             // Normalize seekable descriptors so the declared slice has an absolute start.
@@ -1488,9 +1489,12 @@ public final class SettingsActivity extends Activity {
                             catch (android.system.ErrnoException error) {
                                 if (error.errno != android.system.OsConstants.ESPIPE)
                                     throw new java.io.IOException("Choices document seek failed", error);
+                                pipe = true;
                             }
                         }
-                        try (java.io.InputStream input = opened.createInputStream()) {
+                        boolean brokenSkip = pipe && opened.getStartOffset() > 0 &&
+                            android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R;
+                        try (java.io.InputStream input = brokenSkip ? pipeSlice(opened) : opened.createInputStream()) {
                             stream = input;
                             if (canceled) return;
                             choices = ChoiceCodec.parse(ChoiceCodec.read(input));
@@ -1516,6 +1520,44 @@ public final class SettingsActivity extends Activity {
                 release();
             }
         }
+    }
+
+    /**
+     * Android 9 and 10 skip to a slice's start before they set its length, so on a pipe that skip reads through an
+     * empty slice and moves nothing. Read the start bytes off the descriptor itself, then stop at the declared length.
+     */
+    static java.io.InputStream pipeSlice(android.content.res.AssetFileDescriptor opened) throws java.io.IOException {
+        java.io.InputStream raw = new java.io.FileInputStream(opened.getFileDescriptor());
+        byte[] discard = new byte[8192];
+        for (long left = opened.getStartOffset(); left > 0; ) {
+            int read = raw.read(discard, 0, (int) Math.min(discard.length, left));
+            if (read < 0) throw new java.io.EOFException("Choices document ends before its slice");
+            left -= read;
+        }
+        return new java.io.FilterInputStream(raw) {
+            long remaining = opened.getDeclaredLength();
+            @Override public int read() throws java.io.IOException {
+                if (remaining <= 0) return -1;
+                int value = super.read();
+                if (value >= 0) remaining--;
+                return value;
+            }
+            @Override public int read(byte[] bytes, int offset, int length) throws java.io.IOException {
+                if (length == 0) return 0;
+                if (remaining <= 0) return -1;
+                int read = super.read(bytes, offset, (int) Math.min(length, remaining));
+                if (read > 0) remaining -= read;
+                return read;
+            }
+            @Override public long skip(long count) throws java.io.IOException {
+                long skipped = super.skip(Math.min(count, remaining));
+                remaining -= skipped;
+                return skipped;
+            }
+            @Override public int available() throws java.io.IOException {
+                return (int) Math.min(super.available(), remaining);
+            }
+        };
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {
