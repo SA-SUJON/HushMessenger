@@ -92,7 +92,7 @@ class EmojiSearchTest {
     @Test fun aShapeThatMovedStopsBeforeAnyEdit() {
         val shapes = mapOf(
             // An older release loaded the search mode as a literal. Every supported build asks the table.
-            "search mode loaded as a literal" to watcher(search = "const-string v0, \"$EMOJI_SEARCH_MODE\""),
+            "search mode loaded as a literal" to watcher(search = "const-string v0, \"expression_search\""),
             "lookup takes no number" to watcher(search = LOOKUP.replace("{v0}, LX/46q;->A00(I)", "{}, LX/46q;->A00()")),
             "lookup answers another register" to watcher(search = LOOKUP.replace("move-result-object v0", "move-result-object v2")),
             "call takes an Object" to watcher("invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/Object;)V"),

@@ -21,8 +21,7 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference
 
 internal const val EMOJI_SEARCH = "emoji_search"
 
-/** The mode Messenger asks its emoji and sticker tray for after typing, and the plain mode it asks for otherwise. */
-internal const val EMOJI_SEARCH_MODE = "expression_search"
+/** The plain mode Messenger asks its emoji and sticker tray for when the composer isn't searching. */
 internal const val EMOJI_PLAIN_MODE = "expression"
 
 internal const val EMOJI_SEARCH_HELPER = "$SETTINGS->emojiSearchMode(Ljava/lang/String;)Ljava/lang/String;"
