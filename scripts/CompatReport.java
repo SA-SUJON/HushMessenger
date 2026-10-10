@@ -1666,7 +1666,7 @@ public class CompatReport {
         return true;
     }
     Method singleMethod(String type, String name) { return single(methods(classes.get(type)).stream().filter(m->m.getName().equals(name)).toList(),type+"->"+name); }
-    boolean sessionFirst(List<Instruction> ctorCode) {
+    boolean sessionCapturedFirst(List<Instruction> ctorCode) {
         var store=ctorCode.get(2);
         return store.getOpcode()==Opcode.IPUT_OBJECT && ref(store) instanceof FieldReference f && f.getName().equals("$fbUserSession") && f.getType().equals("Lcom/facebook/auth/usersession/FbUserSession;") &&
             ((TwoRegisterInstruction)store).getRegisterA()==2 && ((TwoRegisterInstruction)store).getRegisterB()==1;
@@ -1710,17 +1710,17 @@ public class CompatReport {
         var ctorCalls=calls(render).stream().filter(m->m.getName().equals("<init>") && m.getParameterTypes().contains(LIST)).toList();
         Method ctor=definition(single(ctorCalls,"dedicated immutable-list closure ctor"));
         var closure=classes.get(ctor.getDefiningClass());
-        // 582 adds an $onThreadInViewport Function1 before the trailing flag, which then needs a move/from16 to be stored.
+        // The closure takes an $onThreadInViewport Function1 before the trailing flag, which then needs a move/from16 to be stored.
         var ctorParams=ctor.getParameterTypes().stream().map(Object::toString).toList();
-        boolean viewport=ctorParams.size()==15 && ctorParams.get(13).equals("Lkotlin/jvm/functions/Function1;") && ctorParams.get(14).equals("Z");
-        require((ctorParams.size()==14 || viewport) && ctorParams.get(11).equals(LIST) && ctor.getReturnType().equals("V"),"captured list argument changed");
+        require(ctorParams.size()==15 && ctorParams.get(11).equals(LIST) && ctorParams.get(13).equals("Lkotlin/jvm/functions/Function1;") && ctorParams.get(14).equals("Z") && ctor.getReturnType().equals("V"),"captured list argument changed");
         var ctorCode=instructions(ctor);
-        require(ctor.getImplementation().getRegisterCount()==(viewport?17:16) && ctorCode.size()==(viewport?19:17) && ctor.getImplementation().getTryBlocks().isEmpty(),"closure ctor shape changed");
+        require(ctor.getImplementation().getRegisterCount()==17 && ctorCode.size()==19 && ctor.getImplementation().getTryBlocks().isEmpty(),"closure ctor shape changed");
         require(ctorCode.get(0).getOpcode()==Opcode.IPUT_OBJECT && ctorCode.get(0) instanceof TwoRegisterInstruction && ref(ctorCode.get(0)) instanceof FieldReference,"captured presentation store absent");
         var store=(TwoRegisterInstruction)ctorCode.get(0); var captured=(FieldReference)ref(ctorCode.get(0));
         require(store.getRegisterA()==13 && store.getRegisterB()==1 && captured.getName().equals("$inboxUnitItems") && captured.getType().equals(LIST),"captured parameter disconnected");
-        // 581 moves the session capture from slot 8 to slot 2, so the captures in slots 2 to 7 move one slot later.
-        int scopeAt=sessionFirst(ctorCode)?5:4;
+        // The session capture comes first, in slot 2, so the scope capture is in slot 5.
+        require(sessionCapturedFirst(ctorCode),"session capture moved");
+        int scopeAt=5;
         var scopeField=(FieldReference)ref(ctorCode.get(scopeAt));
         require(ctorCode.get(scopeAt).getOpcode()==Opcode.IPUT_OBJECT && scopeField.getName().equals("$threadTypeFilter") && scopeField.getType().equals(scopeType) && ((TwoRegisterInstruction)ctorCode.get(scopeAt)).getRegisterA()==10,"captured native scope disconnected");
         var ctorCallers=new ArrayList<String>(); var allocations=new ArrayList<String>(); var fieldWrites=new ArrayList<String>();
@@ -1740,7 +1740,7 @@ public class CompatReport {
         require(scopeResult>=1 && renderCode.get(scopeResult).getOpcode()==Opcode.MOVE_RESULT_OBJECT && ref(renderCode.get(scopeResult-1)) instanceof MethodReference,"captured scope result disconnected");
         var scopeGetter=definition((MethodReference)ref(renderCode.get(scopeResult-1)));
         require(scopeGetter.getDefiningClass().equals(loaderCtor.getDefiningClass()) && scopeGetter.getReturnType().equals(scopeType) && instructions(scopeGetter).size()==13 && calls(scopeGetter).stream().anyMatch(m->m.getDefiningClass().equals(folderGetter.getDefiningClass()) && m.getReturnType().equals(scopeType)),"scope does not read current native config");
-        int prefixAt=scopeAt+(viewport?4:3);
+        int prefixAt=scopeAt+4;
         var prefix=(FieldReference)ref(ctorCode.get(prefixAt));
         require(prefix.getName().equals("$prefixOffsetCallback") && ctorCode.get(prefixAt).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)ctorCode.get(prefixAt)).getRegisterA()==8,"Main callback capture disconnected");
         int prefixArg=args(renderCode.get(callAt)).get(7), prefixMove=-1;
@@ -1794,23 +1794,24 @@ public class CompatReport {
         Method invoke=single(methods(closure).stream().filter(m->m.getName().equals("invoke") && m.getParameterTypes().equals(List.of("Ljava/lang/Object;"))).toList(),"section closure invoke");
         var code=instructions(invoke);
         var listReads=new ArrayList<Integer>(); for(int at=0;at<code.size();at++) if(reads(code.get(at),captured.toString())) listReads.add(at);
-        require(listReads.size()==2 && listReads.get(0)==5 && Set.of(55,56,64,66).contains(listReads.get(1)),"presentation read shape changed: "+listReads);
+        require(listReads.size()==2 && listReads.get(0)==5 && listReads.get(1)==64,"presentation read shape changed: "+listReads);
         int secondRead=listReads.get(1);
-        require(hasString(invoke,"searchBarSection") && code.get(secondRead) instanceof TwoRegisterInstruction read && Set.of(0,1).contains(read.getRegisterA()) && read.getRegisterB()==4,"header or local presentation read changed");
-        // 582 reads the list into v1, and its sink takes an $onThreadInViewport after the list, moved into place after the alias.
+        require(hasString(invoke,"searchBarSection") && code.get(secondRead) instanceof TwoRegisterInstruction read && read.getRegisterA()==1 && read.getRegisterB()==4,"header or local presentation read changed");
+        // The list goes into v1, and the sink takes an $onThreadInViewport after the list, moved into place after the alias.
         int listRegister=((TwoRegisterInstruction)code.get(secondRead)).getRegisterA(), aliasAt=-1;
         for(int at=secondRead+1;at<code.size() && aliasAt<0;at++) if(code.get(at).getOpcode()==Opcode.MOVE_OBJECT_FROM16 && ((TwoRegisterInstruction)code.get(at)).getRegisterA()==17) aliasAt=at;
         require(aliasAt>0 && ((TwoRegisterInstruction)code.get(aliasAt)).getRegisterB()==listRegister,"second list alias changed");
-        int sinkAt=aliasAt+1<code.size() && code.get(aliasAt+1).getOpcode()==Opcode.MOVE_OBJECT_FROM16 ? aliasAt+2 : aliasAt+1;
+        require(aliasAt+1<code.size() && code.get(aliasAt+1).getOpcode()==Opcode.MOVE_OBJECT_FROM16,"viewport callback alias changed");
+        int sinkAt=aliasAt+2;
         require(sinkAt<code.size() && code.get(sinkAt).getOpcode()==Opcode.INVOKE_STATIC_RANGE && ref(code.get(sinkAt)) instanceof MethodReference,"list section sink changed");
         var sink=(MethodReference)ref(code.get(sinkAt));
-        require(Set.of(12,13).contains(sink.getParameterTypes().size()) && sink.getParameterTypes().get(11).toString().equals("Ljava/util/List;") && args(code.get(sinkAt)).get(11)==17,"renderer list argument disconnected");
-        require(code.size()==sinkAt+8 && Set.of(20,21).contains(invoke.getImplementation().getRegisterCount()) && invoke.getImplementation().getTryBlocks().isEmpty(),"presentation body shape changed");
+        require(sink.getParameterTypes().size()==13 && sink.getParameterTypes().get(11).toString().equals("Ljava/util/List;") && args(code.get(sinkAt)).get(11)==17,"renderer list argument disconnected");
+        require(code.size()==sinkAt+8 && invoke.getImplementation().getRegisterCount()==21 && invoke.getImplementation().getTryBlocks().isEmpty(),"presentation body shape changed");
         require(code.get(6).getOpcode()==Opcode.INVOKE_VIRTUAL && Objects.toString(ref(code.get(6))).equals("Ljava/util/AbstractCollection;->isEmpty()Z") && args(code.get(6)).equals(List.of(0)),"original empty/header gate changed");
         for(int at=secondRead+1;at<aliasAt;at++) require(!writes(code.get(at),listRegister),"list overwritten before render");
         require(targets(invoke).stream().noneMatch(t->t>secondRead && t<=sinkAt),"branch bypasses second-read hook");
-        // The hook's two scratch registers are whichever of v0, v1 and v3 doesn't hold the list.
-        for(int scratch:List.of(0,1,3)) if(scratch!=listRegister) require(deadFrom(invoke,secondRead+1,scratch),"scope scratch register still live");
+        // The hook's two scratch registers are v0 and v3.
+        for(int scratch:List.of(0,3)) require(deadFrom(invoke,secondRead+1,scratch),"scope scratch register still live");
         var search=classes.values().stream().filter(c->Set.of("MessagingTabbedSearchFragment","SearchListItemFragment","MsysMessageSearchThreadListFragment","FoldersFragment").contains(original(c))).toList();
         require(search.stream().anyMatch(c->original(c).equals("MessagingTabbedSearchFragment")) && search.stream().anyMatch(c->original(c).equals("SearchListItemFragment")) && search.stream().anyMatch(c->original(c).equals("FoldersFragment")),"separate native Search/folder fragments absent");
         require(search.stream().noneMatch(c->c.getType().equals(main.getType())),"Search shares main fragment");

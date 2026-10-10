@@ -30,22 +30,24 @@ class CommunityInboxTest {
         (i as? TwoRegisterInstruction)?.registerB, (i as? NarrowLiteralInstruction)?.narrowLiteral)
 
     @Test fun fixtureUsesRecordedStockIdentitiesEvenWhenTheCompiledProfileDrifts() {
-        val profile = activeProfile
-        val original = profile.nativeCommunityInbox
         val field = ControlProfile::class.java.getDeclaredField("nativeCommunityInbox").apply { isAccessible = true }
-        try {
-            field.set(profile, original.replaceFirst("->", "->changed_"))
-            val contract = assertNotNull(findCommunityInbox(communityInboxFixture()))
-            assertEquals(original, contract.identity, "The fixture must not repeat the changed compiled contract")
-            assertFailsWith<PatchException> {
-                injectCommunityInbox(contract, contract.render as MutableMethod,
-                    communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
-            }
-        } finally { field.set(profile, original) }
+        for (profile in controlProfiles.values.toSet()) {
+            activeProfile = profile
+            val original = profile.nativeCommunityInbox
+            try {
+                field.set(profile, original.replaceFirst("->", "->changed_"))
+                val contract = assertNotNull(findCommunityInbox(communityInboxFixture()))
+                assertEquals(original, contract.identity, "The fixture must not repeat the changed compiled contract")
+                assertFailsWith<PatchException> {
+                    injectCommunityInbox(contract, contract.render as MutableMethod,
+                        communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
+                }
+            } finally { field.set(profile, original) }
+        }
     }
 
     @Test fun backwardPathsMustReplaceScratchRegistersBeforeReadingThem() {
-        for (register in listOf(1, 3)) for (overwritten in listOf(false, true)) for (branch in listOf("goto", "if", "switch")) {
+        for (register in listOf(0, 3)) for (overwritten in listOf(false, true)) for (branch in listOf("goto", "if", "switch")) {
             val classes = communityInboxFixture()
             val contract = assertNotNull(findCommunityInbox(classes))
             val render = contract.render as MutableMethod
@@ -54,14 +56,16 @@ class CommunityInboxTest {
             if (overwritten) render.replaceInstruction(48, "const/4 v$register, 0x0")
             val implementation = render.implementation!!
             val target = implementation.newLabelForIndex(48)
+            // v0 is written again for the viewport callback, so its backward path has to leave before that read.
+            val from = if (register == 0) at + 2 else at + 15
             when (branch) {
-                "goto" -> implementation.replaceInstruction(at + 14, BuilderInstruction10t(Opcode.GOTO, target))
-                "if" -> implementation.replaceInstruction(at + 13, BuilderInstruction21t(Opcode.IF_EQZ, 2, target))
+                "goto" -> implementation.replaceInstruction(from, BuilderInstruction10t(Opcode.GOTO, target))
+                "if" -> implementation.replaceInstruction(from, BuilderInstruction21t(Opcode.IF_EQZ, 2, target))
                 "switch" -> {
-                    val payloadAt = (at + 15..at + 16).first { body(render).take(it).sumOf { i -> i.codeUnits } % 2 == 0 }
+                    val payloadAt = (at + 17..at + 18).first { body(render).take(it).sumOf { i -> i.codeUnits } % 2 == 0 }
                     val payload = implementation.newLabelForIndex(payloadAt)
                     implementation.replaceInstruction(payloadAt, BuilderPackedSwitchPayload(0, listOf(target)))
-                    implementation.replaceInstruction(at + 13, BuilderInstruction31t(Opcode.PACKED_SWITCH, 2, payload))
+                    implementation.replaceInstruction(from, BuilderInstruction31t(Opcode.PACKED_SWITCH, 2, payload))
                 }
             }
             val before = body(render).map(::structural)
@@ -79,21 +83,16 @@ class CommunityInboxTest {
         val code = body(render)
         assertEquals(at + 9, code.branchTarget(at + 6))
         assertEquals(Opcode.CHECK_CAST, code[at + 9].opcode)
-        assertEquals(0, (code[at + 9] as OneRegisterInstruction).registerA)
+        assertEquals(1, (code[at + 9] as OneRegisterInstruction).registerA)
         assertEquals(IMMUTABLE_LIST, reference(code[at + 9]).toString())
     }
 
-    @Test fun the582ClosureFiltersTheListInV1AndUsesV0AndV3AsScratch() {
-        val contract = assertNotNull(findCommunityInbox(communityInboxFixture(viewport = true)))
+    @Test fun theClosureFiltersTheListInV1AndUsesV0AndV3AsScratch() {
+        val contract = assertNotNull(findCommunityInbox(communityInboxFixture()))
         val render = contract.render as MutableMethod
         val at = render.communityReadSite(contract.capturedScope)
         assertEquals(64, at)
-        val field = ControlProfile::class.java.getDeclaredField("nativeCommunityInbox").apply { isAccessible = true }
-        val recorded = activeProfile.nativeCommunityInbox
-        try {
-            field.set(activeProfile, contract.identity)
-            injectCommunityInbox(contract, render, communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
-        } finally { field.set(activeProfile, recorded) }
+        injectCommunityInbox(contract, render, communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
         val code = body(render)
         val filter = code[at + 3] as FiveRegisterInstruction
         assertEquals(listOf(1, 0, 3), listOf(filter.registerC, filter.registerD, filter.registerE))
@@ -104,16 +103,16 @@ class CommunityInboxTest {
         assertEquals(listOf(18, 0), (code[at + 21] as TwoRegisterInstruction).let { listOf(it.registerA, it.registerB) })
 
         // v0 is scratch only because the closure writes it again before the sink reads it.
-        val live = communityInboxFixture(viewport = true)
+        val live = communityInboxFixture()
         val liveRender = assertNotNull(findCommunityInbox(live)).render as MutableMethod
         liveRender.replaceInstruction(70, "nop")
         assertNull(findCommunityInbox(live))
     }
 
-    @Test fun everySupportedBuildsRecordedIdsConnectThroughThe582Closure() {
+    @Test fun everySupportedBuildsRecordedIdsConnectThroughTheClosure() {
         for (profile in controlProfiles.values.toSet()) {
             activeProfile = profile
-            val classes = communityInboxFixture(viewport = true)
+            val classes = communityInboxFixture()
             val contract = assertNotNull(findCommunityInbox(classes))
             assertEquals(profile.nativeCommunityInbox, contract.identity)
             validateControls(findControls(classes), setOf(COMMUNITY_INBOX))
@@ -124,7 +123,7 @@ class CommunityInboxTest {
         }
     }
 
-    @Test fun theOlderClosureConnectsTheNativeMembershipAndMainOnlyRendererBeforeEditing() {
+    @Test fun theClosureConnectsTheNativeMembershipAndMainOnlyRendererBeforeEditing() {
         for (profile in listOf(SYNTHETIC_PROFILE)) {
             activeProfile = profile
             val classes = communityInboxFixture()
@@ -144,7 +143,7 @@ class CommunityInboxTest {
             assertEquals(contract.capturedScope, reference(after[at + 2]).toString())
             assertEquals("$SETTINGS->filterJoinedCommunityInboxRows(Ljava/util/List;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;", reference(after[at + 3]).toString())
             assertEquals(Opcode.MOVE_RESULT_OBJECT, after[at + 4].opcode)
-            assertEquals(0, (after[at + 4] as OneRegisterInstruction).registerA)
+            assertEquals(1, (after[at + 4] as OneRegisterInstruction).registerA)
             assertEquals("${render.definingClass}->\$inboxUnitItems:$IMMUTABLE_LIST", reference(after[at + 5]).toString())
             assertEquals(at + 9, after.branchTarget(at + 6))
             assertEquals(COMMUNITY_LIST_COPY, reference(after[at + 7]).toString())
@@ -156,31 +155,8 @@ class CommunityInboxTest {
         }
     }
 
-    @Test fun theSessionFirstCaptureOrderAndGatedSecondReadKeepTheSameContract() {
-        for (profile in listOf(SYNTHETIC_PROFILE)) {
-            activeProfile = profile
-            val classes = communityInboxFixture(sessionFirst = true)
-            val contract = assertNotNull(findCommunityInbox(classes))
-            assertEquals(profile.nativeCommunityInbox, contract.identity)
-            validateControls(findControls(classes), setOf(COMMUNITY_INBOX))
-            val render = contract.render as MutableMethod
-            val at = render.communityReadSite(contract.capturedScope)
-            assertEquals(66, at)
-            val before = body(render).map(::structural)
-            injectCommunityInbox(contract, render, communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
-            assertEquals(before, body(render).filterIndexed { index, _ -> index !in at + 1..at + 9 }.map(::structural))
-            assertEquals(at + 9, body(render).branchTarget(at + 6))
-            exerciseNativeListProjection(render, at)
-        }
-        // The shifted order needs the session store in slot 2; without it slot 4 holds no scope capture.
-        val classes = communityInboxFixture(sessionFirst = true)
-        val ctorId = activeProfile.nativeCommunityInbox.split('|')[1]
-        classes.flatMap { it.methods }.single { it.hookId() == ctorId }.replaceInstruction(2, "nop")
-        assertNull(findCommunityInbox(classes))
-    }
-
     @Test fun changedSnapshotScopePredicateAndForeignSearchCallerFailBeforeMutation() {
-        for (change in listOf("enum_init", "channel_field", "snapshot", "scope", "first_read", "second_alias", "predicate", "null_key", "foreign_search", "captured_write", "branch", "folder_path", "folder_getter", "scratch3", "scratch_one", "scratch_wide", "session_slot")) {
+        for (change in listOf("enum_init", "channel_field", "snapshot", "scope", "first_read", "second_alias", "predicate", "null_key", "foreign_search", "captured_write", "branch", "folder_path", "folder_getter", "scratch0", "scratch3", "scratch_one", "scratch_wide", "session_slot", "single_move")) {
             val classes = communityInboxFixture().toMutableList()
             val valid = assertNotNull(findCommunityInbox(classes))
             val ids = valid.identity.split('|')
@@ -193,20 +169,22 @@ class CommunityInboxTest {
                 "snapshot" -> update.replaceInstruction(58, "move-object/from16 v26, v2")
                 "scope" -> update.replaceInstruction(111, "const/16 v23, 0x0")
                 "first_read" -> renderer.replaceInstruction(6, "invoke-virtual {v1}, Ljava/util/AbstractCollection;->isEmpty()Z")
-                "second_alias" -> renderer.replaceInstruction(at + 10, "move-object/from16 v17, v1")
+                "second_alias" -> renderer.replaceInstruction(at + 11, "move-object/from16 v17, v0")
+                // An older sink took the list last, with no viewport callback moved in after it.
+                "single_move" -> renderer.replaceInstruction(at + 12, "nop")
                 "predicate" -> classes.flatMap { it.methods }.single { it.hookId() == ids[5] }.replaceInstruction(7, "const/4 v1, 0x0")
                 "null_key" -> classes.flatMap { it.methods }.single { it.hookId() == ids[6] }.replaceInstruction(6, "const/4 v0, 0x1")
                 "folder_path" -> classes.flatMap { it.methods }.single { it.hookId() == ids[2] }.replaceInstruction(8,
                     "iget-object v0, v0, ${valid.folderPath.last().substringBefore("->")}->missing:${valid.folderPath.last().substringAfter(':')}")
                 "folder_getter" -> classes.flatMap { it.methods }.single { it.hookId() == valid.folderGetter }.replaceInstruction(13, "nop")
+                "scratch0" -> renderer.replaceInstruction(at + 1, "invoke-static {v0}, LX/ScratchConsumer;->accept(Ljava/lang/Object;)V")
                 "scratch3" -> renderer.replaceInstruction(at + 1, "invoke-static {v3}, LX/ScratchConsumer;->accept(Ljava/lang/Object;)V")
                 "scratch_one" -> renderer.replaceInstruction(at + 1, "check-cast v3, Ljava/lang/Object;")
                 "scratch_wide" -> renderer.replaceInstruction(at + 1, "long-to-int v5, v2")
-                // A session store in slot 2 without the later captures moving down is neither known order.
-                "session_slot" -> classes.flatMap { it.methods }.single { it.hookId() == ids[1] }.replaceInstruction(2,
-                    "iput-object v2, v1, ${renderer.definingClass}->\$fbUserSession:$FB_USER_SESSION")
+                // Without the session store in slot 2 (older builds kept it in slot 8), slot 5 isn't known to hold the scope.
+                "session_slot" -> classes.flatMap { it.methods }.single { it.hookId() == ids[1] }.replaceInstruction(2, "nop")
                 "foreign_search" -> classes.add(fixtureClass("LX/ForeignSearch;", listOf(fixtureMethod("LX/ForeignSearch;->query()V",
-                    "invoke-direct/range {v0 .. v14}, ${ids[1]}\nreturn-void", 15)), "MessagingTabbedSearchFragment"))
+                    "invoke-direct/range {v0 .. v15}, ${ids[1]}\nreturn-void", 16)), "MessagingTabbedSearchFragment"))
                 "captured_write" -> classes.add(fixtureClass("LX/CacheMutation;", listOf(fixtureMethod("LX/CacheMutation;->put()V",
                     "iput-object v0, v1, ${renderer.definingClass}->\$inboxUnitItems:$IMMUTABLE_LIST\nreturn-void"))))
                 "branch" -> {
@@ -233,7 +211,7 @@ class CommunityInboxTest {
                 "helper" -> scope.replaceInstruction(0, "const/4 v0, 0x1")
                 "helper_return" -> scope.replaceInstruction(1, "return v1")
                 "private_helper" -> scope.accessFlags = AccessFlags.PRIVATE.value or AccessFlags.STATIC.value
-                "renderer" -> render.replaceInstruction(render.communityReadSite(contract.capturedScope) + 10, "move-object/from16 v17, v1")
+                "renderer" -> render.replaceInstruction(render.communityReadSite(contract.capturedScope) + 11, "move-object/from16 v17, v0")
                 "profile" -> activeProfile = PROFILE_346415706
             }
             val before = listOf(render, joined, scope).map { body(it).map(::structural) }
@@ -259,7 +237,7 @@ class CommunityInboxTest {
             val scope = host.methods.single { it.hookId() == MAIN_INBOX_SCOPE }
             for (profile in controlProfiles.values.toSet()) {
                 activeProfile = profile
-                val contract = assertNotNull(findCommunityInbox(communityInboxFixture(viewport = true)))
+                val contract = assertNotNull(findCommunityInbox(communityInboxFixture()))
                 val helpers = injectCommunityInbox(contract, contract.render as MutableMethod, MutableMethod(joined), MutableMethod(scope))
                 assertTrue(helpers.all { AccessFlags.STATIC.isSet(it.accessFlags) && !AccessFlags.PRIVATE.isSet(it.accessFlags) })
             }
