@@ -7,7 +7,7 @@ package app.hushmessenger.extension;
 final class ExpectedTotals {
     static final int CONTROLS = 41;
     /** Copy setup for the default test install: one line per control plus its fixed header and status lines. */
-    static final int SETUP_LINES = CONTROLS + 11;
+    static final int SETUP_LINES = CONTROLS + 12;
     /** The same report with two recorded hook errors under its Hook errors heading. */
     static final int SETUP_LINES_WITH_ERRORS = SETUP_LINES + 3;
 

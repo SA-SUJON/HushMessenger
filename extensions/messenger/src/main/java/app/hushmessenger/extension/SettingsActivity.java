@@ -897,6 +897,8 @@ public final class SettingsActivity extends Activity {
                     .append(", scope=").append(text.control(spec, 2))
                     .append('\n');
             }
+            String dataDir = getApplicationInfo().dataDir;
+            summary.append("Analytics stores: ").append(dataDir == null ? "unreadable" : analyticsStores(new java.io.File(dataDir))).append('\n');
             summary.append("Facebook caller checks: ").append(MessengerSignature.callerSummary()).append('\n');
             // Only controls that failed get a line: the exception's class, where it hit HushMessenger's code and when.
             Map<String, String> errors = Settings.lastHookErrors();
@@ -1560,6 +1562,57 @@ public final class SettingsActivity extends Activity {
                 return (int) Math.min(super.available(), remaining);
             }
         };
+    }
+
+    /**
+     * Folders one or two levels under the data dir whose names mention analytics, with how many files they hold and their
+     * total size. Messenger queues its analytics there, and shell can't read the data dir, so this is the only way to see
+     * whether a queue grows while Stop analytics uploads is on. Names and sizes only, never what's in the files.
+     */
+    static String analyticsStores(java.io.File dataDir) {
+        java.io.File[] top = dataDir.listFiles();
+        if (top == null) return "unreadable";
+        java.util.Arrays.sort(top);
+        java.util.List<String> stores = new java.util.ArrayList<>();
+        for (java.io.File first : top) {
+            if (!first.isDirectory()) continue;
+            if (namesAnalytics(first)) {
+                stores.add(storeSize(first.getName(), first));
+                continue;
+            }
+            java.io.File[] inner = first.listFiles();
+            if (inner == null) continue;
+            java.util.Arrays.sort(inner);
+            for (java.io.File second : inner)
+                if (second.isDirectory() && namesAnalytics(second)) stores.add(storeSize(first.getName() + "/" + second.getName(), second));
+        }
+        return stores.isEmpty() ? "none" : String.join(", ", stores);
+    }
+
+    private static boolean namesAnalytics(java.io.File dir) {
+        return dir.getName().toLowerCase(java.util.Locale.ROOT).contains("analytics");
+    }
+
+    /** Stops counting at 10,000 files or 2,000 folders, so a huge store or a folder loop can't hold up the tap. */
+    private static String storeSize(String name, java.io.File dir) {
+        long files = 0, bytes = 0;
+        int folders = 0;
+        java.util.ArrayDeque<java.io.File> pending = new java.util.ArrayDeque<>();
+        pending.add(dir);
+        while (!pending.isEmpty() && files < 10_000 && folders < 2_000) {
+            java.io.File[] entries = pending.poll().listFiles();
+            folders++;
+            if (entries == null) continue;
+            for (java.io.File entry : entries) {
+                if (entry.isDirectory()) pending.add(entry);
+                else {
+                    files++;
+                    bytes += entry.length();
+                }
+            }
+        }
+        boolean cut = !pending.isEmpty();
+        return name + " " + files + (cut ? "+" : "") + " files " + bytes + (cut ? "+" : "") + " bytes";
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {

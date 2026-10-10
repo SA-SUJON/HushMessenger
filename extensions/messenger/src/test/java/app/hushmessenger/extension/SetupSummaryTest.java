@@ -68,7 +68,7 @@ public class SetupSummaryTest {
             assertTrue(text.contains("\nAndroid API: " + Build.VERSION.SDK_INT + "\nPaused: false\nSafe mode: false\n"));
             assertTrue(text.contains("people: installed=true, selected=true, active=true,"));
             assertTrue(text.contains("stories: installed=false, selected=true, active=false,"));
-            assertTrue(text.matches("(?s).*\nFacebook caller checks: trusted=\\d+, signer_differs=\\d+, meta_signed_build=\\d+, not_family=\\d+, error=\\d+\n"));
+            assertTrue(text.matches("(?s).*\nAnalytics stores: none\nFacebook caller checks: trusted=\\d+, signer_differs=\\d+, meta_signed_build=\\d+, not_family=\\d+, error=\\d+\n"));
             assertEquals(ExpectedTotals.SETUP_LINES, text.split("\n").length);
             assertFalse(text.contains("private-"));
             assertFalse(text.contains("account-secret"));
@@ -78,6 +78,27 @@ public class SetupSummaryTest {
             assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
             if (Build.VERSION.SDK_INT < 33) assertEquals("Setup copied", ShadowToast.getTextOfLatestToast());
             else assertNull(ShadowToast.getTextOfLatestToast());
+        }
+    }
+
+    @Test public void analyticsStoresListNamesAndSizesOnly() throws Exception {
+        java.io.File data = java.nio.file.Files.createTempDirectory("hush-data").toFile();
+        try {
+            assertEquals("none", SettingsActivity.analyticsStores(data));
+            java.io.File batches = new java.io.File(data, "files/xanalytics/batches");
+            assertTrue(batches.mkdirs());
+            java.nio.file.Files.write(new java.io.File(batches, "1.batch").toPath(), new byte[] {1, 2, 3});
+            assertTrue(new java.io.File(data, "app_analytics").mkdirs());
+            assertTrue(new java.io.File(data, "app_light_prefs").mkdirs());
+            // A file named like a store isn't one, and a store's own subfolders aren't listed again.
+            java.nio.file.Files.write(new java.io.File(data, "analytics.txt").toPath(), new byte[] {4});
+            assertTrue(new java.io.File(data, "app_analytics/analytics_old").mkdirs());
+            assertEquals("app_analytics 0 files 0 bytes, files/xanalytics 1 files 3 bytes", SettingsActivity.analyticsStores(data));
+            assertEquals("unreadable", SettingsActivity.analyticsStores(new java.io.File(data, "missing")));
+        } finally {
+            try (var walk = java.nio.file.Files.walk(data.toPath())) {
+                walk.sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+            }
         }
     }
 
