@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- With **Hide People You May Know** on, HushMessenger asks Messenger for your chat list again about half a second after it starts instead of after 2.5 seconds, to shorten the loading circle that could still sit under your chats for a few seconds. It tries up to three more times in the first 8 seconds and stops as soon as your chats show up ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)).
 - Extended the app audit with actual Messenger packet observations, background job and CPU measurements, and physically unplugged battery readings. Revision 2 includes aggregate data, a charge-counter chart and a repeatable procedure. It distinguishes shared encrypted hosts from specific tracking operations and documents the limits of short observations on a paused installation. No patch behavior changed.
 
 - Added a detailed Messenger internals audit with ad and tracking paths, native settings screenshots, the boundaries of all 37 controls, and patch candidates with acceptance criteria. A reusable 581 DEX query batch accompanies the report. The audit identifies a conditional analytics Binder entry outside the existing guards and documents message-log isolation and retention limits. No patch behavior changed.
