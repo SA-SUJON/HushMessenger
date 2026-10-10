@@ -184,7 +184,7 @@ class AnalyticsUploadsTest {
             "not a Runnable" to listOf(timerClass(interfaces = emptyList())),
             "uploads before it flushes" to listOf(timerClass(run = timerRun(body = timerBody(first = XANALYTICS_UPLOAD, second = XANALYTICS_FLUSH)))),
             "flushes twice" to listOf(timerClass(run = timerRun(body = timerBody(second = XANALYTICS_FLUSH)))),
-            "never uploads" to listOf(timerClass(run = timerRun(body = timerBody(second = "LX/7ew;->A01()V")))),
+            "never uploads" to listOf(timerClass(run = timerRun(body = timerBody(second = "$LOGGER_PROVIDER->get()Ljava/lang/Object;")))),
             "does other work" to listOf(timerClass(run = timerRun(body = timerBody(extra = "invoke-static {}, LX/Q1a;->A00()V")))),
             "asks a getter with an argument" to listOf(timerClass(run = timerRun(body = timerBody(
                 extra = "invoke-interface {v1, v0}, $LOGGER_PROVIDER->get(Ljava/lang/Object;)Ljava/lang/Object;")))),
