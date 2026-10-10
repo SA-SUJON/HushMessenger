@@ -278,7 +278,8 @@ public final class MessageLog {
         if (file.length() > MAX_FILE_BYTES) throw new Damaged("too large: " + file.length(), null);
         byte[] blob = readAll(file);
         if (blob.length == 0) return entries;
-        if (blob.length <= IV_BYTES) throw new Damaged("too short: " + blob.length, null);
+        // Shorter than an IV and a tag never reaches the tag check, and the keystore reports it as a size error instead.
+        if (blob.length < IV_BYTES + TAG_BITS / 8) throw new Damaged("too short: " + blob.length, null);
         String plain;
         try {
             plain = new String(vault().open(blob), StandardCharsets.UTF_8);

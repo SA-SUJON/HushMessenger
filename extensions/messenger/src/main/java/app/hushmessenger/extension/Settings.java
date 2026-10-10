@@ -51,7 +51,10 @@ public final class Settings {
         installed = Collections.unmodifiableSet(features);
         // Set last: a hook that sees preferences also sees the installed controls.
         preferences = appContext.getSharedPreferences("hushmessenger", Context.MODE_PRIVATE);
-        if (installed.contains(MessageLog.KEY)) MessageLog.scheduleExpiry();
+        // Only the main process writes the log; its lock doesn't reach other processes.
+        if (installed.contains(MessageLog.KEY) && appContext.getPackageName().equals(android.app.Application.getProcessName())) {
+            MessageLog.scheduleExpiry();
+        }
     }
 
     static Set<String> bundled(String list) {

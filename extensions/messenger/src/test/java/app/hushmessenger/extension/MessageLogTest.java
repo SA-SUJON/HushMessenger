@@ -212,6 +212,15 @@ public class MessageLogTest {
         assertTrue(Settings.hookErrors.get("message_log").contains("Damaged"));
     }
 
+    @Test public void aFileCutShorterThanItsTagIsSetAside() throws Exception {
+        MessageLog.storeNow("before", "t");
+        File log = new File(Settings.appContext.getFilesDir(), MessageLog.FILE);
+        Files.write(log.toPath(), java.util.Arrays.copyOf(Files.readAllBytes(log.toPath()), 20));
+        MessageLog.storeNow("after", "t");
+        assertEquals("after", MessageLog.entries().get(0).text);
+        assertTrue(damagedFile().exists());
+    }
+
     @Test public void anOversizedFileIsSetAsideWithoutBeingRead() throws Exception {
         try (java.io.RandomAccessFile file = new java.io.RandomAccessFile(logFile(), "rw")) {
             file.setLength(MessageLog.MAX_FILE_BYTES + 1);
