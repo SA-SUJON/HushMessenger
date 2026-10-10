@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 
 private const val LAUNCH = "LX/7Jp;->DXV($MONTAGE_PARAMS$NAVIGATION_TRIGGER)V"
 
-/** 580's camera listener, with the registers every supported build uses. */
+/** The camera listener, with the registers every supported build uses. */
 private val CAMERA_LAUNCH_BODY = """
     iget-object v0, p0, LX/7Jp;->A03:LX/9em;
     invoke-interface {v0}, LX/9em;->getContext()Landroid/content/Context;

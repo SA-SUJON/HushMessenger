@@ -47,7 +47,7 @@ private fun uploadClass(type: String, vararg entries: String, superclass: String
 private const val COMPAT = "Lcom/facebook/common/jobscheduler/compat/GcmTaskServiceCompat;"
 private const val RUNNABLE = "Ljava/lang/Runnable;"
 private const val ABSTRACT = 0x401 // public abstract
-/** The 580 base mapping's GcmTaskService base and the Runnable it runs each bound task on. */
+/** The synthetic mapping's GcmTaskService base and the Runnable it runs each bound task on. */
 private const val TASK_BASE = "LX/QJz;"
 private const val TASK_RUNNER = "LX/T7W;"
 
@@ -82,7 +82,7 @@ private fun taskBase(type: String = TASK_BASE, superclass: String = SERVICE, var
     listOf(fixtureMethod("$type->onBind(Landroid/content/Intent;)Landroid/os/IBinder;", "const/4 v0, 0x0\nreturn-object v0")) +
         methods, superclass = superclass, flags = ABSTRACT)
 
-/** The inlined route as the 580 base mapping ships it: the task base and its Runnable. */
+/** The inlined route as the synthetic mapping has it: the task base and its Runnable. */
 private fun inlinedTaskFixture() = listOf(taskBase(), taskRunner())
 
 /** GooglePlayUploadService's own task override where a build kept it, as 346013423 ships it (twelve registers). */
@@ -108,7 +108,7 @@ private fun delegatedTaskFixture(base: String = "LX/QBX;", task: String = "LX/UT
     """.trimIndent(), 5, AccessFlags.PUBLIC.value or AccessFlags.FINAL.value)),
 )
 
-/** The six upload components as the 580 base mapping ships them, with its bound task route. */
+/** The six upload components as the synthetic mapping has them, with its bound task route. */
 internal fun analyticsUploadFixture(
     base: MutableClass = uploadClass(BASE, START_COMMAND, START_JOB, superclass = JOBS,
         flags = AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value),

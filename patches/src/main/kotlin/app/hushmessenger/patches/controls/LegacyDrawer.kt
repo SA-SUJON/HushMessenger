@@ -63,7 +63,7 @@ private fun Method.drawerOrigin(before: Int, register: Int): Int {
 
 /**
  * The Settings row's constructor call: the only folder row built with SettingsFolderKey.A00 as its key.
- * 581 also builds the QR code row in this method, with the same row class and its own key.
+ * Messenger also builds the QR code row in this method, with the same row class and its own key.
  */
 internal fun Method.settingsRowCall(): Int {
     val code = drawerCode()

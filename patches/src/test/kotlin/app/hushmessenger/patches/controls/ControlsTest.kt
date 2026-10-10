@@ -76,7 +76,7 @@ class ControlsTest {
 
     @Test fun unsentLabelHookReadsTheRowStraightFromTheWrapperList() {
         messageWrapperFixture().methods.single { it.name == "BWo" }.validateUnsentIndicator()
-        // 580 and 581 went through a static helper instead; that shape no longer matches a supported build.
+        // Older releases went through a static helper instead, a shape no supported build has.
         val helper = fixtureMethod("Lfixture/MessageWrapper;->BWo(I)Ljava/lang/String;", """
             invoke-static {p0, p1}, Lfixture/MessageWrapper;->A00(Lfixture/MessageWrapper;I)Lfixture/KKn;
             move-result-object v0

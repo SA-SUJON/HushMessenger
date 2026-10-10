@@ -46,7 +46,7 @@ internal val VIDEO_TRANSCODE_BODY = """
     return-void
 """.trimIndent()
 
-/** The other 582 family keeps 581's fixed 5 MB margin and branches to the re-encode instead. */
+/** The other 582 family keeps a fixed 5 MB margin and branches to the re-encode instead. */
 internal val VIDEO_TRANSCODE_FIXED_BODY = """
     const-string v0, "$VIDEO_PASSTHROUGH_MARK"
     iget-wide v13, v0, LX/YCo;->A09:J

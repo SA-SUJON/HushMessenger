@@ -101,7 +101,7 @@ class NativeBubblesTest {
     }
 
     @Test fun olderReleasesRolloutSpecifiersAreRefused() {
-        // 580's and 581's numbers for the same rollout read.
+        // Older releases' numbers for the same rollout read.
         for (older in listOf(36312032932401152L, 36312028637433857L)) {
             val mode = nativeBubbleModeMethod().apply { replaceInstruction(19, "const-wide v0, ${older}L") }
             assertTrue(findControls(listOf(fixtureClass(mode.definingClass, listOf(mode)))).getValue("bubble_mode").isEmpty())

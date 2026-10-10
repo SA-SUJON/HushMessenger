@@ -239,14 +239,14 @@ class ExpandedControlsTest {
         for (changed in listOf(
             body.replace("return-object v2", "return-object v7"),
             body.replace("return-object v7", "return-object v5"),
-            // 580's v5 from both exits.
+            // An older release's v5 from both exits.
             body.replace("return-object v7", "return-object v5").replace("return-object v2", "return-object v5"),
         )) {
             assertFailsWith<PatchException> { method("LX/2I2;", "D5T", 24, IMMUTABLE_LIST, changed).injectAdFilter() }
         }
     }
 
-    // Mirrors the drawer case of Messenger 580's merged click listener: the row lands in a high register.
+    // Modelled on the drawer case of Messenger's merged click listener, where the row lands in a high register.
     private val folderClick = """
         move-object/from16 v3, p0
         iget-object v1, v3, LX/Jwp;->A00:Ljava/lang/Object;
@@ -309,7 +309,7 @@ class ExpandedControlsTest {
         val id = "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;"
         fun builder(rows: String) = fixtureMethod(id, rows + "const/4 v0, 0x0\nreturn-object v0", 10)
         assertEquals("LX/HRf;", builder(folderRow("LX/HRf;", settingsKey)).menuFolderItemType())
-        // 581 builds the QR code row in the same method, from the same row class and its own folder key.
+        // Messenger builds the QR code row in the same method, from the same row class and its own folder key.
         val both = builder(folderRow("LX/HRf;", settingsKey) + folderRow("LX/HRf;", qrKey))
         assertEquals("LX/HRf;", both.menuFolderItemType())
         assertEquals(2, both.settingsRowCall())

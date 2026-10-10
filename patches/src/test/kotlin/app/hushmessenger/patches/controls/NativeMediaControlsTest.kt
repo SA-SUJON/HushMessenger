@@ -188,7 +188,7 @@ class NativeMediaControlsTest {
     @Test fun olderViewerShapesAreRefusedAndTheOtherDialogNameKeepsItsCall() {
         val resume = "$EPHEMERAL_VIEWER->onResume()V"
         assertEquals(listOf(14, 21), screenshotViewerFixture(resume).screenshotViewerSites())
-        // 580 and 581 ran onResume two instructions longer.
+        // Older releases ran onResume two instructions longer.
         assertFailsWith<PatchException> { screenshotViewerFixture(resume, resumeTail = 24).screenshotViewerSites() }
         val mask = screenshotViewerFixture(resume).apply { replaceInstruction(9, "const/16 v1, 0x80") }
         assertFailsWith<PatchException> { mask.screenshotViewerSites() }
@@ -202,7 +202,7 @@ class NativeMediaControlsTest {
         for (cell in aiCells) {
             assertEquals(listOf(cell.render), findAiStickerCells(aiStickerCellFixture(cell.render)).map { it.hookId() })
             assertTrue(findAiStickerCells(aiStickerCellFixture(cell.render, sourceCount = 4)).isEmpty())
-            // 581's label for the same row.
+            // An older release's label for the same row.
             assertTrue(findAiStickerCells(aiStickerCellFixture(cell.render, label = 0x7f140511)).isEmpty())
         }
     }

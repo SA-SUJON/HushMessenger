@@ -607,7 +607,7 @@ public class CompatReport {
         return false;
     }
 
-    /** NativeBubbles.kt's bubbleGateHelper: 581 reads the gate through a static (session, lazy holder) helper returning its answer. */
+    /** NativeBubbles.kt's bubbleGateHelper: the gate is read through a static (session, lazy holder) helper returning its answer. */
     static boolean bubbleGateHelper(Method m, String gate) {
         var c = instructions(m); var p = bubbleParameters(m);
         var shape = List.of(Opcode.IGET_OBJECT, Opcode.INVOKE_INTERFACE, Opcode.MOVE_RESULT_OBJECT, Opcode.CHECK_CAST,

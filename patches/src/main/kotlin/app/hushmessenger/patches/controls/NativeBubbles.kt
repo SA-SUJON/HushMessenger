@@ -154,7 +154,7 @@ internal fun Document.addNativeBubbleRoutesMetadata() {
     })
 }
 
-/** 581 reads the gate through a static (session, lazy holder) helper. Only one returning the gate's own answer counts. */
+/** The gate is read through a static (session, lazy holder) helper. Only one returning the gate's own answer counts. */
 private fun Method.bubbleGateHelper(gate: String): Boolean {
     val c = bubbleCode()
     val p = bubbleParameters()
