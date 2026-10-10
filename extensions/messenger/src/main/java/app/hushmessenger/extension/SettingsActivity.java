@@ -593,7 +593,8 @@ public final class SettingsActivity extends Activity {
     @SuppressWarnings("deprecation")
     private LinearLayout controlRow(String key, String title, String description, boolean divided) {
         boolean available = Settings.available(key);
-        if (!available) description += " " + text.format("bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
+        if (!available) description += " " + text.format(CameraActivity.KEY.equals(key) ? "camera_unsupported"
+            : "bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -696,13 +697,17 @@ public final class SettingsActivity extends Activity {
         long used = Settings.lastActive(key), failedAt = Settings.hookErrorAt(key);
         boolean paused = Settings.preferences.getBoolean("paused", false) || CrashGuard.isSafeMode();
         boolean failed = failedAt > 0 && failedAt >= used;
-        String status = paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
+        // A control that keeps its first answer for the run says so until a restart, even with its switch now off.
+        Boolean held = Settings.heldUntilRestart(key);
+        String status = held != null ? text.get(("meta_ai".equals(key) ? "meta_ai_tab_pending_" : "restart_pending_") + (held ? "off" : "on"))
+            : paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
             : used == 0 ? text.get("keep_unsent".equals(key) ? "unsent_not_active" : "not_active") : formatSince(used, "active_now", "active_ago");
         if (!status.contentEquals(label.getText())) label.setText(status);
-        label.setTextColor(!paused && failed ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
-        label.setVisibility(control.isChecked() ? View.VISIBLE : View.GONE);
+        label.setTextColor(held != null || (!paused && failed) ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
+        boolean shown = control.isChecked() || held != null;
+        label.setVisibility(shown ? View.VISIBLE : View.GONE);
         // Hidden labels share the description exposed by the row's switch node.
-        String description = switchDescriptions.get(control).toString() + (control.isChecked() ? " " + status : "");
+        String description = switchDescriptions.get(control).toString() + (shown ? " " + status : "");
         if (!description.contentEquals(control.getContentDescription())) control.setContentDescription(description);
     }
 
@@ -872,10 +877,12 @@ public final class SettingsActivity extends Activity {
                 boolean installed = Settings.installed.contains(key);
                 boolean selected = Settings.preferences.getBoolean(key, false);
                 long lastActive = Settings.lastActive(key);
+                Boolean held = Settings.heldUntilRestart(key);
                 summary.append(key).append(": installed=").append(installed)
                     .append(", selected=").append(selected)
                     .append(", active=").append(!Settings.preview && installed && selected && !paused && !safeMode && Settings.available(key))
                     .append(", last_active=").append(lastActive == 0 ? "none" : ((System.currentTimeMillis() - lastActive) / 1000) + "s ago")
+                    .append(held == null ? "" : ", until_restart=" + held)
                     .append(", scope=").append(text.control(spec, 2))
                     .append('\n');
             }

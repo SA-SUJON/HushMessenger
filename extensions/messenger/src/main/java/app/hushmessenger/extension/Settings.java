@@ -197,6 +197,15 @@ public final class Settings {
     }
 
     /**
+     * The answer a control that holds its first answer for the run is still giving, when the saved switch, Pause or
+     * safe mode now says otherwise. Null when the control doesn't hold one, Messenger hasn't asked yet, or they agree.
+     */
+    static Boolean heldUntilRestart(String key) {
+        Boolean held = "meta_ai".equals(key) ? metaAiTab : "emoji_drawer".equals(key) ? oldEmojiDrawer : null;
+        return held == null || held == wouldUse(key) ? null : held;
+    }
+
+    /**
      * The mode Messenger asks its emoji and sticker tray for after each edit in the composer, right before the tray hears
      * it. With the switch on, the sticker search mode becomes the plain emoji mode, so typing keeps the tray on emoji.
      * Every other mode, and every mode while the switch is off, paused or in safe mode, passes through unchanged.
@@ -257,6 +266,11 @@ public final class Settings {
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) {
+        // Without the capture screen, as on a Root Mount install, the chat camera stays Messenger's own.
+        if (CameraActivity.KEY.equals(key)) {
+            Context context = appContext;
+            return context == null || CameraActivity.captureIntent(context) != null;
+        }
         if (!"bubbles".equals(key)) return true;
         if (Build.VERSION.SDK_INT < 30) return false;
         if (!HostScreens.started) HostScreens.initializeLate();
