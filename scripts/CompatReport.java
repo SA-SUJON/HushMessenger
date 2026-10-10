@@ -1975,7 +1975,7 @@ public class CompatReport {
 
     /**
      * Every method that loads the emoji drawer flag, but only when the one renderer that throws the anchor loads it
-     * too, itself (581) or through a static no-argument boolean that does (580). Mirrors EmojiDrawer.kt.
+     * too. Mirrors EmojiDrawer.kt.
      */
     static List<Method> emojiDrawerReaders(List<ClassDef> classes) {
         var readers = new ArrayList<Method>();
@@ -1992,19 +1992,8 @@ public class CompatReport {
             if (anchor) anchors.add(method);
         }
         if (anchors.size() != 1) return List.of();
-        var anchor = anchors.get(0);
-        var ids = new HashSet<String>();
-        var helpers = new HashSet<String>();
-        for (var reader : readers) {
-            ids.add(hookId(reader));
-            if (AccessFlags.STATIC.isSet(reader.getAccessFlags()) && reader.getParameterTypes().isEmpty() &&
-                "Z".equals(reader.getReturnType())) helpers.add(hookId(reader));
-        }
-        boolean connected = ids.contains(hookId(anchor));
-        for (var i : anchor.getImplementation().getInstructions()) {
-            if (i.getOpcode() == Opcode.INVOKE_STATIC && helpers.contains(((ReferenceInstruction) i).getReference().toString())) connected = true;
-        }
-        return connected ? readers : List.of();
+        var anchor = hookId(anchors.get(0));
+        return readers.stream().anyMatch(reader -> hookId(reader).equals(anchor)) ? readers : List.of();
     }
 
     // The analytics logger's upload components and the entry points Android starts them through. Mirrors AnalyticsUploads.kt.
