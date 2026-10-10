@@ -2048,14 +2048,84 @@ public class CompatReport {
         return false;
     }
 
+    static boolean isFragmentStart(MethodReference mr) {
+        return "Z".equals(mr.getReturnType()) && List.of("Landroid/content/Intent;", "Landroidx/fragment/app/Fragment;", "I")
+            .equals(mr.getParameterTypes().stream().map(Object::toString).toList());
+    }
+
+    static Set<String> stringsOf(Method m) {
+        var strings = new HashSet<String>();
+        for (var i : m.getImplementation().getInstructions())
+            if (i instanceof ReferenceInstruction r && r.getReference() instanceof StringReference sr) strings.add(sr.getString());
+        return strings;
+    }
+
+    static boolean isCameraClass(Instruction i) {
+        return i.getOpcode() == Opcode.CONST_CLASS && ((ReferenceInstruction) i).getReference() instanceof TypeReference t &&
+            MONTAGE_ACTIVITY.equals(t.getType());
+    }
+
+    /** The static factory Messenger 582's chat screen gets its camera launcher from. Mirrors SystemCamera.kt. */
+    static boolean isChatCameraFactory(Method m) {
+        if (!AccessFlags.STATIC.isSet(m.getAccessFlags()) || m.getParameterTypes().isEmpty() ||
+            !"Landroid/content/Context;".equals(m.getParameterTypes().get(0).toString())) return false;
+        var strings = stringsOf(m);
+        boolean cameraClass = false;
+        for (var i : m.getImplementation().getInstructions()) if (isCameraClass(i)) cameraClass = true;
+        return strings.contains("fragment_params") && strings.contains("trigger2") && hasLiteral(m, 7376) && cameraClass;
+    }
+
+    /** What the factory's builder returns right after it's handed the camera screen's class. */
+    static String chatCameraLauncherType(Method factory) {
+        var code = new ArrayList<Instruction>();
+        factory.getImplementation().getInstructions().forEach(code::add);
+        int at = -1;
+        for (int i = 0; i < code.size(); i++) if (isCameraClass(code.get(i))) { at = i; break; }
+        if (at < 0 || at + 1 >= code.size() || code.get(at + 1).getOpcode() != Opcode.IPUT_OBJECT) return null;
+        var builder = ((FieldReference) ((ReferenceInstruction) code.get(at + 1)).getReference()).getDefiningClass();
+        for (int i = at + 2; i < code.size(); i++)
+            if (code.get(i).getOpcode() == Opcode.INVOKE_VIRTUAL && ((ReferenceInstruction) code.get(i)).getReference() instanceof MethodReference mr &&
+                builder.equals(mr.getDefiningClass())) return mr.getReturnType();
+        return null;
+    }
+
+    /** The check Messenger 582's chat runs on where a picked photo comes from. Mirrors SystemCamera.kt. */
+    static boolean isThirdPartyUriCheck(Method m) {
+        if (AccessFlags.STATIC.isSet(m.getAccessFlags()) || !"Ljava/lang/Boolean;".equals(m.getReturnType()) ||
+            !List.of("Landroid/content/Context;", "Landroid/net/Uri;").equals(m.getParameterTypes().stream().map(Object::toString).toList())) return false;
+        var strings = stringsOf(m);
+        return strings.contains("Unable to get providerInfo for authority ") && strings.contains("content");
+    }
+
+    /** The open that refuses a picked photo whose file Messenger itself owns. Mirrors SystemCamera.kt. */
+    static boolean isInternalFileOpen(Method m) {
+        return AccessFlags.STATIC.isSet(m.getAccessFlags()) && "Landroid/content/res/AssetFileDescriptor;".equals(m.getReturnType()) &&
+            List.of("Landroid/content/Context;", "Landroid/net/Uri;").equals(m.getParameterTypes().stream().map(Object::toString).toList()) &&
+            stringsOf(m).contains("Attempted to retrieve internal file.");
+    }
+
+    static boolean isLauncherStart(Method m) {
+        if (!"Z".equals(m.getReturnType()) || AccessFlags.STATIC.isSet(m.getAccessFlags()) || m.getParameterTypes().size() != 1 ||
+            !"Landroid/os/Bundle;".equals(m.getParameterTypes().get(0).toString()) || !stringsOf(m).contains("ActivityLauncher")) return false;
+        for (var i : m.getImplementation().getInstructions())
+            if (i instanceof ReferenceInstruction r && r.getReference() instanceof MethodReference mr && isFragmentStart(mr)) return true;
+        return false;
+    }
+
     /**
      * system_camera: the chat composer's camera listener, which builds MontageComposerActivity's intent and starts it
      * with request code 7377. Counted only while exactly one chat fragment also reads a photo picked in another app
-     * (request code 1112), the path the switch hands the phone camera's photo to.
+     * (request code 1112), the path the switch hands the phone camera's photo to. While that reader also reads 7376, the
+     * code Messenger 582's chat screen starts its camera with, the chat camera's factory, its launcher's start and the
+     * chat's checks on where a picked photo comes from and who owns its file count too.
      */
     static List<Method> systemCameraLaunches(List<ClassDef> classes) {
         var launches = new ArrayList<Method>();
+        var factories = new ArrayList<Method>();
+        var starts = new ArrayList<Method>();
+        var checks = new ArrayList<Method>();
         int readers = 0;
+        boolean readsChatCamera = false;
         for (var cls : classes) for (var m : cls.getMethods()) {
             if (m.getImplementation() == null) continue;
             var params = new ArrayList<String>();
@@ -2072,11 +2142,23 @@ public class CompatReport {
             }
             if ("onActivityResult".equals(m.getName()) && "V".equals(m.getReturnType()) && params.equals(List.of("I", "I", "Landroid/content/Intent;")) &&
                 hasLiteral(m, 7377) && hasLiteral(m, 1112) && strings.contains("ComposeFragment:externalMediaGalleryActivityResultNullData") &&
-                strings.contains("ComposeFragment:montageMessageActivityResultNullData")) readers++;
+                strings.contains("ComposeFragment:montageMessageActivityResultNullData")) {
+                readers++;
+                readsChatCamera = hasLiteral(m, 7376);
+            }
             if ("V".equals(m.getReturnType()) && params.equals(List.of(MONTAGE_PARAMS, NAVIGATION_TRIGGER)) &&
                 !AccessFlags.STATIC.isSet(m.getAccessFlags()) && buildsIntent && hasLiteral(m, 7377)) launches.add(m);
+            if (isChatCameraFactory(m)) factories.add(m);
+            if (isLauncherStart(m)) starts.add(m);
+            if (isThirdPartyUriCheck(m) || isInternalFileOpen(m)) checks.add(m);
         }
-        return readers == 1 ? launches : List.of();
+        if (readers != 1) return List.of();
+        if (!readsChatCamera) return launches;
+        launches.addAll(factories);
+        var launcher = factories.size() == 1 ? chatCameraLauncherType(factories.get(0)) : null;
+        for (var m : starts) if (m.getDefiningClass().equals(launcher)) launches.add(m);
+        launches.addAll(checks);
+        return launches;
     }
 
     // Google Play's bound task route into GooglePlayUploadService, which skips onStartCommand. Mirrors AnalyticsUploads.kt.

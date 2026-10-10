@@ -55,6 +55,63 @@ public class SystemCameraTest {
         assertSame("Pause brings Messenger's camera back", stock, Settings.systemCamera(stock));
     }
 
+    @Test public void theLauncherSwapsOnlyTheChatCamerasMarkedLaunch() {
+        Settings.hookErrors.clear();
+        Settings.preferences.edit().putBoolean("system_camera", true).commit();
+        // A story reply starts the same screen with the same request code through the same launcher, without the mark.
+        Intent storyReply = new Intent().setClassName(app.getPackageName(), "com.facebook.messaging.montage.composer.MontageComposerActivity");
+        assertSame(storyReply, Settings.chatCamera(storyReply));
+        assertEquals(7376, Settings.cameraRequestCode(storyReply, 7376));
+        assertEquals(0, Settings.lastActive("system_camera"));
+        assertNull(Settings.chatCamera(null));
+
+        android.os.Bundle extras = new android.os.Bundle();
+        extras.putString("trigger2", "thread");
+        Settings.markChatCamera(extras);
+        Settings.markChatCamera(null);
+        Intent chat = new Intent().setClassName(app.getPackageName(), "com.facebook.messaging.montage.composer.MontageComposerActivity")
+            .putExtras(extras);
+        Intent capture = Settings.chatCamera(chat);
+        assertEquals(new ComponentName(app.getPackageName(), CameraActivity.class.getName()), capture.getComponent());
+        assertEquals(1112, Settings.cameraRequestCode(capture, 7376));
+        assertTrue(Settings.lastActive("system_camera") > 0);
+        assertFalse("The mark comes off the launch", chat.hasExtra(Settings.CHAT_CAMERA_MARK));
+
+        Settings.preferences.edit().putBoolean("system_camera", false).commit();
+        Intent again = new Intent(chat).putExtras(extras);
+        assertSame("Off gets Messenger's camera, with its extras as they were", again, Settings.chatCamera(again));
+        assertFalse(again.hasExtra(Settings.CHAT_CAMERA_MARK));
+        assertEquals("thread", again.getStringExtra("trigger2"));
+        assertEquals(7376, Settings.cameraRequestCode(again, 7376));
+        assertTrue(Settings.hookErrors.isEmpty());
+    }
+
+    @Test public void onlyTheCaptureScreensOwnPhotoPassesTheChatsSourceCheck() {
+        Settings.hookErrors.clear();
+        Uri photo = CameraProvider.uriFor(app, new File("IMG_1791657600000.jpg"));
+        assertNotNull(CameraProvider.fileFor(app, photo));
+        assertTrue(Settings.trustCapturedPhoto(photo));
+        // Anything else gets Messenger's own answer: other providers, other files in ours, and file URIs.
+        assertFalse(Settings.trustCapturedPhoto(null));
+        assertFalse(Settings.trustCapturedPhoto(Uri.parse("content://media/external/images/media/12")));
+        assertFalse(Settings.trustCapturedPhoto(Uri.parse("content://" + app.getPackageName() + ".provider/IMG_1791657600000.jpg")));
+        assertFalse(Settings.trustCapturedPhoto(photo.buildUpon().appendPath("x").build()));
+        assertFalse(Settings.trustCapturedPhoto(Uri.parse("file:///data/data/" + app.getPackageName() + "/IMG_1791657600000.jpg")));
+        assertTrue(Settings.hookErrors.isEmpty());
+    }
+
+    @Test public void onlyTheCaptureScreensOwnPhotoPassesTheOpensOwnFileCheck() {
+        Settings.hookErrors.clear();
+        Uri photo = CameraProvider.uriFor(app, new File("IMG_1791657600000.jpg"));
+        assertFalse(Settings.internalFile(true, photo));
+        // Every other file Messenger owns is still refused, and a file it doesn't own stays allowed.
+        assertTrue(Settings.internalFile(true, Uri.parse("content://" + app.getPackageName() + ".provider/IMG_1791657600000.jpg")));
+        assertTrue(Settings.internalFile(true, null));
+        assertFalse(Settings.internalFile(false, photo));
+        assertFalse(Settings.internalFile(false, Uri.parse("content://media/external/images/media/12")));
+        assertTrue(Settings.hookErrors.isEmpty());
+    }
+
     @Test public void thePhotoTheCameraAppSavesComesBackForMessengerToRead() throws Exception {
         try (ActivityController<CameraActivity> controller = Robolectric.buildActivity(CameraActivity.class).setup()) {
             ShadowActivity screen = shadowOf(controller.get());

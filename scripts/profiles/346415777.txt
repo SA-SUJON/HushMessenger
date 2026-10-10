@@ -131,6 +131,10 @@ hook subtabs LX/2HG;->run()V
 hook suggested_replies LX/7Pr;->A06(LX/7Pr;)Z
 hook suggested_replies LX/7Qp;->A05(LX/7Qp;)Z
 hook suggested_replies LX/WRl;->A03()Z
+hook system_camera LX/0FS;->A01(Landroid/content/Context;Landroid/net/Uri;)Landroid/content/res/AssetFileDescriptor;
+hook system_camera LX/0gi;->A00(Landroid/content/Context;Landroid/net/Uri;)Ljava/lang/Boolean;
+hook system_camera LX/5ok;->A00(Landroid/content/Context;Landroid/os/Bundle;Landroidx/fragment/app/Fragment;Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threadkey/ThreadKey;LX/HJ6;)LX/6iH;
+hook system_camera LX/5xn;->BxF(Landroid/os/Bundle;)Z
 hook system_camera LX/7Gk;->Daf(Lcom/facebook/messaging/montage/composer/model/MontageComposerFragmentParams;Lcom/facebook/messaging/send/trigger/NavigationTrigger;)V
 hook typing LX/Aol;->run()V
 hook typing_mailbox LX/4hB;->A0K(Ljava/lang/String;Z)LX/33K;

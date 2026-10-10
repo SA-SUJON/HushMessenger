@@ -289,6 +289,50 @@ public final class Settings {
     public static int cameraRequestCode(android.content.Intent intent, int requestCode) {
         return CameraActivity.isCapture(appContext, intent) ? CameraActivity.EXTERNAL_MEDIA_REQUEST : requestCode;
     }
+    /** Set on the extras Messenger 582's chat screen copies into its camera launcher, so that one launch can be told apart. */
+    static final String CHAT_CAMERA_MARK = "app.hushmessenger.chat_camera";
+    /**
+     * The chat camera's launcher factory hands over its copy of the camera screen's extras. Story and note replies build
+     * the same kind of launcher for the same screen, and their extras never get the mark.
+     */
+    public static void markChatCamera(android.os.Bundle extras) {
+        if (extras != null) extras.putBoolean(CHAT_CAMERA_MARK, true);
+    }
+    /**
+     * Every intent Messenger's activity launcher starts for a result comes past here. Only the chat camera's carries the
+     * mark, which comes off again so Messenger's camera gets its extras as they were, and that one goes to systemCamera.
+     */
+    public static android.content.Intent chatCamera(android.content.Intent intent) {
+        try {
+            if (intent == null || !intent.hasExtra(CHAT_CAMERA_MARK)) return intent;
+            intent.removeExtra(CHAT_CAMERA_MARK);
+        } catch (RuntimeException error) {
+            hookFailed(CameraActivity.KEY, "Couldn't read the chat camera's launch", error);
+            return intent;
+        }
+        return systemCamera(intent);
+    }
+    /**
+     * Messenger 582's chat asks this before it copies a picked photo, and only copies from apps outside Meta's. The capture
+     * screen's photo comes from a provider inside Messenger, so that one photo is let through. It doesn't follow the switch,
+     * because a photo already on its way back must not close Messenger, and everything else gets Messenger's own answer.
+     */
+    public static boolean trustCapturedPhoto(android.net.Uri uri) {
+        try {
+            Context context = appContext;
+            return context != null && CameraProvider.fileFor(context, uri) != null;
+        } catch (RuntimeException error) {
+            hookFailed(CameraActivity.KEY, "Couldn't check the camera photo", error);
+            return false;
+        }
+    }
+    /**
+     * Messenger then opens the photo and refuses any file Messenger itself owns, which every file the capture screen's
+     * provider serves is. Its own photo counts as outside, and every other file keeps Messenger's answer.
+     */
+    public static boolean internalFile(boolean internal, android.net.Uri uri) {
+        return internal && !trustCapturedPhoto(uri);
+    }
     /** Encrypted chats send typing through one mailbox call; "not typing" is always allowed through. */
     public static boolean outgoingTyping(boolean typing) { return typing && !enabled("typing"); }
     static boolean available(String key) {

@@ -82,7 +82,8 @@ internal val syntheticHooks: Map<String, Set<String>> = mapOf(
     EMOJI_DRAWER to setOf(DRAWER_RENDERER, DRAWER_EFFECT),
     "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
     ORIGINAL_VIDEO to setOf(VIDEO_TRANSCODE),
-    SYSTEM_CAMERA to setOf("LX/7Jp;->DXV($MONTAGE_PARAMS$NAVIGATION_TRIGGER)V"),
+    SYSTEM_CAMERA to setOf("LX/7Jp;->DXV($MONTAGE_PARAMS$NAVIGATION_TRIGGER)V", CHAT_CAMERA_FACTORY, CHAT_CAMERA_START, THIRD_PARTY_URI_CHECK,
+        INTERNAL_FILE_OPEN),
     "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
     "menu_settings" to setOf(
         "LX/9rv;->A1i()V",
