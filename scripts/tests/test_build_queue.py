@@ -65,6 +65,7 @@ class BuildQueueCommands(unittest.TestCase):
                 command[-6:-1],
             )
             self.assertEqual(
+                "$ErrorActionPreference = 'Stop'; "
                 "& 'java' '-jar' 'desktop.jar' '--enable=Hide People You May Know' 'C:/it''s.apk'; exit $LASTEXITCODE",
                 command[-1],
             )

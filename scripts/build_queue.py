@@ -43,9 +43,13 @@ def _user_setting(name):
 
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as key:
-            return str(winreg.QueryValueEx(key, name)[0]).strip()
+            value, kind = winreg.QueryValueEx(key, name)
     except OSError:
         return ""
+    # A value like %USERPROFILE%\... is stored unexpanded. release.ps1's .NET read expands it, so this does too.
+    if kind == winreg.REG_EXPAND_SZ:
+        value = winreg.ExpandEnvironmentStrings(value)
+    return str(value).strip()
 
 
 def quote(text):
@@ -82,7 +86,10 @@ def queued(command, label):
         return list(command)
     if any(part == "" for part in command):
         raise ValueError("an empty argument would be dropped on its way through the queue")
-    run ="& {}; exit $LASTEXITCODE".format(" ".join(quote(part) for part in command))
+    # Without Stop, a program that isn't there leaves $LASTEXITCODE empty and the job exits 0.
+    run = "$ErrorActionPreference = 'Stop'; & {}; exit $LASTEXITCODE".format(
+        " ".join(quote(part) for part in command)
+    )
     return [
         shell(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
         "-File", queue, "-Label", label, "-Run", run,
