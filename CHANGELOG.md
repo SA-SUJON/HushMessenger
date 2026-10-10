@@ -18,6 +18,7 @@
 - Every switch in HushMessenger settings now explains in plain words what it does and what you'll notice. The pages, the setup panel and the bubble and app icon help text got the same plain wording.
 - Messages in HushMessenger settings are clearer. Saving and restoring your choices, update checks, the camera notice and the setup help now say what happened and what to do next.
 - The options you fill in when patching are easier to read. Clone install, Custom new-message sound and Spoof package version now explain what to type, and the version code option is called Version number.
+- The settings extension's unit tests now always run on JDK 21. On Windows, the Java 25.0.2 runtime bundled with Android Studio made four Android 9 and 10 restore tests read the start of a file instead of the part the provider pointed to. Restoring choices on a phone was never affected.
 
 ## 0.22.0 (2026-10-08)
 

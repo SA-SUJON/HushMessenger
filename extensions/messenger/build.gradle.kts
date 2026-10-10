@@ -1,4 +1,6 @@
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
 
 extension {
     name = "extensions/messenger.mpe"
@@ -34,7 +36,17 @@ configurations.configureEach {
     }
 }
 
+// Robolectric runs Android 9 and 10's AssetFileDescriptor streams on the host java.io classes, so the
+// test JVM decides whether a declared slice starts at its offset. JetBrains Runtime 25.0.2 (Android
+// Studio's, often JAVA_HOME) reports a RandomAccessFile descriptor on Windows as a non-regular file;
+// FileInputStream.skip then reads through the subclass before its slice length is set and moves
+// nothing, so the API 28/29 slice restores read the provider's prefix. Pin the test JVM.
+val testLauncher = extensions.getByType<JavaToolchainService>().launcherFor {
+    languageVersion.set(JavaLanguageVersion.of(21))
+}
+
 tasks.withType<Test>().configureEach {
+    javaLauncher.set(testLauncher)
     // Robolectric's API 36 file-descriptor bridge needs this JDK 21 export.
     jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
 }
