@@ -131,6 +131,7 @@ public class CompatReport {
             "com.facebook.messaging.quickpromotion.plugins.threadview.QuickpromotionThreadviewKillSwitch",
             "com.facebook.messaging.quickpromotion.plugins.threadviewmsys.QuickpromotionThreadviewmsysKillSwitch"
         )),
+        Map.entry("ad_context_banner", Set.of("com.facebook.messaging.nativepagereply.plugins.adscontextprovider.threadviewbanner.CTMAdsThreadViewBannerImplementation")),
         Map.entry("suggested_replies", Set.of("com.facebook.messaging.business.plugins.suggestedreply.SuggestedReplyKillSwitch")),
         Map.entry("business_suggestions", Set.of("com.facebook.messaging.business.plugins.suggestasyoutype.SAYTKillSwitch")),
         Map.entry("event_prompts", Set.of("com.facebook.messaging.events.plugins.qp.EventsQpKillSwitch")),
@@ -175,6 +176,7 @@ public class CompatReport {
         PATCHES.put("Restore old emoji drawer", List.of("emoji_drawer"));
         PATCHES.put("Keep emoji search on emoji", List.of("emoji_search"));
         PATCHES.put("Hide chat promotions", List.of("chat_promotions"));
+        PATCHES.put("Hide ad banners in business chats", List.of("ad_context_banner"));
         PATCHES.put("Hide business reply suggestions", List.of("suggested_replies"));
         PATCHES.put("Hide business typing suggestions", List.of("business_suggestions"));
         PATCHES.put("Hide event prompts", List.of("event_prompts"));

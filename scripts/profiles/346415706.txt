@@ -2,6 +2,7 @@
 version 582.0.0.61.92
 code 346415706
 sha256 94fdee0b4118b804e42fe1d247e8dd795b11d8bd5e06691ce97d9ddde0b0f3de
+hook ad_context_banner LX/HEa;->A00()Z
 hook ads LX/2I1;->D5H(LX/1jo;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;)Lcom/google/common/collect/ImmutableList;
 hook ai_fab LX/6rJ;->render(LX/2Cf;)LX/1GT;
 hook ai_menu LX/HEJ;->A00()Z

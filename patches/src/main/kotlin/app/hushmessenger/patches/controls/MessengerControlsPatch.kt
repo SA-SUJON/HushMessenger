@@ -317,6 +317,9 @@ val keepEmojiSearchPatch = controlPatch("emoji_search", "Keep emoji search on em
 @Suppress("unused")
 val hideChatPromotionsPatch = controlPatch("chat_promotions", "Hide chat promotions", "Hides promotion banners inside conversations.", "Conversations")
 @Suppress("unused")
+val hideAdContextBannerPatch = controlPatch("ad_context_banner", "Hide ad banners in business chats",
+    "Hides the banner in a chat with a business that shows the ad the chat started from.", "Conversations")
+@Suppress("unused")
 val hideSuggestedRepliesPatch = controlPatch("suggested_replies", "Hide business reply suggestions", "Hides suggested replies in conversations with businesses.", "Conversations")
 @Suppress("unused")
 val hideBusinessSuggestionsPatch = controlPatch("business_suggestions", "Hide business typing suggestions", "Hides business suggestions that pop up as you type.", "Conversations")

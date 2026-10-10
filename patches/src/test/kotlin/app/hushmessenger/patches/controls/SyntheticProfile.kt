@@ -103,6 +103,7 @@ internal val syntheticHooks: Map<String, Set<String>> = mapOf(
     "avatar_stickers" to setOf("LX/PKW;->A01(LX/PKW;)Z"),
     "inbox_promotions" to setOf("LX/2Ef;->A0J()Z", "LX/2Ef;->A0K()Z"),
     "chat_promotions" to setOf("LX/ThP;->A0D()Z", "LX/ThP;->A0E()Z"),
+    AD_CONTEXT_BANNER to setOf(SYNTHETIC_AD_BANNER_GATE),
     "suggested_replies" to setOf("LX/7Sd;->A06(LX/7Sd;)Z", "LX/7Tb;->A05(LX/7Tb;)Z", "LX/ThO;->A05()Z"),
     "business_suggestions" to setOf("LX/7Sd;->A05(LX/7Sd;)Z", "LX/7Tb;->A04(LX/7Tb;)Z", "LX/ThO;->A04()Z"),
     "event_prompts" to setOf("LX/ThP;->A07()Z", "LX/ThP;->A08()Z"),

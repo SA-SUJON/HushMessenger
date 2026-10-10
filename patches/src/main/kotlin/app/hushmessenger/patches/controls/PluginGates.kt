@@ -15,6 +15,8 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference
 /** Plugin gates by control, found by their kill switch or plugin names. False is the normal disabled path. */
 internal data class PluginGate(val anchors: Set<String>)
 
+internal const val AD_CONTEXT_BANNER = "ad_context_banner"
+
 internal val pluginGates = mapOf(
     "people" to PluginGate(
         setOf(
@@ -63,6 +65,13 @@ internal val pluginGates = mapOf(
         setOf(
             "com.facebook.messaging.quickpromotion.plugins.threadview.QuickpromotionThreadviewKillSwitch",
             "com.facebook.messaging.quickpromotion.plugins.threadviewmsys.QuickpromotionThreadviewmsysKillSwitch",
+        ),
+    ),
+    // The ad a chat with a business started from, shown as a banner at the top of the chat. It isn't a Quickpromotion,
+    // so the chat promotion gates never see it. The anchor is the banner itself, which only the thread banner gate builds.
+    AD_CONTEXT_BANNER to PluginGate(
+        setOf(
+            "com.facebook.messaging.nativepagereply.plugins.adscontextprovider.threadviewbanner.CTMAdsThreadViewBannerImplementation",
         ),
     ),
     "suggested_replies" to PluginGate(
