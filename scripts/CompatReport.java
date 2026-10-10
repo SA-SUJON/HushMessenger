@@ -2011,6 +2011,68 @@ public class CompatReport {
         return readers == 1 ? launches : List.of();
     }
 
+    // Google Play's bound task route into GooglePlayUploadService, which skips onStartCommand. Mirrors AnalyticsUploads.kt.
+    static final String GOOGLE_PLAY_UPLOAD_SERVICE = "Lcom/facebook/analytics2/logger/GooglePlayUploadService;";
+    static final String TASK_SERVICE_COMPAT = "Lcom/facebook/common/jobscheduler/compat/GcmTaskServiceCompat;";
+    static final String BOUND_UPLOAD_MARK = "Job with no build ID, cancelling job";
+
+    static boolean holdsBoundUploadMark(Method m) {
+        if (m.getImplementation() == null) return false;
+        for (var i : m.getImplementation().getInstructions())
+            if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference s &&
+                BOUND_UPLOAD_MARK.equals(s.getString())) return true;
+        return false;
+    }
+
+    static boolean typeChecked(Method m, Opcode opcode, String type) {
+        for (var i : m.getImplementation().getInstructions())
+            if (i.getOpcode() == opcode && type.equals(((ReferenceInstruction) i).getReference().toString())) return true;
+        return false;
+    }
+
+    /** The Runnable's run() with the uploader's task inlined: reads its service field first and reports through one (I)V. */
+    static boolean isInlinedUploadTask(Method m) {
+        if (!"run()V".equals(entryPoint(m)) || AccessFlags.STATIC.isSet(m.getAccessFlags()) || !holdsBoundUploadMark(m) ||
+            !typeChecked(m, Opcode.INSTANCE_OF, TASK_SERVICE_COMPAT) || !typeChecked(m, Opcode.CHECK_CAST, GOOGLE_PLAY_UPLOAD_SERVICE)) return false;
+        var code = m.getImplementation();
+        var first = code.getInstructions().iterator().next();
+        if (first.getOpcode() != Opcode.IGET_OBJECT || ((TwoRegisterInstruction) first).getRegisterB() != code.getRegisterCount() - 1 ||
+            !(((ReferenceInstruction) first).getReference() instanceof FieldReference field) ||
+            !m.getDefiningClass().equals(field.getDefiningClass())) return false;
+        var reporters = new TreeSet<String>();
+        for (var i : code.getInstructions())
+            if (i.getOpcode() == Opcode.INVOKE_DIRECT && ((ReferenceInstruction) i).getReference() instanceof MethodReference r &&
+                m.getDefiningClass().equals(r.getDefiningClass()) && "V".equals(r.getReturnType()) &&
+                r.getParameterTypes().size() == 1 && "I".contentEquals(r.getParameterTypes().get(0))) reporters.add(r.toString());
+        return reporters.size() == 1;
+    }
+
+    static List<Method> boundUploadTasks(List<ClassDef> classes) {
+        ClassDef play = null;
+        for (var cls : classes) if (GOOGLE_PLAY_UPLOAD_SERVICE.equals(cls.getType())) play = cls;
+        if (play == null || play.getSuperclass() == null) return List.of();
+        var base = play.getSuperclass();
+        ClassDef baseClass = null;
+        for (var cls : classes) if (base.equals(cls.getType())) baseClass = cls;
+        if (baseClass == null || !"Landroid/app/Service;".equals(baseClass.getSuperclass())) return List.of();
+        var abstractTasks = new HashSet<String>();
+        for (var m : baseClass.getMethods())
+            if (AccessFlags.ABSTRACT.isSet(m.getAccessFlags()) && "I".equals(m.getReturnType()) && m.getParameterTypes().size() == 1)
+                abstractTasks.add(entryPoint(m));
+        var found = new ArrayList<Method>();
+        for (var m : play.getMethods())
+            if (abstractTasks.contains(entryPoint(m)) && "I".equals(m.getReturnType()) && m.getParameterTypes().size() == 1 &&
+                !AccessFlags.STATIC.isSet(m.getAccessFlags()) && !AccessFlags.ABSTRACT.isSet(m.getAccessFlags()) && holdsBoundUploadMark(m))
+                found.add(m);
+        for (var cls : classes) {
+            if (!cls.getInterfaces().contains("Ljava/lang/Runnable;")) continue;
+            boolean holdsService = false;
+            for (var f : cls.getFields()) if (base.equals(f.getType()) && !AccessFlags.STATIC.isSet(f.getAccessFlags())) holdsService = true;
+            if (holdsService) for (var m : cls.getMethods()) if (isInlinedUploadTask(m)) found.add(m);
+        }
+        return found;
+    }
+
     static List<Method> analyticsUploads(List<ClassDef> classes) {
         var found = new ArrayList<Method>();
         ClassDef uploader = null;
@@ -2097,6 +2159,7 @@ public class CompatReport {
         found.get("emoji_search").addAll(emojiSearchWatchers(classes));
         found.get("disappearing_swipe").addAll(disappearingSwipeStarts(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
+        found.get("analytics_uploads").addAll(boundUploadTasks(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
         found.get("system_camera").addAll(systemCameraLaunches(classes));
         for (var cls : classes) for (var method : cls.getMethods())

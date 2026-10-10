@@ -153,6 +153,7 @@ internal val expectedHooks = mapOf(
     ANALYTICS_UPLOADS to setOf(
         "LX/0c0;->onStartCommand(Landroid/content/Intent;II)I",
         "LX/0c0;->onStartJob(Landroid/app/job/JobParameters;)Z",
+        "LX/T7W;->run()V",
         "Lcom/facebook/analytics2/logger/GooglePlayUploadService;->onStartCommand(Landroid/content/Intent;II)I",
         "Lcom/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService;->onStartCommand(Landroid/content/Intent;II)I",
         "Lcom/facebook/analytics2/logger/legacy/uploader/HighPriUploadRetryReceiver;->onReceive(Landroid/content/Context;Landroid/content/Intent;)V",
@@ -449,7 +450,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     found.getValue(EMOJI_DRAWER).addAll(connectEmojiDrawer(drawerReaders, drawerAnchors))
     found.getValue(EMOJI_SEARCH).addAll(findEmojiSearch(classes))
     found.getValue(DISAPPEARING_SWIPE).addAll(findDisappearingSwipe(classes))
-    found.getValue(ANALYTICS_UPLOADS).addAll(findAnalyticsUploads(classes))
+    found.getValue(ANALYTICS_UPLOADS).addAll(findAnalyticsUploads(classes) + findBoundUploadTasks(classes))
     found.getValue(MESSAGE_LOG).addAll(findMessageLogHook(classes))
     messageLogContract = resolveMessageLogContract(classes)
     found.getValue(SYSTEM_CAMERA).addAll(findSystemCamera(classes))

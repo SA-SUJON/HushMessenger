@@ -10,8 +10,8 @@ internal object ExpectedTotals {
     /** Controls whose description sends people to HushMessenger settings > Controls. */
     const val DIRECTED_CONTROLS = 37
     /** Hook methods per 580 build, and per 581 build, which reads the emoji drawer flag in eight places where 580 has two. */
-    const val HOOKS_580 = 120
-    const val HOOKS_581 = 126
+    const val HOOKS_580 = 121
+    const val HOOKS_581 = 127
     /** The complete synthetic discovery fixture, one method per expected hook. */
-    const val DISCOVERY_FIXTURE_HOOKS = 120
+    const val DISCOVERY_FIXTURE_HOOKS = 121
 }
