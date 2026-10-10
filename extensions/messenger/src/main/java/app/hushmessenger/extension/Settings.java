@@ -816,7 +816,7 @@ public final class Settings {
     public static void addMenuSettingsEntry(ArrayList list) {
         try {
             if (list == null || list.isEmpty()) return;
-            // Messenger 581 builds its QR code row into the same list, so find Settings by its folder key.
+            // Messenger builds its QR code row into the same list, so find Settings by its folder key.
             int at = -1;
             for (int i = 0; i < list.size() && at < 0; i++) if (holdsSettingsKey(list.get(i))) at = i;
             if (at < 0) return;

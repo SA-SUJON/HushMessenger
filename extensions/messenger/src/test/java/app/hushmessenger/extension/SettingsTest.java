@@ -286,7 +286,7 @@ public class SettingsTest {
         }
     }
 
-    /** Shaped like Messenger 580's Menu tab folder row (HRf): context, key, metadata, badge and one title. */
+    /** Shaped like Messenger's Menu tab folder row: context, key, metadata, badge and one title. */
     static class FakeDrawerFolderKey {
         final String name;
         FakeDrawerFolderKey(String name) { this.name = name; }
@@ -387,7 +387,7 @@ public class SettingsTest {
         assertTrue((launched.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
     }
 
-    /** Shaped like Messenger 580's keyboard tab: an activate event plus int icon and label fields. */
+    /** Shaped like Messenger's keyboard tab: an activate event plus int icon and label fields. */
     static final class KeyboardTab {
         final Object event;
         final int icon = 7;
