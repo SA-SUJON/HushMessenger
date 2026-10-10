@@ -187,6 +187,7 @@ public class CompatReport {
         PATCHES.put("Turn off the swipe up for disappearing messages", List.of("disappearing_swipe"));
         PATCHES.put("Use the phone's camera app", List.of("system_camera"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
+        PATCHES.put("Stop ad attribution uploads", List.of("attribution_uploads"));
         PATCHES.put("Keep a message log", List.of("message_log"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
@@ -2225,6 +2226,32 @@ public class CompatReport {
         return starts;
     }
 
+    static final String LAT_STATUS_JOB = "Lcom/facebook/attribution/LatStatusJob;";
+
+    /**
+     * attribution_uploads: LatStatusJob's static (LatStatusJob, FbUserSession)V worker, which names both the
+     * AttributionIdUpdate failure text and the IAdvertisingIdService Binder fallback. Mirrors AttributionUploads.kt.
+     */
+    static List<Method> attributionUploads(List<ClassDef> classes) {
+        var uploads = new ArrayList<Method>();
+        for (var cls : classes) {
+            if (!LAT_STATUS_JOB.equals(cls.getType())) continue;
+            for (var method : cls.getMethods()) {
+                if (method.getImplementation() == null || !AccessFlags.STATIC.isSet(method.getAccessFlags()) ||
+                    !"V".equals(method.getReturnType())) continue;
+                var params = new ArrayList<String>();
+                for (var t : method.getParameterTypes()) params.add(t.toString());
+                if (!params.equals(List.of(LAT_STATUS_JOB, "Lcom/facebook/auth/usersession/FbUserSession;"))) continue;
+                var strings = new HashSet<String>();
+                for (var i : method.getImplementation().getInstructions())
+                    if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) strings.add(sr.getString());
+                if (strings.contains("Failure while creating and sending attribution state through AttributionIdUpdate.") &&
+                    strings.contains("com.google.android.gms.ads.identifier.internal.IAdvertisingIdService")) uploads.add(method);
+            }
+        }
+        return uploads;
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -2238,6 +2265,7 @@ public class CompatReport {
         found.get("disappearing_swipe").addAll(disappearingSwipeStarts(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
         found.get("analytics_uploads").addAll(boundUploadTasks(classes));
+        found.get("attribution_uploads").addAll(attributionUploads(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
         found.get("system_camera").addAll(systemCameraLaunches(classes));
         for (var cls : classes) for (var method : cls.getMethods())

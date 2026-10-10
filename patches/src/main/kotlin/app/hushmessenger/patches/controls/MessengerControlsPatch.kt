@@ -142,6 +142,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             EMOJI_SEARCH -> method.validateEmojiSearch()
             DISAPPEARING_SWIPE -> method.validateDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
+            ATTRIBUTION_UPLOADS -> method.validateAttributionUpload()
             MESSAGE_LOG -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
             ORIGINAL_VIDEO -> method.validateOriginalVideo()
@@ -186,6 +187,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             EMOJI_SEARCH -> method.injectEmojiSearch()
             DISAPPEARING_SWIPE -> method.injectDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
+            ATTRIBUTION_UPLOADS -> method.injectAttributionUpload()
             MESSAGE_LOG -> method.injectMessageLog()
             "original_photo" -> method.injectOriginalPhoto()
             ORIGINAL_VIDEO -> method.injectOriginalVideo()
@@ -346,6 +348,9 @@ val systemCameraPatch = controlPatch("system_camera", "Use the phone's camera ap
 @Suppress("unused")
 val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytics uploads",
     "Stops the background services Messenger uses to upload usage statistics. It still records them on your phone, and they can upload after you turn this off.", "Privacy")
+@Suppress("unused")
+val stopAttributionUploadsPatch = controlPatch("attribution_uploads", "Stop ad attribution uploads",
+    "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "Privacy")
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")
