@@ -29,6 +29,15 @@ REPO = Path(__file__).parents[2]
 TAGGED_PUBLIC_FEED = release.tagged_public_feed
 
 
+def setUpModule():
+    # These tests check the plain command lines, so keep this PC's build queue out of them.
+    queue_off = patch.dict(
+        os.environ, {"HUSHMESSENGER_BUILD_WRAPPER": "", "BUILD_QUEUE_SCRIPT": ""}
+    )
+    queue_off.start()
+    unittest.addModuleCleanup(queue_off.stop)
+
+
 class FakeGradle:
     """Popen stand-in whose output pipes stay open for a set number of waits."""
 

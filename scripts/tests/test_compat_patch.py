@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -7,6 +8,15 @@ from unittest.mock import Mock, patch
 from zipfile import ZipFile
 
 from scripts import verify_compat_patch as check
+
+
+def setUpModule():
+    # These tests check the plain command lines, so keep this PC's build queue out of them.
+    queue_off = patch.dict(
+        os.environ, {"HUSHMESSENGER_BUILD_WRAPPER": "", "BUILD_QUEUE_SCRIPT": ""}
+    )
+    queue_off.start()
+    unittest.addModuleCleanup(queue_off.stop)
 
 
 class ProfilePatchChecks(unittest.TestCase):

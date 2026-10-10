@@ -12,7 +12,12 @@ import zlib
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
-PROFILES = Path(__file__).resolve().parent / "profiles"
+if __package__:
+    from .build_queue import queued, time_limit
+else:
+    from build_queue import queued, time_limit
+
+PROFILES =Path(__file__).resolve().parent / "profiles"
 
 
 def recorded_builds(directory: Path = PROFILES) -> dict[int, str]:
@@ -91,12 +96,12 @@ def check(args: argparse.Namespace) -> int:
             str(changed_apk),
         ]
         run = subprocess.run(
-            command,
+            queued(command, "hushmessenger changed APK check"),
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            timeout=300,
+            timeout=time_limit(300),
             check=False,
         )
         log = run.stdout + run.stderr

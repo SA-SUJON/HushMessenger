@@ -12,8 +12,10 @@ from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
 if __package__:
+    from .build_queue import gradle, queued, time_limit
     from .check_release import stop_process_tree
 else:
+    from build_queue import gradle, queued, time_limit
     from check_release import stop_process_tree
 
 
@@ -24,17 +26,20 @@ def digest(path):
 
 def validate_apk(apk, java, aapt2):
     root = Path(__file__).resolve().parents[1]
+    limit = time_limit(600, gradle_job=True)
     process = subprocess.Popen(
-        [
-            str(root / ("gradlew.bat" if sys.platform == "win32" else "gradlew")),
-            ":patches:checkRebuiltApk",
-            f"-PvalidationApk={apk.resolve()}",
-            f"-PvalidationAapt2={aapt2.resolve()}",
-            "--no-daemon",
-            "--no-configuration-cache",
-            "--max-workers=2",
-            "-Dorg.gradle.jvmargs=-Xmx1024m -XX:ActiveProcessorCount=2",
-        ],
+        gradle(
+            root,
+            [
+                ":patches:checkRebuiltApk",
+                f"-PvalidationApk={apk.resolve()}",
+                f"-PvalidationAapt2={aapt2.resolve()}",
+                "--no-daemon",
+                "--no-configuration-cache",
+                "--max-workers=2",
+                "-Dorg.gradle.jvmargs=-Xmx1024m -XX:ActiveProcessorCount=2",
+            ],
+        ),
         cwd=root,
         env={**os.environ, "JAVA_HOME": str(java.resolve().parent.parent)},
         stdout=subprocess.PIPE,
@@ -45,7 +50,7 @@ def validate_apk(apk, java, aapt2):
         start_new_session=sys.platform != "win32",
     )
     try:
-        stdout, stderr = process.communicate(timeout=600)
+        stdout, stderr = process.communicate(timeout=limit)
     except subprocess.TimeoutExpired:
         stop_process_tree(process)
         try:
@@ -67,26 +72,29 @@ def verify(apk, bundle, desktop, java, names, apk_sha256, aapt2):
         root = Path(scratch)
         output, result = root / "patched.apk", root / "result.json"
         run = subprocess.run(
-            [
-                str(java),
-                "-Xmx1024m",
-                "-XX:ActiveProcessorCount=2",
-                "-jar",
-                str(desktop),
-                "patch",
-                f"--patches={bundle}",
-                "--unsigned",
-                f"--out={output}",
-                f"--result-file={result}",
-                f"--temporary-files-path={root / 'tmp'}",
-                *[f"--enable={name}" for name in names],
-                str(apk),
-            ],
+            queued(
+                [
+                    str(java),
+                    "-Xmx1024m",
+                    "-XX:ActiveProcessorCount=2",
+                    "-jar",
+                    str(desktop),
+                    "patch",
+                    f"--patches={bundle}",
+                    "--unsigned",
+                    f"--out={output}",
+                    f"--result-file={result}",
+                    f"--temporary-files-path={root / 'tmp'}",
+                    *[f"--enable={name}" for name in names],
+                    str(apk),
+                ],
+                f"hushmessenger profile patch {apk.name}",
+            ),
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            timeout=1800,
+            timeout=time_limit(1800),
             check=False,
         )
         if run.returncode or not result.is_file() or not output.is_file():
