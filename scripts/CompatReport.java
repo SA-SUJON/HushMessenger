@@ -86,9 +86,9 @@ public class CompatReport {
     static final String PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden";
     static final String STORY_CARD_DATE_KEY = "last_date_creation_card_shown";
     // The Notifications tab's server flag ID, renumbered by each release: 580's, then 581's
-    static final Set<Long> PEOPLE_SERVER_FLAGS = Set.of(72344235860374863L, 72344231565407716L);
-    // The redesigned emoji drawer's server flag, renumbered by each release: 580's, then 581's
-    static final Set<Long> EMOJI_DRAWER_FLAGS = Set.of(36320734536089357L, 36320704471318256L);
+    static final Set<Long> PEOPLE_SERVER_FLAGS = Set.of(72344235860374863L, 72344231565407716L, 72344188615734930L);
+    // The redesigned emoji drawer's server flag, renumbered by each release: 580's, 581's, then 582's
+    static final Set<Long> EMOJI_DRAWER_FLAGS = Set.of(36320734536089357L, 36320704471318256L, 36320652931710646L);
     // The drawer renderer throws this when the redesign can't draw, which ties the flag to the emoji drawer
     static final String EMOJI_DRAWER_ANCHOR = "Cannot render redesigned drawer with search icon ";
     // Controls whose hook count follows how Redex inlined one flag read, so it differs between releases
@@ -525,9 +525,10 @@ public class CompatReport {
 
     static final String BUBBLE_SESSION = "Lcom/facebook/auth/usersession/FbUserSession;";
     static final long BUBBLE_ROLLOUT = 36312032932401152L;
-    /** 581 renumbered the specifier of the same rollout read. Exactly these two are accepted, as in NativeBubbles.kt. */
+    /** 581 and 582 each renumbered the specifier of the same rollout read. Exactly these three are accepted, as in NativeBubbles.kt. */
     static final long BUBBLE_ROLLOUT_581 = 36312028637433857L;
-    static final Set<Long> BUBBLE_ROLLOUTS = Set.of(BUBBLE_ROLLOUT, BUBBLE_ROLLOUT_581);
+    static final long BUBBLE_ROLLOUT_582 = 36312020047499274L;
+    static final Set<Long> BUBBLE_ROLLOUTS = Set.of(BUBBLE_ROLLOUT, BUBBLE_ROLLOUT_581, BUBBLE_ROLLOUT_582);
     static final String BUBBLE_ACTIVITY = "com.facebook.messaging.msys.thread.bubbles.activity.StaxThreadViewBubblesActivity";
     static final String SHORTCUT_BUILDER = "Landroid/content/pm/ShortcutInfo$Builder;";
     static final String MESSAGING_STYLE = "Landroidx/core/app/NotificationCompat$MessagingStyle;";
@@ -622,6 +623,15 @@ public class CompatReport {
             calls(c.get(4),0,1) && register(c.get(5)) == 0 && register(c.get(6)) == 0;
     }
 
+    /** The shortcut builder names its ID itself, or (582) through a static (ThreadKey)String helper that does. As in NativeBubbles.kt. */
+    static boolean namesThreadShortcut(Map<String,ClassDef> byType, List<Instruction> c) {
+        if (c.stream().anyMatch(i -> "thread_shortcut_".equals(ref(i)))) return true;
+        for (var i : c) if (i.getOpcode() == Opcode.INVOKE_STATIC && i instanceof ReferenceInstruction r && r.getReference() instanceof MethodReference m &&
+            m.getParameterTypes().stream().map(Object::toString).toList().equals(List.of(BUBBLE_THREAD)) && "Ljava/lang/String;".equals(m.getReturnType()) &&
+            bubbleTarget(byType, m) instanceof Method helper && instructions(helper).stream().anyMatch(h -> "thread_shortcut_".equals(ref(h)))) return true;
+        return false;
+    }
+
     /** NativeBubbles.kt's immutable connected-route checks. */
     static String nativeBubbleRoutes(List<ClassDef> classes, String gate) {
         var byType = new HashMap<String,ClassDef>(); classes.forEach(c -> byType.put(c.getType(),c));
@@ -634,7 +644,7 @@ public class CompatReport {
         for (var cls : classes) for (var m : cls.getMethods()) {
             var c = instructions(m); var refs = c.stream().map(CompatReport::ref).filter(Objects::nonNull).collect(Collectors.toSet());
             if (bubbleParameters(m).equals(List.of("Landroid/content/Context;","Landroid/graphics/Bitmap;","Lcom/facebook/messaging/model/threadkey/ThreadKey;","Ljava/lang/String;")) &&
-                refs.contains("thread_shortcut_") && refs.contains(SHORTCUT_BUILDER+"->setPerson(Landroid/app/Person;)"+SHORTCUT_BUILDER) &&
+                namesThreadShortcut(byType, c) && refs.contains(SHORTCUT_BUILDER+"->setPerson(Landroid/app/Person;)"+SHORTCUT_BUILDER) &&
                 refs.contains(SHORTCUT_BUILDER+"->setIntent(Landroid/content/Intent;)"+SHORTCUT_BUILDER) &&
                 refs.contains(SHORTCUT_BUILDER+"->build()Landroid/content/pm/ShortcutInfo;")) {
                 for (int at=0;at<c.size();at++) if ((SHORTCUT_BUILDER+"->setLongLived(Z)"+SHORTCUT_BUILDER).equals(ref(c.get(at))) &&
@@ -1597,6 +1607,27 @@ public class CompatReport {
             if(code.get(target) instanceof SwitchPayload s) for(var e:s.getSwitchElements()) { Integer t=addresses.get(address+e.getOffset()); require(t!=null,"bad switch branch"); out.add(t); }
         } address+=i.getCodeUnits(); } return out;
     }
+    /** No path from `from` reads the register before writing it. Mirrors the scratch proof in CommunityInbox.kt. */
+    boolean deadFrom(Method method,int from,int register) {
+        var code=instructions(method); var addresses=new HashMap<Integer,Integer>(); var units=new int[code.size()]; int address=0;
+        for(int at=0;at<code.size();at++) { units[at]=address; addresses.put(address,at); address+=code.get(at).getCodeUnits(); }
+        var pending=new ArrayDeque<Integer>(List.of(from)); var seen=new HashSet<Integer>();
+        while(!pending.isEmpty()) {
+            int at=pending.poll(); if(!seen.add(at)) continue;
+            var i=code.get(at);
+            if(operandReads(i,register)) return false;
+            if(writes(i,register)) continue;
+            if(i instanceof OffsetInstruction j && i.getOpcode()!=Opcode.FILL_ARRAY_DATA) {
+                Integer landing=addresses.get(units[at]+j.getCodeOffset()); require(landing!=null,"bad native branch");
+                if(i.getOpcode()==Opcode.PACKED_SWITCH || i.getOpcode()==Opcode.SPARSE_SWITCH) {
+                    require(code.get(landing) instanceof SwitchPayload,"bad switch branch");
+                    for(var e:((SwitchPayload)code.get(landing)).getSwitchElements()) { Integer t=addresses.get(units[at]+e.getOffset()); require(t!=null,"bad switch branch"); pending.add(t); }
+                } else pending.add(landing);
+            }
+            if(i.getOpcode().canContinue()) { require(at+1<code.size(),"native code falls off the end"); pending.add(at+1); }
+        }
+        return true;
+    }
     Method singleMethod(String type, String name) { return single(methods(classes.get(type)).stream().filter(m->m.getName().equals(name)).toList(),type+"->"+name); }
     boolean sessionFirst(List<Instruction> ctorCode) {
         var store=ctorCode.get(2);
@@ -1642,9 +1673,12 @@ public class CompatReport {
         var ctorCalls=calls(render).stream().filter(m->m.getName().equals("<init>") && m.getParameterTypes().contains(LIST)).toList();
         Method ctor=definition(single(ctorCalls,"dedicated immutable-list closure ctor"));
         var closure=classes.get(ctor.getDefiningClass());
-        require(ctor.getParameterTypes().size()==14 && ctor.getParameterTypes().get(11).toString().equals(LIST) && ctor.getReturnType().equals("V"),"captured list argument changed");
+        // 582 adds an $onThreadInViewport Function1 before the trailing flag, which then needs a move/from16 to be stored.
+        var ctorParams=ctor.getParameterTypes().stream().map(Object::toString).toList();
+        boolean viewport=ctorParams.size()==15 && ctorParams.get(13).equals("Lkotlin/jvm/functions/Function1;") && ctorParams.get(14).equals("Z");
+        require((ctorParams.size()==14 || viewport) && ctorParams.get(11).equals(LIST) && ctor.getReturnType().equals("V"),"captured list argument changed");
         var ctorCode=instructions(ctor);
-        require(ctor.getImplementation().getRegisterCount()==16 && ctorCode.size()==17 && ctor.getImplementation().getTryBlocks().isEmpty(),"closure ctor shape changed");
+        require(ctor.getImplementation().getRegisterCount()==(viewport?17:16) && ctorCode.size()==(viewport?19:17) && ctor.getImplementation().getTryBlocks().isEmpty(),"closure ctor shape changed");
         require(ctorCode.get(0).getOpcode()==Opcode.IPUT_OBJECT && ctorCode.get(0) instanceof TwoRegisterInstruction && ref(ctorCode.get(0)) instanceof FieldReference,"captured presentation store absent");
         var store=(TwoRegisterInstruction)ctorCode.get(0); var captured=(FieldReference)ref(ctorCode.get(0));
         require(store.getRegisterA()==13 && store.getRegisterB()==1 && captured.getName().equals("$inboxUnitItems") && captured.getType().equals(LIST),"captured parameter disconnected");
@@ -1669,8 +1703,9 @@ public class CompatReport {
         require(scopeResult>=1 && renderCode.get(scopeResult).getOpcode()==Opcode.MOVE_RESULT_OBJECT && ref(renderCode.get(scopeResult-1)) instanceof MethodReference,"captured scope result disconnected");
         var scopeGetter=definition((MethodReference)ref(renderCode.get(scopeResult-1)));
         require(scopeGetter.getDefiningClass().equals(loaderCtor.getDefiningClass()) && scopeGetter.getReturnType().equals(scopeType) && instructions(scopeGetter).size()==13 && calls(scopeGetter).stream().anyMatch(m->m.getDefiningClass().equals(folderGetter.getDefiningClass()) && m.getReturnType().equals(scopeType)),"scope does not read current native config");
-        var prefix=(FieldReference)ref(ctorCode.get(scopeAt+3));
-        require(prefix.getName().equals("$prefixOffsetCallback") && ctorCode.get(scopeAt+3).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)ctorCode.get(scopeAt+3)).getRegisterA()==8,"Main callback capture disconnected");
+        int prefixAt=scopeAt+(viewport?4:3);
+        var prefix=(FieldReference)ref(ctorCode.get(prefixAt));
+        require(prefix.getName().equals("$prefixOffsetCallback") && ctorCode.get(prefixAt).getOpcode()==Opcode.IPUT_OBJECT && ((TwoRegisterInstruction)ctorCode.get(prefixAt)).getRegisterA()==8,"Main callback capture disconnected");
         int prefixArg=args(renderCode.get(callAt)).get(7), prefixMove=-1;
         for(int at=callAt-1;at>=0;at--) if(writes(renderCode.get(at),prefixArg)) { prefixMove=at; break; }
         require(prefixMove>=0 && renderCode.get(prefixMove).getOpcode()==Opcode.MOVE_OBJECT_FROM16,"Main callback alias absent");
@@ -1722,18 +1757,23 @@ public class CompatReport {
         Method invoke=single(methods(closure).stream().filter(m->m.getName().equals("invoke") && m.getParameterTypes().equals(List.of("Ljava/lang/Object;"))).toList(),"section closure invoke");
         var code=instructions(invoke);
         var listReads=new ArrayList<Integer>(); for(int at=0;at<code.size();at++) if(reads(code.get(at),captured.toString())) listReads.add(at);
-        require(listReads.size()==2 && listReads.get(0)==5 && Set.of(55,56,66).contains(listReads.get(1)),"presentation read shape changed: "+listReads);
-        int secondRead=listReads.get(1), aliasAt=secondRead+10, sinkAt=secondRead+11;
-        require(code.size()==secondRead+19 && invoke.getImplementation().getRegisterCount()==20 && invoke.getImplementation().getTryBlocks().isEmpty(),"presentation body shape changed");
-        require(code.get(6).getOpcode()==Opcode.INVOKE_VIRTUAL && Objects.toString(ref(code.get(6))).equals("Ljava/util/AbstractCollection;->isEmpty()Z") && args(code.get(6)).equals(List.of(0)),"original empty/header gate changed");
-        require(hasString(invoke,"searchBarSection") && code.get(secondRead) instanceof TwoRegisterInstruction && ((TwoRegisterInstruction)code.get(secondRead)).getRegisterA()==0,"header or local presentation read changed");
-        require(code.get(aliasAt).getOpcode()==Opcode.MOVE_OBJECT_FROM16 && ((TwoRegisterInstruction)code.get(aliasAt)).getRegisterA()==17 && ((TwoRegisterInstruction)code.get(aliasAt)).getRegisterB()==0,"second list alias changed");
-        require(code.get(sinkAt).getOpcode()==Opcode.INVOKE_STATIC_RANGE && ref(code.get(sinkAt)) instanceof MethodReference,"list section sink changed");
+        require(listReads.size()==2 && listReads.get(0)==5 && Set.of(55,56,64,66).contains(listReads.get(1)),"presentation read shape changed: "+listReads);
+        int secondRead=listReads.get(1);
+        require(hasString(invoke,"searchBarSection") && code.get(secondRead) instanceof TwoRegisterInstruction read && Set.of(0,1).contains(read.getRegisterA()) && read.getRegisterB()==4,"header or local presentation read changed");
+        // 582 reads the list into v1, and its sink takes an $onThreadInViewport after the list, moved into place after the alias.
+        int listRegister=((TwoRegisterInstruction)code.get(secondRead)).getRegisterA(), aliasAt=-1;
+        for(int at=secondRead+1;at<code.size() && aliasAt<0;at++) if(code.get(at).getOpcode()==Opcode.MOVE_OBJECT_FROM16 && ((TwoRegisterInstruction)code.get(at)).getRegisterA()==17) aliasAt=at;
+        require(aliasAt>0 && ((TwoRegisterInstruction)code.get(aliasAt)).getRegisterB()==listRegister,"second list alias changed");
+        int sinkAt=aliasAt+1<code.size() && code.get(aliasAt+1).getOpcode()==Opcode.MOVE_OBJECT_FROM16 ? aliasAt+2 : aliasAt+1;
+        require(sinkAt<code.size() && code.get(sinkAt).getOpcode()==Opcode.INVOKE_STATIC_RANGE && ref(code.get(sinkAt)) instanceof MethodReference,"list section sink changed");
         var sink=(MethodReference)ref(code.get(sinkAt));
-        require(sink.getParameterTypes().size()==12 && sink.getParameterTypes().get(11).toString().equals("Ljava/util/List;") && args(code.get(sinkAt)).get(11)==17,"renderer list argument disconnected");
-        for(int at=secondRead+1;at<aliasAt;at++) require(!writes(code.get(at),0),"list overwritten before render");
+        require(Set.of(12,13).contains(sink.getParameterTypes().size()) && sink.getParameterTypes().get(11).toString().equals("Ljava/util/List;") && args(code.get(sinkAt)).get(11)==17,"renderer list argument disconnected");
+        require(code.size()==sinkAt+8 && Set.of(20,21).contains(invoke.getImplementation().getRegisterCount()) && invoke.getImplementation().getTryBlocks().isEmpty(),"presentation body shape changed");
+        require(code.get(6).getOpcode()==Opcode.INVOKE_VIRTUAL && Objects.toString(ref(code.get(6))).equals("Ljava/util/AbstractCollection;->isEmpty()Z") && args(code.get(6)).equals(List.of(0)),"original empty/header gate changed");
+        for(int at=secondRead+1;at<aliasAt;at++) require(!writes(code.get(at),listRegister),"list overwritten before render");
         require(targets(invoke).stream().noneMatch(t->t>secondRead && t<=sinkAt),"branch bypasses second-read hook");
-        require(code.subList(secondRead+1,code.size()).stream().noneMatch(i->operandReads(i,1) || operandReads(i,3)),"scope scratch register still live");
+        // The hook's two scratch registers are whichever of v0, v1 and v3 doesn't hold the list.
+        for(int scratch:List.of(0,1,3)) if(scratch!=listRegister) require(deadFrom(invoke,secondRead+1,scratch),"scope scratch register still live");
         var search=classes.values().stream().filter(c->Set.of("MessagingTabbedSearchFragment","SearchListItemFragment","MsysMessageSearchThreadListFragment","FoldersFragment").contains(original(c))).toList();
         require(search.stream().anyMatch(c->original(c).equals("MessagingTabbedSearchFragment")) && search.stream().anyMatch(c->original(c).equals("SearchListItemFragment")) && search.stream().anyMatch(c->original(c).equals("FoldersFragment")),"separate native Search/folder fragments absent");
         require(search.stream().noneMatch(c->c.getType().equals(main.getType())),"Search shares main fragment");
@@ -1815,19 +1855,24 @@ public class CompatReport {
         }
         if (subscribe == null) return null;
         var body = instructions(subscribe);
-        int at = -1;
+        // The observer's constructor: through 581 one class serves several lambdas picked by an int, and 582 gives the
+        // observer a class of its own that takes only the supplier. Mirrors OBSERVER_INITS in InboxRefresh.kt.
+        int at = -1, registers = 0;
         for (int i = 0; i < body.size(); i++) {
             if (body.get(i).getOpcode() == Opcode.INVOKE_DIRECT && body.get(i) instanceof ReferenceInstruction ri &&
-                ri.getReference() instanceof MethodReference mr && "<init>".equals(mr.getName()) && "V".equals(mr.getReturnType()) &&
-                inboxParams(mr).equals(List.of("Ljava/lang/Object;", "I"))) {
+                ri.getReference() instanceof MethodReference mr && "<init>".equals(mr.getName()) && "V".equals(mr.getReturnType())) {
+                var params = inboxParams(mr);
+                int expected = params.equals(List.of("Ljava/lang/Object;", "I")) ? 3 : params.equals(List.of(INBOX_SUPPLIER)) ? 2 : 0;
+                if (expected == 0) continue;
                 if (at >= 0) return null;
                 at = i;
+                registers = expected;
             }
         }
         if (at < 1 || body.get(at - 1).getOpcode() != Opcode.NEW_INSTANCE) return null;
         var init = (FiveRegisterInstruction) body.get(at);
         var observerType = ((TypeReference) ((ReferenceInstruction) body.get(at - 1)).getReference()).getType();
-        if (init.getRegisterCount() != 3 || register(body.get(at - 1)) != init.getRegisterC() ||
+        if (init.getRegisterCount() != registers || register(body.get(at - 1)) != init.getRegisterC() ||
             !observerType.equals(((MethodReference) ((ReferenceInstruction) body.get(at)).getReference()).getDefiningClass())) return null;
         var observer = byType.get(observerType);
         if (observer == null) return null;
@@ -2418,9 +2463,9 @@ public class CompatReport {
                     found.get("browser").add(method);
                 }
 
-                // people_jewel, kept once discovery knows the preference getter
-                if ("Z".equals(method.getReturnType()) && isStatic &&
-                    paramTypes.equals(List.of(cls.getType()))) {
+                // people_jewel, kept once discovery knows the preference getter. 582 passes the suggestions logger first.
+                if ("Z".equals(method.getReturnType()) && isStatic && (paramTypes.equals(List.of(cls.getType())) ||
+                    (paramTypes.size() == 2 && paramTypes.get(1).equals(cls.getType())))) {
                     var refIds = refs.stream().map(Object::toString).collect(Collectors.toSet());
                     if (!Collections.disjoint(refIds, peopleJewelKeys)) jewelCandidates.add(Map.entry(method, refIds));
                 }
