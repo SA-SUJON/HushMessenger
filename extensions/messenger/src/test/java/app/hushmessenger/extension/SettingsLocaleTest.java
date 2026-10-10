@@ -134,7 +134,7 @@ public class SettingsLocaleTest {
                 EditText search = root.findViewWithTag("find_control");
                 search.setText(visibleTitle);
                 assertEquals(1, visibleControls(root));
-                search.setText("People You");
+                search.setText("People You May");
                 assertEquals(1, visibleControls(root));
                 root.findViewWithTag("category_chats").performClick();
                 assertEquals(0, visibleControls(root));

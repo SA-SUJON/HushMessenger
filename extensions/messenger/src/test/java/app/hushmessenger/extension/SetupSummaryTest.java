@@ -152,7 +152,7 @@ public class SetupSummaryTest {
             assertTrue(report.matches("(?s).*hide_read_receipts: installed=true, selected=true, active=true, last_active=\\d+s ago, scope=.*"));
             assertTrue(report.contains("Replying or switching this off may notify them."));
             assertTrue(report.contains("Encrypted chats aren't supported and group chats aren't tested."));
-            assertTrue(report.contains("This doesn't add replay or saving."));
+            assertTrue(report.contains("It doesn't add replay or saving."));
             assertTrue(report.contains("Native Bubbles needs Android 11 or newer, a supported account and notification permission."));
             assertTrue(report.contains("Search and community folders still show them."));
         }
@@ -180,7 +180,7 @@ public class SetupSummaryTest {
                     android.graphics.Rect visible = new android.graphics.Rect();
                     assertTrue(target.getGlobalVisibleRect(visible));
                     assertEquals(target.getHeight(), visible.height());
-                    assertTrue(root.findViewWithTag("allow_screenshot").getContentDescription().toString().contains("This doesn't add replay or saving."));
+                    assertTrue(root.findViewWithTag("allow_screenshot").getContentDescription().toString().contains("It doesn't add replay or saving."));
                     String output = System.getenv("HUSH_SETTINGS_CAPTURES");
                     if (output != null) {
                         var directory = java.nio.file.Path.of(output);

@@ -205,7 +205,7 @@ public class ChoiceBackupTest {
             clipboard(ChoiceCodec.HEADER + "\nnew_control=false\n");
             screen.get().getWindow().getDecorView().findViewWithTag("import_choices").performClick();
             assertEquals(before, Settings.preferences.getAll());
-            assertTrue(ShadowToast.getTextOfLatestToast().startsWith("No installed"));
+            assertTrue(ShadowToast.getTextOfLatestToast().startsWith("Nothing to restore"));
         }
     }
 

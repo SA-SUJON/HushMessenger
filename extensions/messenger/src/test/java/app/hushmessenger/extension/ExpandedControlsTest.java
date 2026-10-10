@@ -136,7 +136,7 @@ public class ExpandedControlsTest {
             View root = screen.get().getWindow().getDecorView();
             EditText search = root.findViewWithTag("find_control");
             TextView status = root.findViewWithTag("search_status");
-            search.setText("  PEOPLE YOU  ");
+            search.setText("  PEOPLE YOU MAY  ");
             assertEquals(ExpectedTotals.shown(1), status.getText().toString());
             assertEquals(View.VISIBLE, ((View) root.findViewWithTag("people").getParent()).getVisibility());
             assertEquals(View.GONE, ((View) root.findViewWithTag("stories").getParent()).getVisibility());
