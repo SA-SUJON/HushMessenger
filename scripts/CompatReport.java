@@ -93,8 +93,8 @@ public class CompatReport {
     static final String EMOJI_DRAWER_ANCHOR = "Cannot render redesigned drawer with search icon ";
     // Controls whose hook count follows how Redex inlined one flag read, so it differs between releases
     static final Set<String> RELEASE_HOOK_COUNTS = Set.of("emoji_drawer");
-    // The inbox ad filter's exit registers, in order: v5 from both in 580, v7 then v2 in 581
-    static final Set<List<Integer>> AD_FILTER_RESULTS = Set.of(List.of(5, 5), List.of(7, 2));
+    // The inbox ad filter's exit registers in 582, in order
+    static final List<Integer> AD_FILTER_RESULTS = List.of(7, 2);
 
     // Material You theme finds its targets by shape when it patches (MaterialYouPatch.kt), so no profile records them
     static final String DARK_SCHEME = "Lcom/facebook/mig/scheme/schemes/DarkColorScheme;";
@@ -517,8 +517,8 @@ public class CompatReport {
                 exits.add(String.valueOf(i));
                 results.add(code.get(i) instanceof OneRegisterInstruction r ? r.getRegisterA() : -1);
             }
-            // ControlHooks.kt wraps each exit's own result register, so only the release-pinned pairs record
-            if (!exits.isEmpty() && ads.get(0).getImplementation().getRegisterCount() == 24 && AD_FILTER_RESULTS.contains(results)) {
+            // ControlHooks.kt wraps each exit's own result register, so only the pinned pair records
+            if (!exits.isEmpty() && ads.get(0).getImplementation().getRegisterCount() == 24 && AD_FILTER_RESULTS.equals(results)) {
                 found.fields.put("adFilterSize", String.valueOf(code.size()));
                 found.fields.put("adFilterExits", String.join(" ", exits));
             }

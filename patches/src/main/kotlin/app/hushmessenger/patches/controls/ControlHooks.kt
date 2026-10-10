@@ -494,15 +494,15 @@ internal fun MutableMethod.validatePluginGate() {
     }
 }
 
-/** The registers each release returns from its two exits, in order: v5 from both in 580, v7 then v2 in 581. */
-private val AD_FILTER_RESULTS = setOf(listOf(5, 5), listOf(7, 2))
+/** The registers 582 returns from its two exits, in order. */
+private val AD_FILTER_RESULTS = listOf(7, 2)
 
 /** Wrap both exits, including direct branches to a return. The returned list stays intact on the inactive path. */
 internal fun MutableMethod.validateAdFilter(): List<Int> {
     val code = implementation!!.instructions
     val exits = code.indices.filter { code[it].opcode == Opcode.RETURN_OBJECT }
     if (implementation!!.registerCount != 24 || code.size != activeProfile.adFilterSize || exits != activeProfile.adFilterExits ||
-        exits.map { (code[it] as? OneRegisterInstruction)?.registerA ?: -1 } !in AD_FILTER_RESULTS) {
+        exits.map { (code[it] as? OneRegisterInstruction)?.registerA ?: -1 } != AD_FILTER_RESULTS) {
         throw PatchException("Messenger controls: the inbox ad filter exits differ from the tested build")
     }
     return exits
