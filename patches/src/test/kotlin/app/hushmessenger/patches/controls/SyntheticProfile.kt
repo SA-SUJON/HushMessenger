@@ -74,6 +74,7 @@ internal val syntheticHooks: Map<String, Set<String>> = mapOf(
         "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
     ),
     ATTRIBUTION_UPLOADS to setOf(ATTRIBUTION_WORKER),
+    AD_EVENTS to setOf(SYNTHETIC_INBOX_VISIBILITY, SYNTHETIC_AD_ENTRY),
     MESSAGE_LOG to setOf(newMessageNotificationCtor("LX/5qJ;", "LX/5Yc;")),
     EMOJI_SEARCH to setOf("LX/7TX;->A8Y(Landroid/text/Editable;Z)V"),
     DISAPPEARING_SWIPE to setOf(OVERSCROLL_START),

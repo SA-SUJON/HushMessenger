@@ -230,6 +230,8 @@ public final class Settings {
     public static boolean stopAnalyticsUploads() { return enabled("analytics_uploads"); }
     /** Asked each time the ad attribution job runs, before it reads the Advertising ID; true skips that run. */
     public static boolean stopAttributionUploads() { return enabled("attribution_uploads"); }
+    /** Asked before the inbox visibility event and the ad deep link's entry event are logged; true drops that one event. */
+    public static boolean stopAdEvents() { return enabled("ad_events"); }
     /** Asked each time a chat's swipe up for disappearing messages could start; true keeps the gesture from starting. */
     public static boolean blockDisappearingSwipe() { return enabled("disappearing_swipe"); }
     /** Messenger's own original-upload check allows 25 MB, so a bigger video keeps its re-encode. */

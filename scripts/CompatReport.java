@@ -190,6 +190,7 @@ public class CompatReport {
         PATCHES.put("Use the phone's camera app", List.of("system_camera"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
         PATCHES.put("Stop ad attribution uploads", List.of("attribution_uploads"));
+        PATCHES.put("Stop inbox and ad link logging", List.of("ad_events"));
         PATCHES.put("Keep a message log", List.of("message_log"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
@@ -2254,6 +2255,32 @@ public class CompatReport {
         return uploads;
     }
 
+    /**
+     * ad_events: the static (context, FbUserSession, four Strings)V click-to-message entry event that reads ad_id and
+     * page_id, and the inbox tracker's non-static (rows, Z)V callback that names InboxCustomizedImpressionTracker and
+     * inbox2_vr. Mirrors AdEvents.kt.
+     */
+    static List<Method> adEvents(List<ClassDef> classes) {
+        var events = new ArrayList<Method>();
+        var string = "Ljava/lang/String;";
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null || !"V".equals(method.getReturnType())) continue;
+            var params = new ArrayList<String>();
+            for (var t : method.getParameterTypes()) params.add(t.toString());
+            var isStatic = AccessFlags.STATIC.isSet(method.getAccessFlags());
+            var entry = isStatic && params.size() == 6 && params.get(1).equals("Lcom/facebook/auth/usersession/FbUserSession;") &&
+                params.subList(2, 6).equals(List.of(string, string, string, string));
+            var visibility = !isStatic && params.size() == 2 && params.get(1).equals("Z");
+            if (!entry && !visibility) continue;
+            var strings = new HashSet<String>();
+            for (var i : method.getImplementation().getInstructions())
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) strings.add(sr.getString());
+            if (entry && strings.contains("ad_id") && strings.contains("page_id") ||
+                visibility && strings.contains("inbox2_vr") && strings.contains("InboxCustomizedImpressionTracker")) events.add(method);
+        }
+        return events;
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -2268,6 +2295,7 @@ public class CompatReport {
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
         found.get("analytics_uploads").addAll(boundUploadTasks(classes));
         found.get("attribution_uploads").addAll(attributionUploads(classes));
+        found.get("ad_events").addAll(adEvents(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
         found.get("system_camera").addAll(systemCameraLaunches(classes));
         for (var cls : classes) for (var method : cls.getMethods())

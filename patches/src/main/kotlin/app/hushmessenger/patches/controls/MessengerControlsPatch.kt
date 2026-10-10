@@ -143,6 +143,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             DISAPPEARING_SWIPE -> method.validateDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
             ATTRIBUTION_UPLOADS -> method.validateAttributionUpload()
+            AD_EVENTS -> method.validateAdEvent()
             MESSAGE_LOG -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
             ORIGINAL_VIDEO -> method.validateOriginalVideo()
@@ -188,6 +189,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             DISAPPEARING_SWIPE -> method.injectDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
             ATTRIBUTION_UPLOADS -> method.injectAttributionUpload()
+            AD_EVENTS -> method.injectAdEvent()
             MESSAGE_LOG -> method.injectMessageLog()
             "original_photo" -> method.injectOriginalPhoto()
             ORIGINAL_VIDEO -> method.injectOriginalVideo()
@@ -354,6 +356,9 @@ val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytic
 @Suppress("unused")
 val stopAttributionUploadsPatch = controlPatch("attribution_uploads", "Stop ad attribution uploads",
     "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "Privacy")
+@Suppress("unused")
+val stopAdEventsPatch = controlPatch("ad_events", "Stop inbox and ad link logging",
+    "Stops two reports Messenger logs: which part of your chat list was on screen (filed under inbox ads), and which ad brought you in when a link from an ad opens a chat. Nothing on screen changes.", "Privacy")
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")

@@ -3,6 +3,8 @@ version 582.0.0.61.92
 code 346415686
 sha256 c6cc83fed103e21955dbd9d82f3cd81d446d9dc3691e3dd5b46907e89637db9b
 hook ad_context_banner LX/KEY;->A00()Z
+hook ad_events LX/27U;->Dgy(LX/0Co;Z)V
+hook ad_events LX/6N0;->A00(LX/6G1;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 hook ads LX/2I2;->D5T(LX/1jp;Lcom/google/common/collect/ImmutableList;Ljava/lang/String;)Lcom/google/common/collect/ImmutableList;
 hook ai_fab LX/6sQ;->render(LX/2Cg;)LX/1GU;
 hook ai_menu LX/WRi;->A00()Z
