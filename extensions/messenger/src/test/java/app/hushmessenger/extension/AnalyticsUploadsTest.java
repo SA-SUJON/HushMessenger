@@ -78,6 +78,17 @@ public class AnalyticsUploadsTest {
         assertTrue(Settings.hookErrors.isEmpty());
     }
 
+    @Test public void extrasThatWontUnpackStillLetTheSkipStopTheStart() {
+        Settings.hookErrors.clear();
+        Intent broken = new Intent("com.facebook.analytics2.logger.UPLOAD_NOW") {
+            @Override public android.os.Bundle getExtras() { throw new RuntimeException("Parcel: unknown type code"); }
+        };
+        // Reading the starter is the only new step on the skip path, so a failure there is logged instead of thrown.
+        Settings.releaseUploadStarter(broken);
+        assertEquals(java.util.Collections.singleton("analytics_uploads"), Settings.hookErrors.keySet());
+        Settings.hookErrors.clear();
+    }
+
     @Test public void pauseLetsTheNextUploadRunWithoutForgettingTheChoice() {
         Settings.preferences.edit().putBoolean("analytics_uploads", true).commit();
         assertTrue(Settings.stopAnalyticsUploads());

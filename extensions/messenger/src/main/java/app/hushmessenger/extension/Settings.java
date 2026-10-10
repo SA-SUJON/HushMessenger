@@ -244,7 +244,7 @@ public final class Settings {
             if (starter instanceof android.os.Messenger) ((android.os.Messenger) starter).send(android.os.Message.obtain());
         } catch (android.os.DeadObjectException gone) {
             // The starter's process has died, and its wakelock went with it.
-        } catch (android.os.RemoteException | android.os.BadParcelableException error) {
+        } catch (android.os.RemoteException | RuntimeException error) {
             hookFailed("analytics_uploads", "Couldn't answer the analytics upload starter", error);
         }
     }
