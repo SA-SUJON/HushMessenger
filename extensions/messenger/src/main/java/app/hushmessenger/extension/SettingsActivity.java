@@ -1527,7 +1527,8 @@ public final class SettingsActivity extends Activity {
      * empty slice and moves nothing. Read the start bytes off the descriptor itself, then stop at the declared length.
      */
     static java.io.InputStream pipeSlice(android.content.res.AssetFileDescriptor opened) throws java.io.IOException {
-        java.io.InputStream raw = new java.io.FileInputStream(opened.getFileDescriptor());
+        // Close through the ParcelFileDescriptor, the way createInputStream's stream does, so the later close is a no-op.
+        java.io.InputStream raw = new android.os.ParcelFileDescriptor.AutoCloseInputStream(opened.getParcelFileDescriptor());
         byte[] discard = new byte[8192];
         for (long left = opened.getStartOffset(); left > 0; ) {
             int read = raw.read(discard, 0, (int) Math.min(discard.length, left));
@@ -1550,6 +1551,7 @@ public final class SettingsActivity extends Activity {
                 return read;
             }
             @Override public long skip(long count) throws java.io.IOException {
+                if (count <= 0 || remaining <= 0) return 0;
                 long skipped = super.skip(Math.min(count, remaining));
                 remaining -= skipped;
                 return skipped;
