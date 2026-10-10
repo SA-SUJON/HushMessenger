@@ -136,11 +136,39 @@ internal fun findBoundUploadTasks(classes: Iterable<ClassDef>): List<Method> {
     return delegated + inlined
 }
 
+internal const val XANALYTICS_FLUSH = "Lcom/facebook/xanalytics/XAnalyticsHolder;->flush()V"
+internal const val XANALYTICS_UPLOAD = "Lcom/facebook/xanalytics/XAnalyticsNative;->kickOffUpload()V"
+
+/**
+ * The timer Messenger's startup jobs schedule with a fixed delay to send the native XAnalytics batch: a Runnable whose
+ * run() flushes the batch, then starts its upload, and does nothing else but read the logger from a provider. Both calls
+ * return nothing, so nothing waits on them, and a run that returns early leaves the schedule in place.
+ */
+internal fun Method.isXAnalyticsUploadTimer(): Boolean {
+    if (entryPoint() != RUN || AccessFlags.STATIC.isSet(accessFlags)) return false
+    val code = implementation?.instructions?.toList() ?: return false
+    val calls = code.filter { it.opcode.name.startsWith("invoke") }
+        .map { (it as ReferenceInstruction).reference as? MethodReference ?: return false }
+    val named = calls.map { "${it.definingClass}->${it.name}(${it.parameterTypes.joinToString("")})${it.returnType}" }
+    val flush = named.indexOf(XANALYTICS_FLUSH)
+    val upload = named.indexOf(XANALYTICS_UPLOAD)
+    val providers = calls.filterIndexed { i, call -> i != flush && i != upload }
+    return named.count { it == XANALYTICS_FLUSH } == 1 && named.count { it == XANALYTICS_UPLOAD } == 1 && flush < upload &&
+        providers.all { it.name == "get" && it.parameterTypes.isEmpty() && it.returnType == "Ljava/lang/Object;" } &&
+        code.last().opcode == Opcode.RETURN_VOID && code.count { it.opcode == Opcode.RETURN_VOID } == 1
+}
+
+/** The one XAnalytics upload timer. Two would mean Messenger moved the upload, so neither is taken. */
+internal fun findXAnalyticsUploadTimers(classes: Iterable<ClassDef>): List<Method> = classes
+    .filter { "Ljava/lang/Runnable;" in it.interfaces }
+    .flatMap { it.methods }.filter { it.isXAnalyticsUploadTimer() }
+    .let { if (it.size == 1) it else emptyList() }
+
 /** Each entry point starts with a free register, and a service start keeps this and its start ID in invoke range. */
 internal fun MutableMethod.validateAnalyticsUpload() {
     val entry = entryPoint()
     val inlined = isInlinedUploadTask()
-    if (!inlined && !isDelegatedUploadTask() &&
+    if (!inlined && !isDelegatedUploadTask() && !isXAnalyticsUploadTimer() &&
         (AccessFlags.STATIC.isSet(accessFlags) || entry !in setOf(START_COMMAND, START_JOB, RECEIVE))) {
         throw PatchException("Messenger controls: ${hookId()} isn't an analytics upload entry point")
     }
@@ -156,7 +184,8 @@ internal fun MutableMethod.validateAnalyticsUpload() {
 /**
  * While the switch is on, a service start stops that start and asks Android not to restart it, a job reports it has no
  * work and the retry receiver does nothing. A bound task reports success to Google Play (0, so it isn't retried) and
- * frees its tag through Messenger's own reporter, once. Off, Pause and safe mode run Messenger's own code.
+ * frees its tag through Messenger's own reporter, once. The XAnalytics timer skips that run's flush and upload. Off,
+ * Pause and safe mode run Messenger's own code.
  */
 internal fun MutableMethod.injectAnalyticsUpload() {
     validateAnalyticsUpload()

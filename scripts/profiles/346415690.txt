@@ -26,6 +26,7 @@ hook allow_screenshot Lcom/facebook/screenshot/ScreenshotContentObserver;->onCha
 hook analytics_uploads LX/0bU;->onStartCommand(Landroid/content/Intent;II)I
 hook analytics_uploads LX/0bU;->onStartJob(Landroid/app/job/JobParameters;)Z
 hook analytics_uploads LX/Smm;->run()V
+hook analytics_uploads LX/Vjo;->run()V
 hook analytics_uploads Lcom/facebook/analytics2/logger/GooglePlayUploadService;->onStartCommand(Landroid/content/Intent;II)I
 hook analytics_uploads Lcom/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService;->onStartCommand(Landroid/content/Intent;II)I
 hook analytics_uploads Lcom/facebook/analytics2/logger/legacy/uploader/HighPriUploadRetryReceiver;->onReceive(Landroid/content/Context;Landroid/content/Intent;)V

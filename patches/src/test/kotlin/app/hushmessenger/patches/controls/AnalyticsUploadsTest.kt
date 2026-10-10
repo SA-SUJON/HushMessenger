@@ -108,13 +108,38 @@ private fun delegatedTaskFixture(base: String = "LX/QBX;", task: String = "LX/UT
     """.trimIndent(), 5, AccessFlags.PUBLIC.value or AccessFlags.FINAL.value)),
 )
 
-/** The six upload components as the synthetic mapping has them, with its bound task route. */
+private const val TIMER = "LX/Wq1;"
+private const val LOGGER_PROVIDER = "LX/0La;"
+private const val LOGGER = "LX/7ew;"
+
+/** Reads the logger from its provider, the way the timer does before each of its two calls. */
+private val READ_LOGGER = listOf(
+    "invoke-interface {v1}, $LOGGER_PROVIDER->get()Ljava/lang/Object;",
+    "move-result-object v0",
+    "check-cast v0, $LOGGER",
+    "iget-object v0, v0, $LOGGER->A02:Lcom/facebook/xanalytics/XAnalyticsNative;",
+)
+
+/** Messenger 582's XAnalytics timer (Vjo / YjU): flush the native batch, then start its upload. */
+private fun timerBody(owner: String = TIMER, first: String = XANALYTICS_FLUSH, second: String = XANALYTICS_UPLOAD, extra: String = "") =
+    (listOf("iget-object v0, p0, $owner->A00:LX/2zB;", "iget-object v1, v0, LX/2zB;->A00:$LOGGER_PROVIDER") +
+        READ_LOGGER + "invoke-virtual {v0}, $first" + READ_LOGGER + "invoke-virtual {v0}, $second" + extra + "return-void")
+        .filter { it.isNotBlank() }.joinToString("\n")
+
+private fun timerRun(owner: String = TIMER, body: String = timerBody(owner)) =
+    fixtureMethod("$owner->run()V", body, 3, AccessFlags.PUBLIC.value or AccessFlags.FINAL.value)
+
+private fun timerClass(owner: String = TIMER, run: MutableMethod = timerRun(owner), interfaces: List<String> = listOf(RUNNABLE)) =
+    fixtureClass(owner, listOf(run), interfaces = interfaces)
+
+/** The six upload components as the synthetic mapping has them, with its bound task route and XAnalytics timer. */
 internal fun analyticsUploadFixture(
     base: MutableClass = uploadClass(BASE, START_COMMAND, START_JOB, superclass = JOBS,
         flags = AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value),
     uploader: MutableClass = fixtureClass(ANALYTICS2_UPLOAD_SERVICE, listOf(fixtureMethod("$ANALYTICS2_UPLOAD_SERVICE-><init>()V", "return-void")), superclass = BASE),
     play: MutableClass = uploadClass(PLAY, START_COMMAND, superclass = TASK_BASE),
     tasks: List<MutableClass> = inlinedTaskFixture(),
+    timers: List<MutableClass> = listOf(timerClass()),
 ): List<MutableClass> = listOf(
     uploadClass(ALARM, START_COMMAND),
     uploadClass(LOLLIPOP, START_COMMAND, START_JOB, superclass = JOBS),
@@ -122,7 +147,7 @@ internal fun analyticsUploadFixture(
     play,
     uploadClass(RETRY, RECEIVE, superclass = "Landroid/content/BroadcastReceiver;"),
     base, uploader,
-) + tasks
+) + tasks + timers
 
 private fun Method.code() = implementation!!.instructions.toList()
 private fun reference(at: Int, code: List<com.android.tools.smali.dexlib2.iface.instruction.Instruction>) =
@@ -138,16 +163,48 @@ class AnalyticsUploadsTest {
     @Test fun everyUploadEntryPointIsFoundByItsManifestName() {
         assertEquals(activeProfile.hooks.getValue(ANALYTICS_UPLOADS), found(analyticsUploadFixture()))
         validateControls(findControls(analyticsUploadFixture()), setOf(ANALYTICS_UPLOADS))
-        assertEquals(10, found(analyticsUploadFixture()).size)
+        assertEquals(11, found(analyticsUploadFixture()).size)
         // 346415706 and 346415707 keep the uploader's own task override instead of inlining it.
         activeProfile = PROFILE_346415706
         val renamed = analyticsUploadFixture(
             uploadClass("LX/0bU;", START_COMMAND, START_JOB, superclass = JOBS, flags = AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value),
             fixtureClass(ANALYTICS2_UPLOAD_SERVICE, superclass = "LX/0bU;"),
             fixtureClass(PLAY, listOf(entry(PLAY, START_COMMAND), delegatedTask("LX/RVX;")), superclass = "LX/QBX;"),
-            delegatedTaskFixture(task = "LX/RVX;"))
+            delegatedTaskFixture(task = "LX/RVX;"), timers = listOf(timerClass("LX/YjU;")))
         assertTrue("$PLAY->A04(LX/RVX;)I" in found(renamed))
+        assertTrue("LX/YjU;->run()V" in found(renamed))
         validateControls(findControls(renamed), setOf(ANALYTICS_UPLOADS))
+    }
+
+    @Test fun theXAnalyticsTimerIsTakenOnlyInItsOwnShape() {
+        val withoutTimer = found(analyticsUploadFixture(timers = emptyList()))
+        assertEquals(setOf("$TIMER->run()V"), found(analyticsUploadFixture()) - withoutTimer)
+        val cases = mapOf(
+            "a second timer" to listOf(timerClass(), timerClass("LX/Wq2;")),
+            "not a Runnable" to listOf(timerClass(interfaces = emptyList())),
+            "uploads before it flushes" to listOf(timerClass(run = timerRun(body = timerBody(first = XANALYTICS_UPLOAD, second = XANALYTICS_FLUSH)))),
+            "flushes twice" to listOf(timerClass(run = timerRun(body = timerBody(second = XANALYTICS_FLUSH)))),
+            "never uploads" to listOf(timerClass(run = timerRun(body = timerBody(second = "LX/7ew;->A01()V")))),
+            "does other work" to listOf(timerClass(run = timerRun(body = timerBody(extra = "invoke-static {}, LX/Q1a;->A00()V")))),
+            "asks a getter with an argument" to listOf(timerClass(run = timerRun(body = timerBody(
+                extra = "invoke-interface {v1, v0}, $LOGGER_PROVIDER->get(Ljava/lang/Object;)Ljava/lang/Object;")))),
+            "returns early" to listOf(timerClass(run = timerRun(body = timerBody(extra = "if-nez v0, :done\nreturn-void\n:done")))),
+        )
+        for ((case, timers) in cases) assertEquals(withoutTimer, found(analyticsUploadFixture(timers = timers)), case)
+    }
+
+    @Test fun theXAnalyticsTimerSkipsThatRunWhileTheSwitchIsOn() {
+        val run = timerRun()
+        val before = run.code()
+        injectControl(ANALYTICS_UPLOADS, mapOf(ANALYTICS_UPLOADS to listOf(run)))
+        val code = run.code()
+        assertEquals("$SETTINGS->stopAnalyticsUploads()Z", reference(0, code))
+        assertEquals(Opcode.MOVE_RESULT, code[1].opcode)
+        assertEquals(Opcode.IF_EQZ, code[2].opcode)
+        assertEquals(Opcode.RETURN_VOID, code[3].opcode)
+        assertEquals(4, code.branchTarget(2))
+        // The run that goes ahead is Messenger's own, flush and upload untouched.
+        assertEquals(before, code.drop(4))
     }
 
     @Test fun aBoundTaskIsFoundOnlyWhereTheUploaderRunsIt() {
@@ -175,7 +232,7 @@ class AnalyticsUploadsTest {
         )
         for ((case, classes) in cases) {
             val hooks = found(classes)
-            assertEquals(9, hooks.size, case)
+            assertEquals(10, hooks.size, case)
             assertTrue(inlined !in hooks && delegated !in hooks, case)
             assertFailsWith<PatchException>(case) { validateControls(findControls(classes), setOf(ANALYTICS_UPLOADS)) }
         }
@@ -235,7 +292,7 @@ class AnalyticsUploadsTest {
         )
         for ((case, classes) in cases) {
             val hooks = found(classes)
-            assertEquals(8, hooks.size, case)
+            assertEquals(9, hooks.size, case)
             assertTrue(hooks.none { it.startsWith(BASE) }, case)
             assertFailsWith<PatchException>(case) { validateControls(findControls(classes), setOf(ANALYTICS_UPLOADS)) }
         }
@@ -244,7 +301,7 @@ class AnalyticsUploadsTest {
             if (it.type != ALARM) it else fixtureClass(ALARM, listOf(entry(ALARM, START_COMMAND,
                 flags = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value)), superclass = SERVICE)
         }
-        assertEquals(9, found(static).size)
+        assertEquals(10, found(static).size)
     }
 
     @Test fun aServiceStartStopsItselfWithoutAskingForARestart() {
@@ -293,6 +350,7 @@ class AnalyticsUploadsTest {
             "a Runnable that isn't the uploader's task" to inlinedTask(mark = "Job with old build ID"),
             "a task with two reporters" to inlinedTask(secondReporter = true),
             "an uploader method without the task message" to delegatedTask(mark = "GooglePlayUploadService"),
+            "a Runnable that uploads before it flushes" to timerRun(body = timerBody(first = XANALYTICS_UPLOAD, second = XANALYTICS_FLUSH)),
         )
         for ((case, bad) in cases) {
             val good = entry(LOLLIPOP, START_JOB)

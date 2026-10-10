@@ -2141,6 +2141,36 @@ public class CompatReport {
         return found;
     }
 
+    static final String XANALYTICS_FLUSH = "Lcom/facebook/xanalytics/XAnalyticsHolder;->flush()V";
+    static final String XANALYTICS_UPLOAD = "Lcom/facebook/xanalytics/XAnalyticsNative;->kickOffUpload()V";
+
+    /** The XAnalytics timer: a Runnable's run() that flushes, then uploads, once each, and otherwise only calls ()Object getters. */
+    static boolean isXAnalyticsUploadTimer(Method m) {
+        if (!"run()V".equals(entryPoint(m)) || AccessFlags.STATIC.isSet(m.getAccessFlags()) || m.getImplementation() == null) return false;
+        int flushes = 0, uploads = 0, returns = 0;
+        boolean uploadAfterFlush = false;
+        Instruction last = null;
+        for (var i : m.getImplementation().getInstructions()) {
+            last = i;
+            if (i.getOpcode() == Opcode.RETURN_VOID) returns++;
+            if (!i.getOpcode().name.startsWith("invoke")) continue;
+            if (!(((ReferenceInstruction) i).getReference() instanceof MethodReference r)) return false;
+            var name = r.getDefiningClass() + "->" + r.getName() + "(" + String.join("", r.getParameterTypes()) + ")" + r.getReturnType();
+            if (XANALYTICS_FLUSH.equals(name)) flushes++;
+            else if (XANALYTICS_UPLOAD.equals(name)) { uploads++; uploadAfterFlush = flushes == 1; }
+            else if (!"get".equals(r.getName()) || !r.getParameterTypes().isEmpty() || !"Ljava/lang/Object;".equals(r.getReturnType())) return false;
+        }
+        return flushes == 1 && uploads == 1 && uploadAfterFlush && returns == 1 && last.getOpcode() == Opcode.RETURN_VOID;
+    }
+
+    static List<Method> xanalyticsUploadTimers(List<ClassDef> classes) {
+        var found = new ArrayList<Method>();
+        for (var cls : classes)
+            if (cls.getInterfaces().contains("Ljava/lang/Runnable;"))
+                for (var m : cls.getMethods()) if (isXAnalyticsUploadTimer(m)) found.add(m);
+        return found.size() == 1 ? found : List.of();
+    }
+
     static List<Method> analyticsUploads(List<ClassDef> classes) {
         var found = new ArrayList<Method>();
         ClassDef uploader = null;
@@ -2280,6 +2310,7 @@ public class CompatReport {
         found.get("disappearing_swipe").addAll(disappearingSwipeStarts(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
         found.get("analytics_uploads").addAll(boundUploadTasks(classes));
+        found.get("analytics_uploads").addAll(xanalyticsUploadTimers(classes));
         found.get("attribution_uploads").addAll(attributionUploads(classes));
         found.get("ad_events").addAll(adEvents(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
