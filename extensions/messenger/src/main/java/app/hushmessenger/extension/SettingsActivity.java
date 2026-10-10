@@ -1566,53 +1566,88 @@ public final class SettingsActivity extends Activity {
 
     /**
      * Folders one or two levels under the data dir whose names mention analytics, with how many files they hold and their
-     * total size. Messenger queues its analytics there, and shell can't read the data dir, so this is the only way to see
-     * whether a queue grows while Stop analytics uploads is on. Names and sizes only, never what's in the files.
+     * total size. Shell can't read the data dir, so this is how to see whether Messenger's analytics pile up while Stop
+     * analytics uploads is on. Names and sizes only, never what's in the files, and links aren't followed.
      */
     static String analyticsStores(java.io.File dataDir) {
-        java.io.File[] top = dataDir.listFiles();
+        return analyticsStores(dataDir, 20_000, 2_000);
+    }
+
+    /**
+     * One budget covers the whole report, so a huge cache, many stores or a folder loop can't hold up the tap: at most
+     * {@code entries} directory entries looked at and {@code folders} folders opened. A count cut short ends in "+".
+     */
+    static String analyticsStores(java.io.File dataDir, int entries, int folders) {
+        java.nio.file.Path root = dataDir.toPath();
+        int[] budget = {entries, folders};
+        java.util.List<java.nio.file.Path> top = folders(root, budget, false);
         if (top == null) return "unreadable";
-        java.util.Arrays.sort(top);
-        java.util.List<String> stores = new java.util.ArrayList<>();
-        for (java.io.File first : top) {
-            if (!first.isDirectory()) continue;
+        java.util.TreeMap<String, java.nio.file.Path> found = new java.util.TreeMap<>();
+        for (java.nio.file.Path first : top) {
             if (namesAnalytics(first)) {
-                stores.add(storeSize(first.getName(), first));
+                found.put(first.getFileName().toString(), first);
                 continue;
             }
-            java.io.File[] inner = first.listFiles();
-            if (inner == null) continue;
-            java.util.Arrays.sort(inner);
-            for (java.io.File second : inner)
-                if (second.isDirectory() && namesAnalytics(second)) stores.add(storeSize(first.getName() + "/" + second.getName(), second));
+            java.util.List<java.nio.file.Path> inner = folders(first, budget, true);
+            if (inner != null) for (java.nio.file.Path second : inner) found.put(first.getFileName() + "/" + second.getFileName(), second);
         }
+        java.util.List<String> stores = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, java.nio.file.Path> store : found.entrySet())
+            stores.add(storeSize(store.getKey(), store.getValue(), budget));
         return stores.isEmpty() ? "none" : String.join(", ", stores);
     }
 
-    private static boolean namesAnalytics(java.io.File dir) {
-        return dir.getName().toLowerCase(java.util.Locale.ROOT).contains("analytics");
+    private static boolean namesAnalytics(java.nio.file.Path path) {
+        return path.getFileName().toString().toLowerCase(java.util.Locale.ROOT).contains("analytics");
     }
 
-    /** Stops counting at 10,000 files or 2,000 folders, so a huge store or a folder loop can't hold up the tap. */
-    private static String storeSize(String name, java.io.File dir) {
+    /** The folders directly in dir, or only those named for analytics, checking a name before touching the entry. Null if dir can't be read. */
+    private static java.util.List<java.nio.file.Path> folders(java.nio.file.Path dir, int[] budget, boolean analyticsOnly) {
+        java.util.List<java.nio.file.Path> folders = new java.util.ArrayList<>();
+        if (budget[1]-- <= 0) return folders;
+        try (java.nio.file.DirectoryStream<java.nio.file.Path> entries = java.nio.file.Files.newDirectoryStream(dir)) {
+            for (java.nio.file.Path entry : entries) {
+                if (budget[0]-- <= 0) break;
+                if (analyticsOnly && !namesAnalytics(entry)) continue;
+                if (java.nio.file.Files.isDirectory(entry, java.nio.file.LinkOption.NOFOLLOW_LINKS)) folders.add(entry);
+            }
+        } catch (java.io.IOException | java.nio.file.DirectoryIteratorException | SecurityException e) {
+            return null;
+        }
+        return folders;
+    }
+
+    private static String storeSize(String name, java.nio.file.Path dir, int[] budget) {
         long files = 0, bytes = 0;
-        int folders = 0;
-        java.util.ArrayDeque<java.io.File> pending = new java.util.ArrayDeque<>();
+        boolean cut = false;
+        java.util.ArrayDeque<java.nio.file.Path> pending = new java.util.ArrayDeque<>();
         pending.add(dir);
-        while (!pending.isEmpty() && files < 10_000 && folders < 2_000) {
-            java.io.File[] entries = pending.poll().listFiles();
-            folders++;
-            if (entries == null) continue;
-            for (java.io.File entry : entries) {
-                if (entry.isDirectory()) pending.add(entry);
-                else {
-                    files++;
-                    bytes += entry.length();
+        walk:
+        while (!pending.isEmpty()) {
+            if (budget[1]-- <= 0) {
+                cut = true;
+                break;
+            }
+            try (java.nio.file.DirectoryStream<java.nio.file.Path> entries = java.nio.file.Files.newDirectoryStream(pending.poll())) {
+                for (java.nio.file.Path entry : entries) {
+                    if (budget[0]-- <= 0) {
+                        cut = true;
+                        break walk;
+                    }
+                    java.nio.file.attribute.BasicFileAttributes attributes = java.nio.file.Files.readAttributes(entry,
+                        java.nio.file.attribute.BasicFileAttributes.class, java.nio.file.LinkOption.NOFOLLOW_LINKS);
+                    if (attributes.isDirectory()) pending.add(entry);
+                    else if (attributes.isRegularFile()) {
+                        files++;
+                        bytes += attributes.size();
+                    }
                 }
+            } catch (java.io.IOException | java.nio.file.DirectoryIteratorException | SecurityException e) {
+                // A folder that went away or can't be read just isn't counted.
             }
         }
-        boolean cut = !pending.isEmpty();
-        return name + " " + files + (cut ? "+" : "") + " files " + bytes + (cut ? "+" : "") + " bytes";
+        String more = cut ? "+" : "";
+        return name + " " + files + more + " files " + bytes + more + " bytes";
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {

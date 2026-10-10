@@ -95,6 +95,8 @@ public class SetupSummaryTest {
             assertTrue(new java.io.File(data, "app_analytics/analytics_old").mkdirs());
             assertEquals("app_analytics 0 files 0 bytes, files/xanalytics 1 files 3 bytes", SettingsActivity.analyticsStores(data));
             assertEquals("unreadable", SettingsActivity.analyticsStores(new java.io.File(data, "missing")));
+            // Finding the stores opens three folders (the data dir, files and app_light_prefs), so none are left to count with.
+            assertEquals("app_analytics 0+ files 0+ bytes, files/xanalytics 0+ files 0+ bytes", SettingsActivity.analyticsStores(data, 100, 3));
         } finally {
             try (var walk = java.nio.file.Files.walk(data.toPath())) {
                 walk.sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
