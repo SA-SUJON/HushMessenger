@@ -358,7 +358,7 @@ val stopAttributionUploadsPatch = controlPatch("attribution_uploads", "Stop ad a
     "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "Privacy")
 @Suppress("unused")
 val stopAdEventsPatch = controlPatch("ad_events", "Stop inbox and ad link logging",
-    "Stops two reports Messenger logs: which part of your chat list was on screen (filed under inbox ads), and which ad brought you in when a link from an ad opens a chat. Nothing on screen changes.", "Privacy")
+    "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "Privacy")
 @Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")

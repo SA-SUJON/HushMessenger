@@ -10,9 +10,11 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
@@ -60,11 +62,22 @@ internal fun findAdEvents(classes: Iterable<ClassDef>): List<Method> =
 /** [skipFrom] is the event's new-instance, [event] its register, and [resume] the instruction after the logger call. */
 internal class VisibilitySubmit(val skipFrom: Int, val event: Int, val resume: Int)
 
+/** A catch handler that only rethrows what it caught, so it reads no register the skip leaves in another type. */
+private fun List<Instruction>.rethrowsAt(at: Int?): Boolean {
+    val caught = at?.let(::getOrNull) as? OneRegisterInstruction ?: return false
+    val rethrow = getOrNull(at + 1) as? OneRegisterInstruction ?: return false
+    return caught.opcode == Opcode.MOVE_EXCEPTION && rethrow.opcode == Opcode.THROW && rethrow.registerA == caught.registerA
+}
+
+/** iput, sput and aput in every width. Opcode.name is the smali spelling, such as iput-boolean. */
+private val FIELD_WRITE = Regex("^[isa]put")
+
 /**
  * The event is created right after its name loads, takes the name in its constructor, and goes to the logger in one
  * invoke-virtual whose only argument is that event. Everything from the new-instance through that call runs straight
- * through with nothing landing inside it, and after it the method only closes its ReqContext and returns, reading no
- * register the skipped code writes.
+ * through with nothing landing inside it. It writes no field or array, and its only void calls are on the event, so
+ * skipping it leaves the tracker as it was. After it the method only closes its ReqContext and returns, reading no
+ * register the skipped code writes, and every catch handler covering the skip or the close only rethrows.
  */
 internal fun Method.inboxVisibilitySubmit(): VisibilitySubmit {
     fun refuse(): Nothing =
@@ -89,6 +102,21 @@ internal fun Method.inboxVisibilitySubmit(): VisibilitySubmit {
     val skipped = name + 1..submit
     val targets = jumpTargets()
     if (skipped.any { it in targets || code[it] is OffsetInstruction || !code[it].opcode.canContinue() }) refuse()
+    for (i in name + 1 until submit) {
+        val call = (code[i] as? ReferenceInstruction)?.reference as? MethodReference
+        val receiver = when (val instruction = code[i]) {
+            is FiveRegisterInstruction -> instruction.registerC.takeIf { instruction.registerCount > 0 }
+            is RegisterRangeInstruction -> instruction.startRegister.takeIf { instruction.registerCount > 0 }
+            else -> null
+        }
+        if (FIELD_WRITE.containsMatchIn(code[i].opcode.name) || call?.returnType == "V" && receiver != event) refuse()
+    }
+    val addresses = code.runningFold(0) { address, instruction -> address + instruction.codeUnits }
+    val indexAt = code.indices.associateBy { addresses[it] }
+    val covered = implementation!!.tryBlocks.filter { block ->
+        (name + 1..submit + 2).any { addresses[it] in block.startCodeAddress until block.startCodeAddress + block.codeUnitCount }
+    }
+    if (covered.any { block -> block.exceptionHandlers.any { !code.rethrowsAt(indexAt[it.handlerCodeAddress]) } }) refuse()
     val written = skipped.flatMap { i ->
         val instruction = code[i]
         if (!instruction.opcode.setsRegister()) return@flatMap emptyList()

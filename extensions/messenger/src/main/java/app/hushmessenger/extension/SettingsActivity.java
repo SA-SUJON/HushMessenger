@@ -124,7 +124,7 @@ public final class SettingsActivity extends Activity {
         {"bubbles", "Allow chat bubbles", "Choose Stock, Chat Heads or Native Bubbles below. Native Bubbles needs Android 11 or newer, a supported account and notification permission. Restart Messenger after changing.", "links_bubbles"},
         {"analytics_uploads", "Stop analytics uploads", "Stops Messenger's background services from uploading usage statistics. It still records them on your phone, and they can upload after you turn this off.", "privacy"},
         {"attribution_uploads", "Stop ad attribution uploads", "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "privacy"},
-        {"ad_events", "Stop inbox and ad link logging", "Stops two reports Messenger logs: which part of your chat list was on screen (filed under inbox ads), and which ad brought you in when a link from an ad opens a chat. Nothing on screen changes.", "privacy"},
+        {"ad_events", "Stop inbox and ad link logging", "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "privacy"},
         {"message_log", "Keep a message log", "Saves each message when its notification arrives, so you can read it after it's unsent. Works in encrypted chats. Stays on your phone.", "privacy"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "privacy"},
         {"hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Replying or switching this off may notify them. Encrypted chats you open can stay unread here. Group chats aren't tested.", "privacy"},
@@ -1639,13 +1639,13 @@ public final class SettingsActivity extends Activity {
         feedback(text.get("open_help"), Toast.LENGTH_LONG);
     }
 
-    /** One toast at a time, built on the app context so no destroyed page is kept alive. */
     /** Opens a web page in the phone's browser, or says there isn't one. */
     private void openPage(String url) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE)); }
         catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
     }
 
+    /** One toast at a time, built on the app context so no destroyed page is kept alive. */
     private void feedback(String message, int length) {
         if (toast != null) toast.cancel();
         toast = Toast.makeText(getApplicationContext(), message, length);

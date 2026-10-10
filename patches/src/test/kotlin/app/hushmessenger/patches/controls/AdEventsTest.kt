@@ -35,7 +35,8 @@ private val ENTRY_BODY = """
 
 /**
  * The tracker callback as Messenger ships it, with its loops cut to one: the visibility update's loop exits onto the
- * event's name, the event is built and logged, then the ReqContext opened at the top is closed.
+ * event's name, the event is built and logged, then the ReqContext opened at the top is closed. Its two handlers are
+ * Kotlin's use block, the first rethrowing whatever the body throws and the second closing the context on the way out.
  */
 private val VISIBILITY_BODY = """
     const/4 v6, 0x0
@@ -53,19 +54,44 @@ private val VISIBILITY_BODY = """
     const-string v1, "pigeon_reserved_keyword_module"
     const-string v0, "messenger_inbox_ads"
     invoke-virtual {v2, v1, v0}, LX/2Kb;->A0E($S$S)V
+    invoke-virtual {v11}, LX/24f;->A02()I
     iget-object v0, v11, LX/24f;->A03:LX/5vW;
     invoke-virtual {v0, v2}, LX/5vW;->A03(LX/2Kb;)V
     if-eqz v3, :closed
     invoke-interface {v3}, $REQ_CONTEXT_CLOSE
     :closed
     return-void
+    move-exception v1
+    throw v1
+    move-exception v0
+    invoke-static {v3, v1}, LX/36T;->A00(Ljava/io/Closeable;Ljava/lang/Throwable;)V
+    throw v0
 """.trimIndent()
 
 private fun entry(id: String = SYNTHETIC_AD_ENTRY, body: String = ENTRY_BODY, registers: Int = 11, flags: Int = STATIC) =
     fixtureMethod(id, body, registers, flags)
 
-private fun visibility(id: String = SYNTHETIC_INBOX_VISIBILITY, body: String = VISIBILITY_BODY, flags: Int = AccessFlags.PUBLIC.value) =
-    fixtureMethod(id, body, registers = 14, flags = flags)
+/**
+ * As in Messenger, the body's try runs from just after the context opens up to its close, and the closing handler
+ * covers only the rethrow. [closeCovered] stretches the closing handler over the close, where it would read registers
+ * the skip leaves in another type.
+ */
+private fun visibility(
+    id: String = SYNTHETIC_INBOX_VISIBILITY,
+    body: String = VISIBILITY_BODY,
+    flags: Int = AccessFlags.PUBLIC.value,
+    closeCovered: Boolean = false,
+) = fixtureMethod(id, body, registers = 14, flags = flags).apply {
+    val code = implementation!!.instructions.toList()
+    val opened = code.indexOfFirst { it.opcode == Opcode.MOVE_RESULT_OBJECT }
+    val close = code.indexOfFirst { (it as? ReferenceInstruction)?.reference?.toString() == REQ_CONTEXT_CLOSE }
+    val (rethrow, finally) = code.indices.filter { code[it].opcode == Opcode.MOVE_EXCEPTION }
+    implementation!!.run {
+        addCatch(newLabelForIndex(opened + 1), newLabelForIndex(close), newLabelForIndex(rethrow))
+        addCatch(newLabelForIndex(rethrow + 1), newLabelForIndex(rethrow + 2), newLabelForIndex(finally))
+        if (closeCovered) addCatch(newLabelForIndex(close), newLabelForIndex(close + 1), newLabelForIndex(finally))
+    }
+}
 
 /** Both events beside methods that share part of their shape and never get a hook. */
 internal fun adEventsFixture(entryMethod: MutableMethod = entry(), visibilityMethod: MutableMethod = visibility()): List<MutableClass> = listOf(
@@ -154,7 +180,8 @@ class AdEventsTest {
     }
 
     @Test fun aChangedCallbackRefusesBothEventsBeforeAnyEdit() {
-        val cases = mapOf(
+        val getter = "invoke-virtual {v11}, LX/24f;->A02()I"
+        val bodies = mapOf(
             "the loop lands on the event" to VISIBILITY_BODY.replace(
                 ":rows_done\nconst-string v0, \"$INBOX_VISIBILITY_EVENT\"", "const-string v0, \"$INBOX_VISIBILITY_EVENT\"\n:rows_done"),
             "the context lives in a register the event writes" to VISIBILITY_BODY.replace("move-result-object v3", "move-result-object v1")
@@ -165,11 +192,15 @@ class AdEventsTest {
             "work after the close" to VISIBILITY_BODY.replace(":closed\nreturn-void", ":closed\niput-boolean v13, v11, LX/24f;->A00:Z\nreturn-void"),
             "the name loads twice" to VISIBILITY_BODY.replace("const-string v1, \"pigeon", "const-string v1, \"$INBOX_VISIBILITY_EVENT\"\nconst-string v1, \"pigeon"),
             "no constructor right after the name" to VISIBILITY_BODY.replace("new-instance v2, LX/2Kb;", "new-instance v2, LX/2Kb;\nconst/4 v6, 0x0"),
+            "the event code writes the tracker" to VISIBILITY_BODY.replace(getter, "iput-boolean v13, v11, LX/24f;->A00:Z"),
+            "the event code calls into the tracker" to VISIBILITY_BODY.replace(getter, "invoke-virtual {v11}, LX/24f;->A04()V"),
+            "the rethrow reads the event" to VISIBILITY_BODY.replace("move-exception v1\nthrow v1",
+                "move-exception v1\ninvoke-static {v2, v1}, LX/36T;->A01(Ljava/lang/Object;Ljava/lang/Throwable;)V\nthrow v1"),
         )
-        for ((case, body) in cases) {
+        val cases = bodies.mapValues { (case, body) -> assertTrue(body != VISIBILITY_BODY, case); visibility(body = body) } +
+            ("the closing handler covers the close" to visibility(closeCovered = true))
+        for ((case, bad) in cases) {
             val good = entry()
-            assertTrue(body != VISIBILITY_BODY, case)
-            val bad = visibility(body = body)
             assertTrue(bad.isInboxVisibilityEvent(), case)
             val goodBefore = good.code()
             val badBefore = bad.code()
