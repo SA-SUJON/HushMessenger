@@ -90,6 +90,7 @@ public final class SettingsActivity extends Activity {
     private static final java.util.concurrent.Semaphore documentSlots = new java.util.concurrent.Semaphore(2);
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
+    static final String SUPPORT_PAGE = "https://ko-fi.com/X8K126YVER";
     static final String[][] CONTROLS = {
         {"ads", "Hide inbox ads", "Hides ad cards in your chat list. Meta stopped selling these ads in November 2025, so this only matters if they come back.", "inbox"},
         {"people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs. Good if you only want people you know.", "inbox"},
@@ -850,11 +851,18 @@ public final class SettingsActivity extends Activity {
         ui.add(content, help, 18);
         Button source = ui.button(text.get("source"));
         source.setTag("source_licenses");
-        source.setOnClickListener(view -> {
-            try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/SysAdminDoc/HushMessenger#research-and-credits"))); }
-            catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
-        });
+        source.setOnClickListener(view -> openPage("https://github.com/SysAdminDoc/HushMessenger#research-and-credits"));
         ui.add(content, source, 16);
+        LinearLayout support = ui.panel();
+        support.setTag("support");
+        support.setClickable(true);
+        support.setFocusable(true);
+        support.setBackground(ui.interactive(ui.surface, ui.line, 8));
+        support.setContentDescription(text.get("support") + ". " + text.get("support_help"));
+        ui.add(support, ui.text(text.get("support"), 16, ui.accent, true), 0);
+        ui.add(support, ui.text(text.get("support_help"), 14, ui.muted, false), 4);
+        support.setOnClickListener(view -> openPage(SUPPORT_PAGE));
+        ui.add(content, support, 12);
         ui.add(content, ui.text(text.get("credits"), 12, ui.muted, false), 16);
         ui.add(content, ui.text(text.get("independent"), 12, ui.muted, false), 20);
     }
@@ -1007,10 +1015,7 @@ public final class SettingsActivity extends Activity {
                 Button view = ui.button(text.get("update_action"));
                 view.setTag("update_release");
                 updateRelease = view;
-                view.setOnClickListener(v -> {
-                    try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(release.page))); }
-                    catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
-                });
+                view.setOnClickListener(v -> openPage(release.page));
                 ViewGroup parent = (ViewGroup) updateStatus.getParent();
                 parent.addView(view, parent.indexOfChild(updateStatus) + 1);
             } else updateStatus.setText(comparison == 0 ? text.get("up_to_date")
@@ -1634,6 +1639,12 @@ public final class SettingsActivity extends Activity {
     }
 
     /** One toast at a time, built on the app context so no destroyed page is kept alive. */
+    /** Opens a web page in the phone's browser, or says there isn't one. */
+    private void openPage(String url) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE)); }
+        catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
+    }
+
     private void feedback(String message, int length) {
         if (toast != null) toast.cancel();
         toast = Toast.makeText(getApplicationContext(), message, length);
