@@ -55,7 +55,7 @@ private val HOLDER_INIT_BODY = """
 
 class EmojiFontTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
     }
 
     private fun String.lf() = replace("\r\n", "\n")

@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import kotlin.test.*
 
 class CommunityInboxTest {
-    @AfterEach fun reset() { activeProfile = BASE_PROFILE }
+    @AfterEach fun reset() { activeProfile = SYNTHETIC_PROFILE }
     private fun body(m: Method) = m.implementation!!.instructions.toList()
     private fun reference(i: Instruction) = (i as? ReferenceInstruction)?.reference
     private fun structural(i: Instruction) = listOf(i.opcode, reference(i), (i as? OneRegisterInstruction)?.registerA,
@@ -110,8 +110,22 @@ class CommunityInboxTest {
         assertNull(findCommunityInbox(live))
     }
 
-    @Test fun everyProfileConnectsTheNativeMembershipAndMainOnlyRendererBeforeEditing() {
+    @Test fun everySupportedBuildsRecordedIdsConnectThroughThe582Closure() {
         for (profile in controlProfiles.values.toSet()) {
+            activeProfile = profile
+            val classes = communityInboxFixture(viewport = true)
+            val contract = assertNotNull(findCommunityInbox(classes))
+            assertEquals(profile.nativeCommunityInbox, contract.identity)
+            validateControls(findControls(classes), setOf(COMMUNITY_INBOX))
+            val render = contract.render as MutableMethod
+            val untouched = classes.flatMap { it.methods }.filter { it !== render }.associate { it.hookId() to body(it).map(::structural) }
+            injectCommunityInbox(contract, render, communityStub(JOINED_COMMUNITY_ROW), communityStub(MAIN_INBOX_SCOPE))
+            assertEquals(untouched, classes.flatMap { it.methods }.filter { it !== render }.associate { it.hookId() to body(it).map(::structural) })
+        }
+    }
+
+    @Test fun theOlderClosureConnectsTheNativeMembershipAndMainOnlyRendererBeforeEditing() {
+        for (profile in listOf(SYNTHETIC_PROFILE)) {
             activeProfile = profile
             val classes = communityInboxFixture()
             val contract = assertNotNull(findCommunityInbox(classes))
@@ -143,7 +157,7 @@ class CommunityInboxTest {
     }
 
     @Test fun theSessionFirstCaptureOrderAndGatedSecondReadKeepTheSameContract() {
-        for (profile in controlProfiles.values.toSet()) {
+        for (profile in listOf(SYNTHETIC_PROFILE)) {
             activeProfile = profile
             val classes = communityInboxFixture(sessionFirst = true)
             val contract = assertNotNull(findCommunityInbox(classes))
@@ -220,7 +234,7 @@ class CommunityInboxTest {
                 "helper_return" -> scope.replaceInstruction(1, "return v1")
                 "private_helper" -> scope.accessFlags = AccessFlags.PRIVATE.value or AccessFlags.STATIC.value
                 "renderer" -> render.replaceInstruction(render.communityReadSite(contract.capturedScope) + 10, "move-object/from16 v17, v1")
-                "profile" -> activeProfile = PROFILE_346013370
+                "profile" -> activeProfile = PROFILE_346415706
             }
             val before = listOf(render, joined, scope).map { body(it).map(::structural) }
             assertFailsWith<PatchException> { injectCommunityInbox(contract, render, joined, scope) }
@@ -245,7 +259,7 @@ class CommunityInboxTest {
             val scope = host.methods.single { it.hookId() == MAIN_INBOX_SCOPE }
             for (profile in controlProfiles.values.toSet()) {
                 activeProfile = profile
-                val contract = assertNotNull(findCommunityInbox(communityInboxFixture()))
+                val contract = assertNotNull(findCommunityInbox(communityInboxFixture(viewport = true)))
                 val helpers = injectCommunityInbox(contract, contract.render as MutableMethod, MutableMethod(joined), MutableMethod(scope))
                 assertTrue(helpers.all { AccessFlags.STATIC.isSet(it.accessFlags) && !AccessFlags.PRIVATE.isSet(it.accessFlags) })
             }
@@ -298,9 +312,11 @@ class CommunityInboxTest {
     /** The emitted identity branch keeps stock objects; changed projections retain the native list type. */
     private fun exerciseNativeListProjection(render: Method, at: Int) {
         val code = body(render)
+        // The rows' register differs between builds; the hook works on whichever one the read fills.
+        val list = (code[at] as TwoRegisterInstruction).registerA
         val stock = NativeImmutableList(listOf(Any(), Any(), Any()))
         for (projection in listOf<List<Any>>(stock, arrayListOf(stock[0], stock[2]), emptyList())) {
-            val registers = mutableMapOf<Int, Any?>(0 to stock)
+            val registers = mutableMapOf<Int, Any?>(list to stock)
             var result: Any? = null
             var copies = 0
             var cursor = at + 1
@@ -316,8 +332,8 @@ class CommunityInboxTest {
                     }
                     Opcode.INVOKE_STATIC -> {
                         if (reference(i).toString() == COMMUNITY_LIST_COPY) {
-                            assertEquals(0, (i as FiveRegisterInstruction).registerC)
-                            result = NativeImmutableList((registers[0] as Collection<*>).map { assertNotNull(it) })
+                            assertEquals(list, (i as FiveRegisterInstruction).registerC)
+                            result = NativeImmutableList((registers[list] as Collection<*>).map { assertNotNull(it) })
                             copies++
                         } else {
                             assertEquals("$SETTINGS->filterJoinedCommunityInboxRows(Ljava/util/List;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;", reference(i).toString())
@@ -336,7 +352,7 @@ class CommunityInboxTest {
                 cursor = next
             }
             // A native same-signature consumer may cast its List back to the original immutable type.
-            val nativeList = registers[0] as NativeImmutableList
+            val nativeList = registers[list] as NativeImmutableList
             assertEquals(projection, nativeList)
             assertEquals(if (projection === stock) 0 else 1, copies)
             if (projection === stock) assertSame(stock, nativeList)

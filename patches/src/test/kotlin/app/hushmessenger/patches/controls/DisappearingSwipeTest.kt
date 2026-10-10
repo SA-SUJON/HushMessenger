@@ -51,7 +51,7 @@ private fun Method.code() = implementation!!.instructions.toList()
 
 class DisappearingSwipeTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
     }
 
     private fun found(classes: List<MutableClass>) = findControls(classes).getValue(DISAPPEARING_SWIPE).map { it.hookId() }
@@ -62,8 +62,7 @@ class DisappearingSwipeTest {
     }
 
     @Test fun everyProfileHooksTheSameNamedMethod() {
-        val profiles = listOf(BASE_PROFILE, PROFILE_346013370, PROFILE_346013423, PROFILE_346013357, PROFILE_346013374,
-            PROFILE_346213494)
+        val profiles = listOf(SYNTHETIC_PROFILE, BASE_PROFILE, PROFILE_346415706)
         for (profile in profiles) {
             assertEquals(setOf(OVERSCROLL_START), profile.hooks.getValue(DISAPPEARING_SWIPE))
             activeProfile = profile

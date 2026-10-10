@@ -80,7 +80,7 @@ private fun assertCameraHook(before: List<Instruction>, after: List<Instruction>
 }
 
 class SystemCameraTest {
-    @AfterTest fun reset() { activeProfile = BASE_PROFILE }
+    @AfterTest fun reset() { activeProfile = SYNTHETIC_PROFILE }
 
     @Test fun theCameraLaunchSwapsItsIntentAndRequestCodeAndKeepsEveryStockInstruction() {
         val found = findSystemCamera(systemCameraFixture())

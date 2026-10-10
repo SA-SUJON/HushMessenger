@@ -49,7 +49,7 @@ class ControlsTest {
 
     @Test fun missingOrAmbiguousAnchorsRejectTheApk() {
         assertFailsWith<PatchException> { validateControls(emptyMap()) }
-        assertFailsWith<PatchException> { validateControls(expectedHooks.keys.associateWith { listOf(method(), method()) }) }
+        assertFailsWith<PatchException> { validateControls(syntheticHooks.keys.associateWith { listOf(method(), method()) }) }
     }
 
     @Test fun changedSubtabAndBrowserBodiesFail() {
@@ -61,7 +61,7 @@ class ControlsTest {
         val supplier = "Lcom/facebook/messaging/inboxsubtabs/plugins/subtabs/itemsupplier/InboxSubtabsItemSupplierImplementation;"
         fun subtabs(value: String) = method(registers = 3, returnType = "V", body = """
             iget-object v0, p0, LX/2UL;->A00:$supplier
-            iget-object v1, v0, $supplier->A05:Ljava/util/concurrent/atomic/AtomicBoolean;
+            iget-object v1, v0, $supplier->A07:Ljava/util/concurrent/atomic/AtomicBoolean;
             const/4 v0, 0x1
             invoke-virtual {v1, $value}, Ljava/util/concurrent/atomic/AtomicBoolean;->set(Z)V
             return-void
@@ -72,6 +72,29 @@ class ControlsTest {
         val changed = subtabs("v2")
         assertFailsWith<PatchException> { changed.injectSubtabs() }
         assertEquals(5, changed.implementation!!.instructions.size)
+    }
+
+    @Test fun unsentLabelHookReadsTheRowStraightFromTheWrapperList() {
+        messageWrapperFixture().methods.single { it.name == "BWo" }.validateUnsentIndicator()
+        // 580 and 581 went through a static helper instead; that shape no longer matches a supported build.
+        val helper = fixtureMethod("Lfixture/MessageWrapper;->BWo(I)Ljava/lang/String;", """
+            invoke-static {p0, p1}, Lfixture/MessageWrapper;->A00(Lfixture/MessageWrapper;I)Lfixture/KKn;
+            move-result-object v0
+            invoke-interface {v0}, Lfixture/KKn;->BWn()Ljava/lang/String;
+            move-result-object v0
+            return-object v0
+        """.trimIndent(), registers = 3)
+        assertFailsWith<PatchException> { helper.validateUnsentIndicator() }
+        val otherRegister = fixtureMethod("Lfixture/MessageWrapper;->BWo(I)Ljava/lang/String;", """
+            iget-object v0, p0, Lfixture/MessageWrapper;->A00:Ljava/util/List;
+            invoke-interface {v0, p1}, Ljava/util/List;->get(I)Ljava/lang/Object;
+            move-result-object v0
+            check-cast v0, Lfixture/KKn;
+            invoke-interface {v0}, Lfixture/KKn;->BWn()Ljava/lang/String;
+            move-result-object p1
+            return-object p1
+        """.trimIndent(), registers = 3)
+        assertFailsWith<PatchException> { otherRegister.validateUnsentIndicator() }
     }
 
     @Test fun settingsHaveALauncherEntryAndAPrivateProviderWithoutChangingHostPermissions() {
@@ -95,11 +118,10 @@ class ControlsTest {
     }
 
     @Test fun notificationsSuggestionsJoinTheStockPreferenceAndSkipTheServerOverride() {
-        // The server branch sits at 20, or at 19 in 346013423 where the list reset is one call. 581 and 582 load their own
-        // flag IDs, and 582's reader also takes the suggestions logger and keeps false in v5.
-        for (serverFlag in listOf("72344235860374863L", "72344231565407716L", "72344188615734930L")) for (logged in listOf(false, true))
-            for ((inlined, serverBranch) in listOf(false to 20, true to 19)) {
-            val reader = peopleJewelMethod(serverFlag = serverFlag, inlinedReset = inlined, logged = logged)
+        // The server branch sits at 20, or at 19 where the list reset is one call. 582's reader also takes the
+        // suggestions logger and keeps false in v5.
+        for (logged in listOf(false, true)) for ((inlined, serverBranch) in listOf(false to 20, true to 19)) {
+            val reader = peopleJewelMethod(inlinedReset = inlined, logged = logged)
             val original = reader.implementation!!.instructions.toList()
             assertEquals(Opcode.IF_NEZ, original[serverBranch].opcode)
             reader.injectPeopleSection()
@@ -133,8 +155,6 @@ class ControlsTest {
             // A second load of the flag makes the server branch ambiguous.
             peopleJewelMethod(extraFlag = true),
             peopleJewelMethod(inlinedReset = true, extraFlag = true),
-            // So does loading both releases' flag IDs.
-            peopleJewelMethod(extraFlag = true, extraFlagValue = "72344231565407716L"),
         )) {
             val before = changed.implementation!!.instructions.toList()
             assertFailsWith<PatchException> { changed.injectPeopleSection() }

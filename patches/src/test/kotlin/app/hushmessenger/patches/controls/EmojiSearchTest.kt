@@ -20,13 +20,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-private const val WATCHER_581 = "LX/7GD;->A8e(Landroid/text/Editable;Z)V"
+private const val WATCHER_581 = "LX/7Ql;->A8h(Landroid/text/Editable;Z)V"
 private const val WATCHER_580 = "LX/7TX;->A8Y(Landroid/text/Editable;Z)V"
 
 /** 581 loads the search mode itself. The plain mode jumps back to the one call that hands the mode over. */
 private fun watcher581(id: String = WATCHER_581, search: String = "const-string v0, \"expression_search\"") = fixtureMethod(id, """
     const-string v6, "afterTextChanged"
-    iget-object v1, p0, LX/7GD;->A05:LX/H2g;
+    iget-object v1, p0, LX/7Ql;->A05:LX/H2g;
     if-eqz v8, :plain
     $search
     :call
@@ -78,11 +78,12 @@ private fun assertSearchHook(before: List<Instruction>, after: List<Instruction>
     assertEquals(mode, (after[call + 1] as OneRegisterInstruction).registerA, label)
     assertEquals(before[call], after[call + 2], label)
     val plainJump = after.indices.first { after[it].opcode == Opcode.GOTO && after.branchTarget(it) == call + 2 }
-    assertEquals(Opcode.CONST_STRING, after[plainJump - 1].opcode, label)
+    // 582's string pools pass 65535 entries, so the plain mode's name can load as const-string/jumbo.
+    assertTrue(after[plainJump - 1].opcode in setOf(Opcode.CONST_STRING, Opcode.CONST_STRING_JUMBO), label)
 }
 
 class EmojiSearchTest {
-    @AfterTest fun reset() { activeProfile = BASE_PROFILE }
+    @AfterTest fun reset() { activeProfile = SYNTHETIC_PROFILE }
 
     private fun found(vararg methods: MutableMethod) =
         findControls(methods.map { fixtureClass(it.definingClass, listOf(it)) }).getValue(EMOJI_SEARCH)
@@ -90,7 +91,7 @@ class EmojiSearchTest {
     @Test fun bothTheLiteralAnd580sTableLookupGoThroughTheExtensionAndNothingStockMoves() {
         for ((label, method) in mapOf("581" to watcher581(), "580" to watcher580())) {
             assertEquals(listOf(method.hookId()), found(method).map { it.hookId() }, label)
-            activeProfile = if (label == "581") PROFILE_346213494 else BASE_PROFILE
+            activeProfile = if (label == "581") BASE_PROFILE else SYNTHETIC_PROFILE
             validateControls(findControls(listOf(fixtureClass(method.definingClass, listOf(method)))), setOf(EMOJI_SEARCH))
             val before = method.code()
             val call = method.emojiSearchCall()

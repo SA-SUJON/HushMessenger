@@ -23,17 +23,21 @@ internal fun communityStub(id: String, body: String = "const/4 v0, 0x0\nreturn v
     fixtureMethod(id, body, if (id == MAIN_INBOX_SCOPE) 2 else 1, AccessFlags.STATIC.value)
 
 /**
- * Synthetic wiring reads independently recorded stock IDs, not the compiled profile being checked.
+ * Synthetic wiring reads independently recorded stock IDs, not the compiled profile being checked: the record of the
+ * supported build whose profile is active, or [SYNTHETIC_COMMUNITY_RECORD] under the synthetic mapping.
+ * The default closure is the older one the synthetic mapping comes from.
  * [sessionFirst] builds the 581 closure: the session capture moves to slot 2 and a gated block precedes the second read.
  * [viewport] builds the 582 closure on top of that: an $onThreadInViewport capture before the trailing flag, the second
- * read into v1, and a 13-argument sink that takes the callback after the list.
+ * read into v1, and a 13-argument sink that takes the callback after the list. Only that one matches a supported build.
  */
 internal fun communityInboxFixture(sessionFirst: Boolean = false, viewport: Boolean = false): List<MutableClass> {
-    val code = controlProfiles.entries.first { it.value === activeProfile }.key
-    val record = Files.readAllLines(Path.of("../scripts/profiles/$code.txt"))
+    val code = controlProfiles.entries.firstOrNull { it.value === activeProfile }?.key
+    val record = if (code == null) SYNTHETIC_COMMUNITY_RECORD else Files.readAllLines(Path.of("../scripts/profiles/$code.txt"))
     val ids = record.single { it.startsWith("nativeCommunityInbox ") }.substringAfter(' ').split('|')
     val (updateId, recordedCtorId, scopeGetterId, switchId, summaryField) = ids
-    val ctorId = if (viewport) recordedCtorId.replace(";Z)V", ";Lkotlin/jvm/functions/Function1;Z)V") else recordedCtorId
+    val callback = ";Lkotlin/jvm/functions/Function1;Z)V"
+    val olderCtorId = recordedCtorId.replace(callback, ";Z)V")
+    val ctorId = if (viewport) olderCtorId.replace(";Z)V", callback) else olderCtorId
     val joinedId = ids[5]; val nullableId = ids[6]; val anyId = ids[7]; val channelId = ids[8]; val requests = ids[9]
     val prefix = ids[10]; val path = ids.subList(11, 16); val folderGetter = ids[16]; val inbox = ids[17]
     val callbackType = path.first().substringBefore("->")
@@ -78,7 +82,7 @@ internal fun communityInboxFixture(sessionFirst: Boolean = false, viewport: Bool
         4 + shift to "iput-object v10, v1, $closure->\$threadTypeFilter:$scope",
         (if (viewport) 8 else 7) + shift to "iput-object v8, v1, $prefix", ctorSize - 1 to "return-void") +
         (if (shift == 1) mapOf(2 to "iput-object v2, v1, $closure->\$fbUserSession:$FB_USER_SESSION") else emptyMap())), if (viewport) 17 else 16)
-    val second = if (sessionFirst) 66 else if (activeProfile in listOf(PROFILE_346013370, PROFILE_346013374)) 55 else 56
+    val second = if (sessionFirst) 66 else 56
     val invokeId = record.single { it.startsWith("hook community_inbox ") }.substringAfter("hook community_inbox ")
     val invoke = if (viewport) fixtureMethod(invokeId, sparse(85, mapOf(
         5 to "iget-object v0, v4, $closure->\$inboxUnitItems:$IMMUTABLE_LIST",

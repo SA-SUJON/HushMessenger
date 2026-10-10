@@ -289,7 +289,7 @@ internal fun peopleStoryMethod(
 internal fun peopleJewelMethod(
     key: String = "LX/JTx;->A01:LX/1BL;",
     resultRegister: String = "v0",
-    serverFlag: String = "72344235860374863L",
+    serverFlag: String = "72344188615734930L",
     serverTarget: String = ":shown",
     flags: Int = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value,
     inlinedReset: Boolean = false,
@@ -380,9 +380,12 @@ internal fun messageWrapperFixture(
     idGetter: String = "B9d",
     unsentGetter: String = "Btd",
 ): MutableClass {
+    // 582 reads the text getter's row straight from the list; the other getters still go through the helper.
     val bwoMethod = fixtureMethod("$type->$textGetter(I)Ljava/lang/String;", """
-        invoke-static {p0, p1}, $type->A00(${type}I)Lfixture/KKn;
+        iget-object v0, p0, $type->A00:Ljava/util/List;
+        invoke-interface {v0, p1}, Ljava/util/List;->get(I)Ljava/lang/Object;
         move-result-object v0
+        check-cast v0, Lfixture/KKn;
         invoke-interface {v0}, Lfixture/KKn;->BWn()Ljava/lang/String;
         move-result-object v0
         return-object v0

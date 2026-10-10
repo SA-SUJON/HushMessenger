@@ -130,7 +130,7 @@ private fun reference(at: Int, code: List<com.android.tools.smali.dexlib2.iface.
 
 class AnalyticsUploadsTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
     }
 
     private fun found(classes: List<MutableClass>) = findControls(classes).getValue(ANALYTICS_UPLOADS).map { it.hookId() }.toSet()
@@ -139,14 +139,14 @@ class AnalyticsUploadsTest {
         assertEquals(activeProfile.hooks.getValue(ANALYTICS_UPLOADS), found(analyticsUploadFixture()))
         validateControls(findControls(analyticsUploadFixture()), setOf(ANALYTICS_UPLOADS))
         assertEquals(10, found(analyticsUploadFixture()).size)
-        // 346013423 names the base differently and keeps the uploader's own task override instead of inlining it.
-        activeProfile = PROFILE_346013423
+        // 346415706 and 346415707 keep the uploader's own task override instead of inlining it.
+        activeProfile = PROFILE_346415706
         val renamed = analyticsUploadFixture(
-            uploadClass("LX/0bw;", START_COMMAND, START_JOB, superclass = JOBS, flags = AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value),
-            fixtureClass(ANALYTICS2_UPLOAD_SERVICE, superclass = "LX/0bw;"),
-            fixtureClass(PLAY, listOf(entry(PLAY, START_COMMAND), delegatedTask()), superclass = "LX/QBX;"),
-            delegatedTaskFixture())
-        assertTrue("$PLAY->A04(LX/UTH;)I" in found(renamed))
+            uploadClass("LX/0bU;", START_COMMAND, START_JOB, superclass = JOBS, flags = AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value),
+            fixtureClass(ANALYTICS2_UPLOAD_SERVICE, superclass = "LX/0bU;"),
+            fixtureClass(PLAY, listOf(entry(PLAY, START_COMMAND), delegatedTask("LX/RVX;")), superclass = "LX/QBX;"),
+            delegatedTaskFixture(task = "LX/RVX;"))
+        assertTrue("$PLAY->A04(LX/RVX;)I" in found(renamed))
         validateControls(findControls(renamed), setOf(ANALYTICS_UPLOADS))
     }
 

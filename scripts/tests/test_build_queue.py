@@ -59,9 +59,9 @@ class BuildQueueCommands(unittest.TestCase):
     def test_queue_runs_the_command_line_inside_a_labelled_slot(self):
         job = ["java", "-jar", "desktop.jar", "--enable=Hide People You May Know", "C:/it's.apk"]
         with self.environment(queue_script=self.queue_script):
-            command = queue.queued(job, "hushmessenger heap patch 346213494")
+            command = queue.queued(job, "hushmessenger heap patch 346415686")
             self.assertEqual(
-                ["-File", str(self.queue_script), "-Label", "hushmessenger heap patch 346213494", "-Run"],
+                ["-File", str(self.queue_script), "-Label", "hushmessenger heap patch 346415686", "-Run"],
                 command[-6:-1],
             )
             self.assertEqual(

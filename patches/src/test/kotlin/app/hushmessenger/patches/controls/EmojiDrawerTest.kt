@@ -20,13 +20,14 @@ private const val CONFIG = "Lcom/facebook/mobileconfig/factory/MobileConfigUnsaf
 internal const val DRAWER_HELPER = "$CONFIG->A02()Z"
 internal const val DRAWER_EFFECT = "LX/H1n;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"
 private const val DRAWER_RENDERER = "LX/4tE;->A00(LX/5bm;)V"
-private const val FLAG_580 = 36320734536089357L
+/** The drawer's flag in 582. The reader shapes below come from 580 and 581, which each numbered it their own way. */
+private const val FLAG = 36320652931710646L
+/** 581's number for the same flag. 582 no longer reads it. */
 private const val FLAG_581 = 36320704471318256L
-private const val FLAG_582 = 36320652931710646L
 private val STATIC = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value
 
 /** 580's helper: the config object, the flag, the interface check and its answer, returned as is. */
-private fun drawerHelper(id: String = DRAWER_HELPER, flag: Long = FLAG_580) = fixtureMethod(id, """
+private fun drawerHelper(id: String = DRAWER_HELPER, flag: Long = FLAG) = fixtureMethod(id, """
     invoke-static {}, LX/1Aa;->A0A()LX/5V6;
     move-result-object v2
     const-wide v0, ${flag}L
@@ -37,7 +38,7 @@ private fun drawerHelper(id: String = DRAWER_HELPER, flag: Long = FLAG_580) = fi
 """.trimIndent(), registers = 3, flags = STATIC)
 
 /** A drawer component that reads the flag through a static (Object, J) check and inverts the answer. */
-private fun drawerEffect(id: String = DRAWER_EFFECT, flag: Long = FLAG_580) = fixtureMethod(id, """
+private fun drawerEffect(id: String = DRAWER_EFFECT, flag: Long = FLAG) = fixtureMethod(id, """
     invoke-static {}, LX/1Aa;->A0A()LX/5V6;
     move-result-object v4
     const-wide v0, ${flag}L
@@ -60,7 +61,7 @@ private fun drawerRenderer(call: String = DRAWER_HELPER, id: String = DRAWER_REN
  * 581's renderer reads the flag itself, twice, the first answer in a register outside the 4-bit range. A path without
  * a config object skips the first read and lands just after its answer.
  */
-private fun drawerRenderer581(id: String = "LX/4wu;->render(LX/5Sd;)V", flag: Long = FLAG_581) = fixtureMethod(id, """
+private fun drawerRenderer581(id: String = "LX/4wu;->render(LX/5Sd;)V", flag: Long = FLAG) = fixtureMethod(id, """
     invoke-static {}, LX/2v6;->A0A()LX/5Yf;
     move-result-object v13
     if-eqz v13, :after
@@ -110,7 +111,7 @@ internal fun assertEmojiDrawerInjected(native: Method, label: String): Int {
 
 class EmojiDrawerTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
     }
 
     private fun found(classes: List<MutableClass>) = findControls(classes).getValue(EMOJI_DRAWER).map { it.hookId() }.toSet()
@@ -131,7 +132,7 @@ class EmojiDrawerTest {
                 fixtureClass(CONFIG, listOf(drawerHelper("$CONFIG->A02(I)Z"))) +
                 fixtureClass("LX/4tE;", listOf(drawerRenderer("$CONFIG->A02(I)Z"))),
             "a renderer asking a non-static reader" to readers.filter { it.type != CONFIG } +
-                fixtureClass(CONFIG, listOf(fixtureMethod(DRAWER_HELPER, "const-wide v0, ${FLAG_580}L\nconst/4 v0, 0x0\nreturn v0", 3))) +
+                fixtureClass(CONFIG, listOf(fixtureMethod(DRAWER_HELPER, "const-wide v0, ${FLAG}L\nconst/4 v0, 0x0\nreturn v0", 3))) +
                 fixtureClass("LX/4tE;", listOf(drawerRenderer())),
         )
         for ((case, classes) in cases) {
@@ -141,18 +142,18 @@ class EmojiDrawerTest {
     }
 
     @Test fun the581DrawerIsFoundWhereTheRendererReadsTheFlagItself() {
-        val other = drawerEffect("LX/Eyg;->invoke(Ljava/lang/Object;)Ljava/lang/Object;", FLAG_581)
+        val other = drawerEffect("LX/Eyg;->invoke(Ljava/lang/Object;)Ljava/lang/Object;")
         val classes = listOf(fixtureClass("LX/4wu;", listOf(drawerRenderer581())), fixtureClass("LX/Eyg;", listOf(other)))
         assertEquals(setOf("LX/4wu;->render(LX/5Sd;)V", "LX/Eyg;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"), found(classes))
         // The same readers without the renderer are just a flag.
         assertTrue(found(classes.drop(1)).isEmpty())
     }
 
-    @Test fun the582FlagIsFoundTheSameWay() {
-        val other = drawerEffect("LX/EfL;->invoke(Ljava/lang/Object;)Ljava/lang/Object;", FLAG_582)
-        val classes = listOf(fixtureClass("LX/51i;", listOf(drawerRenderer581("LX/51i;->render(LX/5XD;)V", FLAG_582))), fixtureClass("LX/EfL;", listOf(other)))
-        assertEquals(setOf("LX/51i;->render(LX/5XD;)V", "LX/EfL;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"), found(classes))
-        assertEquals(2, assertEmojiDrawerInjected(classes[0].methods.single(), "582 renderer"))
+    @Test fun anOlderReleasesFlagIsNotTheDrawer() {
+        val other = drawerEffect("LX/EfL;->invoke(Ljava/lang/Object;)Ljava/lang/Object;", FLAG_581)
+        val classes = listOf(fixtureClass("LX/51i;", listOf(drawerRenderer581("LX/51i;->render(LX/5XD;)V", FLAG_581))), fixtureClass("LX/EfL;", listOf(other)))
+        assertTrue(found(classes).isEmpty())
+        assertFailsWith<PatchException> { validateControls(findControls(classes), setOf(EMOJI_DRAWER)) }
     }
 
     @Test fun everyFlagReadPassesThroughTheExtension() {
@@ -170,12 +171,12 @@ class EmojiDrawerTest {
 
     @Test fun anyOtherUseOfTheFlagRefusesTheSwitchBeforeAnyEdit() {
         val shapes = mapOf(
-            "flag before another argument" to "const-wide v0, ${FLAG_580}L\ninvoke-static {v0, v1, v4}, LX/16z;->A1Z(JLjava/lang/Object;)Z\nmove-result v0\nreturn v0",
-            "answer not a boolean" to "const-wide v0, ${FLAG_580}L\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)I\nmove-result v0\nreturn v0",
-            "answer never taken" to "const-wide v0, ${FLAG_580}L\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nconst/4 v0, 0x0\nreturn v0",
-            "flag logged" to "const-wide v0, ${FLAG_580}L\ninvoke-static {v0, v1}, Ljava/lang/Long;->valueOf(J)Ljava/lang/Long;\nconst/4 v0, 0x0\nreturn v0",
-            "cast over the flag" to "const-wide v0, ${FLAG_580}L\ncheck-cast v1, $CONFIG\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nmove-result v0\nreturn v0",
-            "jump into the read" to "if-eqz v3, :check\nconst-wide v0, ${FLAG_580}L\n:check\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nmove-result v0\nreturn v0",
+            "flag before another argument" to "const-wide v0, ${FLAG}L\ninvoke-static {v0, v1, v4}, LX/16z;->A1Z(JLjava/lang/Object;)Z\nmove-result v0\nreturn v0",
+            "answer not a boolean" to "const-wide v0, ${FLAG}L\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)I\nmove-result v0\nreturn v0",
+            "answer never taken" to "const-wide v0, ${FLAG}L\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nconst/4 v0, 0x0\nreturn v0",
+            "flag logged" to "const-wide v0, ${FLAG}L\ninvoke-static {v0, v1}, Ljava/lang/Long;->valueOf(J)Ljava/lang/Long;\nconst/4 v0, 0x0\nreturn v0",
+            "cast over the flag" to "const-wide v0, ${FLAG}L\ncheck-cast v1, $CONFIG\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nmove-result v0\nreturn v0",
+            "jump into the read" to "if-eqz v3, :check\nconst-wide v0, ${FLAG}L\n:check\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nmove-result v0\nreturn v0",
             "no flag at all" to "const-wide v0, 0x1L\ninvoke-interface {v2, v0, v1}, $CONFIG->Ah8(J)Z\nmove-result v0\nreturn v0",
         )
         for ((case, body) in shapes) {

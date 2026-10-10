@@ -33,8 +33,8 @@ public class SetupSummaryTest {
     private void installedFeatures(String... keys) throws Exception {
         var app = RuntimeEnvironment.getApplication();
         var info = app.getPackageManager().getPackageInfo(app.getPackageName(), PackageManager.GET_META_DATA | PackageManager.GET_PROVIDERS);
-        info.versionName = "580.0.0.49.91";
-        info.setLongVersionCode((7L << 32) | 346013387L);
+        info.versionName = "582.0.0.61.92";
+        info.setLongVersionCode((7L << 32) | 346415686L);
         info.applicationInfo.metaData = new Bundle();
         for (String key : keys) info.applicationInfo.metaData.putBoolean("hush.feature." + key, true);
         // An installed bubbles fixture must also declare the host routes validated by the patch.
@@ -63,8 +63,8 @@ public class SetupSummaryTest {
             String text = clip.getItemAt(0).getText().toString();
             assertTrue(text.startsWith("HushMessenger v" + BuildConfig.VERSION_NAME + "\n"));
             assertTrue(text.contains("\nHost package: " + activity.getPackageName() + "\nSettings provider: found\n"));
-            assertTrue(text.contains("\nHost version: 580.0.0.49.91\n"));
-            assertTrue(text.contains("\nHost version code: " + ((7L << 32) | 346013387L) + "\n"));
+            assertTrue(text.contains("\nHost version: 582.0.0.61.92\n"));
+            assertTrue(text.contains("\nHost version code: " + ((7L << 32) | 346415686L) + "\n"));
             assertTrue(text.contains("\nAndroid API: " + Build.VERSION.SDK_INT + "\nPaused: false\nSafe mode: false\n"));
             assertTrue(text.contains("people: installed=true, selected=true, active=true,"));
             assertTrue(text.contains("stories: installed=false, selected=true, active=false,"));

@@ -26,6 +26,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference as DexMethodReference
@@ -39,7 +40,6 @@ import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
 internal const val SETTINGS = "Lapp/hushmessenger/extension/Settings;"
 internal const val AD_ITEM = "Lcom/facebook/messaging/business/inboxads/common/InboxAdsItem;"
 internal const val IMMUTABLE_LIST = "Lcom/google/common/collect/ImmutableList;"
-internal const val PREFERENCE_GETTER = "Lcom/facebook/prefs/shared/FbSharedPreferences;->AhC(LX/1BK;Z)Z"
 private const val PEOPLE_JEWEL_KEY = "pymk_jewel_section_hidden"
 /** Only the People tab's suggestion handler starts this coroutine; the handler itself is obfuscated. */
 internal const val PEOPLE_TAB_FETCH = "Lcom/facebook/messaging/peopletab/segments/friendrequests/usecase/" +
@@ -102,93 +102,11 @@ internal var messageTextGetterName: String = ""
 internal var messageIdGetterName: String = ""
 internal var messageIsUnsentGetterName: String = ""
 
-internal val expectedHooks = mapOf(
-    COMMUNITY_INBOX to setOf("LX/2GW;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
-    "stories" to setOf("LX/1mi;->A00()Z"),
-    "facebook" to setOf(
-        "LX/Sc2;->A06()Z", "LX/YFi;->A04()Z", "LX/2aP;->A0C()Z", "LX/3Ec;->A00()Z",
-        "LX/3me;->A00()Z", "LX/HFd;->A02()Z", "LX/HRL;->A06()Z", "LX/HRM;->A02()Z",
-        "LX/JiY;->A06()Z", "LX/Jir;->A02()Z", "LX/JjE;->A00()Z", "LX/JjM;->A01()Z",
-        "LX/JjO;->A02()Z", "LX/JjQ;->A02()Z", "LX/JjV;->A03()Z", "LX/JjW;->A03()Z",
-        "LX/JjY;->A01()Z", "LX/JjZ;->A01()Z", "LX/Jjb;->A06()Z", "LX/Jjc;->A06()Z", "LX/Jjd;->A06()Z",
-    ),
-    "ai_menu" to setOf("LX/HFe;->A00()Z", "LX/HFe;->A01()Z", "LX/Jiu;->A00()Z", "LX/Jiu;->A01()Z"),
-    "ai_fab" to setOf("LX/6k8;->render(LX/2MZ;)LX/1GG;"),
-    "ai_sticker_cell" to setOf("LX/FXP;->render(LX/2MZ;)LX/1GG;"),
-    "subtabs" to setOf("LX/2UL;->run()V"),
-    "typing" to setOf("LX/Ahp;->run()V"),
-    "typing_mailbox" to setOf("LX/8eb;->A0I(Ljava/lang/String;Z)LX/325;"),
-    "bubbles" to setOf("LX/2ZW;->A00()Z"),
-    "bubble_mode" to setOf("LX/2ZW;->A01(Lcom/facebook/auth/usersession/FbUserSession;)Z"),
-    "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
-    "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
-    "people_jewel" to setOf("LX/HAR;->A01(LX/HAR;)Z"),
-    "people_tab" to setOf("LX/JZ6;->A01(LX/JZ6;)V"),
-    "people_search" to setOf("LX/CX5;->DLP(LX/EA8;Ljava/lang/Object;)LX/EBu;"),
-    "people_story" to setOf("Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->" +
-        "A0Y(Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;)V"),
-    INBOX_REFRESH_HOOK to setOf("$INBOX_SUPPLIER->A0B()$IMMUTABLE_LIST"),
-    "allow_screenshot" to setOf(
-        "LX/N2h;->run()V",
-        "Lcom/facebook/screenshot/ScreenshotContentObserver;->onChange(ZLandroid/net/Uri;)V",
-        "LX/8xp;->onScreenCaptured()V",
-        "LX/4nW;->A00(Landroid/view/Window;)V",
-    ),
-    "screenshot_viewers" to screenshotViewerHooks("A1A"),
-    "hide_read_receipts" to setOf("LX/AX0;->run()V"),
-    "read_mailbox" to setOf("LX/9sm;->A01(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V"),
-    "keep_unsent" to setOf("LX/SH3;->A01(Landroid/content/Intent;Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;)V"),
-    "anonymous_stories" to setOf("LX/HNV;->C1V(${MONTAGE_CARD}Z)V", STORY_PREVIEW_INIT),
-    APP_ICONS to setOf("LX/7Ya;->A02($FB_USER_SESSION)Z", "LX/7Ya;->A03($FB_USER_SESSION)Z"),
-    "save_stories" to setOf("LX/JgG;->onClick(Landroid/view/View;)V"),
-    "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->" +
-        "A01(Landroidx/fragment/app/Fragment;LX/Ocr;Ljava/util/List;LX/5MS;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
-    "growth_story_card" to setOf("Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->" +
-        "A0x(Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;)Z"),
-    "unsent_indicator" to setOf("LX/K1Y;->BWo(I)Ljava/lang/String;"),
-    "delta_unsent" to setOf("LX/K1Y;->Btd(I)Z"),
-    "ai_search" to setOf("LX/5OA;->A0A(LX/5OA;)Z", "LX/5OA;->A0B(LX/5OA;)Z"),
-    "ai_search_chip" to setOf("LX/D8E;->render(LX/2MZ;)LX/1GG;"),
-    "emoji_typeface" to setOf("LX/1KV;->A00()Landroid/graphics/Typeface;"),
-    ANALYTICS_UPLOADS to setOf(
-        "LX/0c0;->onStartCommand(Landroid/content/Intent;II)I",
-        "LX/0c0;->onStartJob(Landroid/app/job/JobParameters;)Z",
-        "LX/T7W;->run()V",
-        "Lcom/facebook/analytics2/logger/GooglePlayUploadService;->onStartCommand(Landroid/content/Intent;II)I",
-        "Lcom/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService;->onStartCommand(Landroid/content/Intent;II)I",
-        "Lcom/facebook/analytics2/logger/legacy/uploader/HighPriUploadRetryReceiver;->onReceive(Landroid/content/Context;Landroid/content/Intent;)V",
-        "Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;->onStartCommand(Landroid/content/Intent;II)I",
-        "Lcom/facebook/analytics2/logger/legacy/uploader/LollipopUploadService;->onStartJob(Landroid/app/job/JobParameters;)Z",
-        "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartCommand(Landroid/content/Intent;II)I",
-        "Lcom/facebook/analytics2/logger/service/LollipopUploadSafeService;->onStartJob(Landroid/app/job/JobParameters;)Z",
-    ),
-    MESSAGE_LOG to setOf(newMessageNotificationCtor("LX/5qJ;", "LX/5Yc;")),
-    EMOJI_SEARCH to setOf("LX/7TX;->A8Y(Landroid/text/Editable;Z)V"),
-    DISAPPEARING_SWIPE to setOf(OVERSCROLL_START),
-    EMOJI_DRAWER to setOf("Lcom/facebook/mobileconfig/factory/MobileConfigUnsafeContext;->A02()Z",
-        "LX/H1n;->invoke(Ljava/lang/Object;)Ljava/lang/Object;"),
-    "original_photo" to setOf(TRANSCODE_IMAGE, TRANSCODE_IMAGE_ASYNC),
-    ORIGINAL_VIDEO to setOf(VIDEO_TRANSCODE),
-    SYSTEM_CAMERA to setOf("LX/7Jp;->DXV($MONTAGE_PARAMS$NAVIGATION_TRIGGER)V"),
-    "avatar_tabs" to setOf("Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;->A0P()$IMMUTABLE_LIST"),
-    "menu_settings" to setOf(
-        "LX/9rv;->A1i()V",
-        "LX/HFb;->Ax1(LX/0MG;)Ljava/util/ArrayList;",
-        "LX/TxV;->CAo(LX/4jw;I)V",
-        "LX/Txc;->A0I(Ljava/util/List;)V",
-        "LX/Jwp;->onClick(Landroid/view/View;)V",
-    ),
-    "chat_animation" to setOf(FRAGMENT_ANIMATION),
-    "chat_fragment" to setOf("LX/1hl;-><init>()V"),
-    "chat_inbox" to setOf("LX/1fs;-><init>()V"),
-    "chat_legacy" to setOf("LX/1hd;->onCreateAnimation(IZI)$ANIMATION"),
-) + pluginGates.mapValues { it.value.methods }
-
 internal fun Method.hookId() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
 
-/** Match semantics first, then require the complete set from both tested APKs. */
+/** Match semantics first, then require the exact set the build's profile records. */
 internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInboxContract? = findCommunityInbox(classes)): Map<String, List<Method>> {
-    val found = expectedHooks.keys.associateWith { mutableListOf<Method>() }
+    val found = BASE_PROFILE.hooks.keys.associateWith { mutableListOf<Method>() }
     community?.let { found.getValue(COMMUNITY_INBOX).add(it.render) }
     found.getValue("ai_sticker_cell").addAll(findAiStickerCells(classes))
     val adContract = classes.any { it.type == AD_ITEM } && classes.any { cls ->
@@ -264,6 +182,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
         }
     }
     val appIconManagers = findAppIconManagers(classes)
+    val stringTables = redexStringTables(classes)
     var searchFieldRender: Method? = null
     var changedViewer = false
     val drawerReaders = mutableListOf<Method>()
@@ -288,7 +207,8 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
             if (EMOJI_DRAWER_ANCHOR in strings) drawerAnchors.add(method)
             if (method.returnType == "Z" && (method.parameterTypes.isEmpty() ||
                 (AccessFlags.STATIC.isSet(method.accessFlags) && method.parameterTypes == listOf(cls.type)))) {
-                for ((key, spec) in pluginGates) if (strings.any { it in spec.anchors }) add(key)
+                val anchors = strings + method.tableStrings(stringTables)
+                for ((key, spec) in pluginGates) if (anchors.any { it in spec.anchors }) add(key)
             }
             if (adContract && method.returnType == IMMUTABLE_LIST && method.parameterTypes.size == 3 &&
                 strings.containsAll(setOf("messaging.inbox.itemlistprocessor.ItemListProcessorInterfaceSpec", "processItems", "new_friend_bump_threads"))) add("ads")
@@ -674,7 +594,7 @@ internal fun MutableMethod.validateSubtabs() {
         (literal as? WideLiteralInstruction)?.wideLiteral != 1L ||
         (instructions[0] as? ReferenceInstruction)?.reference.toString() != activeProfile.subtabsSupplier ||
         (instructions[1] as? ReferenceInstruction)?.reference.toString() !=
-            "Lcom/facebook/messaging/inboxsubtabs/plugins/subtabs/itemsupplier/InboxSubtabsItemSupplierImplementation;->A05:Ljava/util/concurrent/atomic/AtomicBoolean;" ||
+            "Lcom/facebook/messaging/inboxsubtabs/plugins/subtabs/itemsupplier/InboxSubtabsItemSupplierImplementation;->A07:Ljava/util/concurrent/atomic/AtomicBoolean;" ||
         (instructions[3] as? ReferenceInstruction)?.reference.toString() != "Ljava/util/concurrent/atomic/AtomicBoolean;->set(Z)V") {
         throw PatchException("Messenger controls: inbox tabs no longer use the checked visibility flag")
     }
@@ -743,8 +663,8 @@ internal fun Method.jumpTargets(): Set<Int> {
     return targets
 }
 
-/** The Notifications tab's server flag ID, renumbered by each release: 580's, 581's, then 582's. */
-private val PEOPLE_SERVER_FLAGS = setOf(72344235860374863L, 72344231565407716L, 72344188615734930L)
+/** The Notifications tab's server flag ID. Each release renumbers it. */
+private val PEOPLE_SERVER_FLAGS = setOf(72344188615734930L)
 
 /**
  * Where the Notifications tab loads its server flag: the method's only constant with one of those values, after the
@@ -1021,25 +941,31 @@ internal fun MutableMethod.injectKeyboardTabs() {
     """.trimIndent())
 }
 
+private const val IMMUTABLE_LIST_BUILDER = "Lcom/google/common/collect/ImmutableList\$Builder;"
+
 /**
- * Builds that fill the keyboard's tab list inline hand a local ArrayList of tab items to one static
- * (ImmutableList.Builder, Iterable) -> ImmutableList copy. Returns that call's index and list register.
+ * Builds that fill the keyboard's tab list inline add a local ArrayList of tab items to an ImmutableList.Builder
+ * once, and the next instruction hands that builder to one static (ImmutableList.Builder) -> ImmutableList call.
+ * Returns the addAll's index and list register.
  */
 internal fun MutableMethod.validateKeyboardTabsInline(): Pair<Int, Int> {
     val code = implementation!!.instructions.toList()
-    val copies = code.indices.filter { index ->
-        val ref = (code[index] as? ReferenceInstruction)?.reference as? DexMethodReference
-        code[index].opcode == Opcode.INVOKE_STATIC && ref != null && ref.returnType == IMMUTABLE_LIST &&
-            ref.parameterTypes.map { it.toString() } == listOf("Lcom/google/common/collect/ImmutableList\$Builder;", "Ljava/lang/Iterable;")
+    val adds = code.indices.filter { index ->
+        code[index].opcode == Opcode.INVOKE_VIRTUAL && (code[index] as ReferenceInstruction).reference.toString() ==
+            "$IMMUTABLE_LIST_BUILDER->addAll(Ljava/lang/Iterable;)$IMMUTABLE_LIST_BUILDER"
     }
+    val build = adds.singleOrNull()?.let { code.getOrNull(it + 1) }
+    val ref = (build as? ReferenceInstruction)?.reference as? DexMethodReference
     // Code inserted before a jump target would be skipped by whatever jumps there.
-    if (returnType != "V" || copies.size != 1 || copies.single() in jumpTargets()) {
+    if (returnType != "V" || adds.size != 1 || adds.single() in jumpTargets() || build?.opcode != Opcode.INVOKE_STATIC ||
+        ref == null || ref.returnType != IMMUTABLE_LIST || ref.parameterTypes.map { it.toString() } != listOf(IMMUTABLE_LIST_BUILDER) ||
+        (build as FiveRegisterInstruction).registerC != (code[adds.single()] as FiveRegisterInstruction).registerC) {
         throw PatchException("Messenger controls: the sticker keyboard tab list differs from the tested build")
     }
-    return copies.single() to (code[copies.single()] as FiveRegisterInstruction).registerD
+    return adds.single() to (code[adds.single()] as FiveRegisterInstruction).registerD
 }
 
-/** Drops the avatar tab from the list just before Messenger copies it; the list is a local. */
+/** Drops the avatar tab from the list just before Messenger adds it to the builder; the list is a local. */
 internal fun MutableMethod.injectKeyboardTabsInline() {
     val (copy, tabs) = validateKeyboardTabsInline()
     addInstructions(copy, "invoke-static/range {v$tabs .. v$tabs}, $SETTINGS->removeAvatarTabs(Ljava/lang/Iterable;)V")
@@ -1066,16 +992,30 @@ internal fun MutableMethod.injectOutgoingTyping() {
 
 /**
  * The Menu tab's folder row class, which the Settings row is built from. The builder may also make other folder rows
- * of that class (581 adds the QR code row) and their folder keys, but nothing else.
+ * of that class (the QR code row), their folder keys and, in builds that make them in place, their icons, but nothing else.
  */
 internal fun Method.menuFolderItemType(): String {
-    val types = implementation!!.instructions.filter { it.opcode == Opcode.NEW_INSTANCE }
+    val code = implementation!!.instructions.toList()
+    val types = code.filter { it.opcode == Opcode.NEW_INSTANCE }
         .map { ((it as ReferenceInstruction).reference as TypeReference).type }.toSet()
-    val row = ((implementation!!.instructions.elementAt(settingsRowCall()) as ReferenceInstruction).reference as DexMethodReference).definingClass
-    if (row !in types || types.any { it != row && !(it.startsWith(DRAWER_MODEL) && it.endsWith("FolderKey;")) })
-        throw PatchException("Messenger controls: menu settings item builder creates ${types.size} types, expected its row and folder keys")
+    val row = ((code[settingsRowCall()] as ReferenceInstruction).reference as DexMethodReference).definingClass
+    val icons = inlineRowIcons(code, row)
+    if (row !in types || types.any { it != row && it !in icons && !(it.startsWith(DRAWER_MODEL) && it.endsWith("FolderKey;")) })
+        throw PatchException("Messenger controls: menu settings item builder creates ${types.size} types, expected its rows, folder keys and icons")
     return row
 }
+
+/** Types created by the last write before a row constructor call to the register holding the row's icon argument. */
+private fun inlineRowIcons(code: List<Instruction>, row: String): Set<String> = code.indices.mapNotNull { at ->
+    val call = (code[at] as? ReferenceInstruction)?.reference as? DexMethodReference
+    val range = code[at] as? RegisterRangeInstruction
+    if (code[at].opcode != Opcode.INVOKE_DIRECT_RANGE || range == null || call?.definingClass != row || call.name != "<init>" ||
+        range.registerCount < 4) return@mapNotNull null
+    // The receiver comes first, so the icon (the constructor's third parameter) is the fourth register.
+    val icon = range.startRegister + 3
+    val origin = (at - 1 downTo 0).firstOrNull { code[it].opcode.setsRegister() && (code[it] as? OneRegisterInstruction)?.registerA == icon }
+    origin?.takeIf { code[it].opcode == Opcode.NEW_INSTANCE }?.let { ((code[it] as ReferenceInstruction).reference as TypeReference).type }
+}.toSet()
 
 /** Messenger casts the tapped folder row just before its folder-selected trace section starts. */
 internal fun Method.menuFolderCastIndex(folderItemType: String): Int {
@@ -1182,9 +1122,12 @@ internal fun MutableMethod.validateUnsentIndicator() {
     if (returnType != "Ljava/lang/String;") throw PatchException("Messenger controls: unsent_indicator hook must return String")
     if (parameterTypes != listOf("I")) throw PatchException("Messenger controls: unsent_indicator hook must take one int param")
     val code = implementation!!.instructions.toList()
-    if (code.size != 5) throw PatchException("Messenger controls: unsent_indicator hook has ${code.size} instructions, expected 5")
-    if (code[4].opcode != Opcode.RETURN_OBJECT) throw PatchException("Messenger controls: unsent_indicator hook must end with return-object")
-    if (code[0].opcode != Opcode.INVOKE_STATIC) throw PatchException("Messenger controls: unsent_indicator hook must start with invoke-static")
+    // 582 takes the row from the wrapper's list, casts it and asks it for its text, ending in v0.
+    val shape = listOf(Opcode.IGET_OBJECT, Opcode.INVOKE_INTERFACE, Opcode.MOVE_RESULT_OBJECT, Opcode.CHECK_CAST,
+        Opcode.INVOKE_INTERFACE, Opcode.MOVE_RESULT_OBJECT, Opcode.RETURN_OBJECT)
+    if (code.size != shape.size) throw PatchException("Messenger controls: unsent_indicator hook has ${code.size} instructions, expected ${shape.size}")
+    if (code.map { it.opcode } != shape || (code.last() as OneRegisterInstruction).registerA != 0 || implementation!!.registerCount != 3)
+        throw PatchException("Messenger controls: unsent_indicator hook no longer reads the row's text from its list")
 }
 
 internal fun MutableMethod.injectUnsentIndicator() {
@@ -1496,7 +1439,10 @@ internal fun MutableMethod.validateStorySave(): StorySave {
         val result = answer(i)
         op(result) == Opcode.MOVE_RESULT && reg(result) == reg(i) && op(result - 1) == Opcode.INVOKE_VIRTUAL &&
             call(result - 1)?.returnType == "Z" && params(result - 1)?.isEmpty() == true &&
-            args(result - 1) == listOf((code[i + 1] as TwoRegisterInstruction).registerB)
+            args(result - 1) == listOf((code[i + 1] as TwoRegisterInstruction).registerB) &&
+            // The menu is built right before the question. 582's 346415706 family merges a fragment manager check of
+            // the same shape into this onClick, without a menu.
+            op(result - 2) == Opcode.MOVE_RESULT_OBJECT && op(result - 3) == Opcode.INVOKE_STATIC
     }.singleOrNull() ?: fail("no longer asks once whether the story is yours")
     val result = answer(own)
     val flag = reg(own)

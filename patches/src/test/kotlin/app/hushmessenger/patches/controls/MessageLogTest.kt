@@ -71,7 +71,7 @@ private fun reference(at: Int, code: List<com.android.tools.smali.dexlib2.iface.
 
 class MessageLogTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
         messageLogContract = null
     }
 

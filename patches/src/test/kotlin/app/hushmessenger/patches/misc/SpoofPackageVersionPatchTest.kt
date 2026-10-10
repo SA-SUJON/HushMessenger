@@ -12,12 +12,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SpoofPackageVersionPatchTest {
-    private fun manifest(code: String = "346213494", major: String? = null): Document {
+    private fun manifest(code: String = "346415686", major: String? = null): Document {
         val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
         val root = document.createElement("manifest")
         root.setAttribute("package", "com.facebook.orca")
         root.setAttribute("android:versionCode", code)
-        root.setAttribute("android:versionName", "581.0.0.49.91")
+        root.setAttribute("android:versionName", "582.0.0.61.92")
         if (major != null) root.setAttribute("android:versionCodeMajor", major)
         document.appendChild(root)
         return document
@@ -28,22 +28,22 @@ class SpoofPackageVersionPatchTest {
     @Test
     fun raisesTheManifestCodeToTheChosenNumber() {
         val document = manifest()
-        document.spoofVersionCode("346213494", HIGHEST_VERSION_CODE)
+        document.spoofVersionCode("346415686", HIGHEST_VERSION_CODE)
         assertEquals("2147483647", document.code)
-        assertEquals("581.0.0.49.91", document.documentElement.getAttribute("android:versionName"))
+        assertEquals("582.0.0.61.92", document.documentElement.getAttribute("android:versionName"))
 
-        val lowest = manifest("346013440")
-        lowest.spoofVersionCode("346013440", 1)
+        val lowest = manifest("346415706")
+        lowest.spoofVersionCode("346415706", 1)
         assertEquals("1", lowest.code)
     }
 
     @Test
     fun refusesAManifestThatDisagreesWithThePatcherBeforeChangingIt() {
-        val document = manifest("346213494")
-        val failure = assertFailsWith<PatchException> { document.spoofVersionCode("346013440", HIGHEST_VERSION_CODE) }
-        assertContains(failure.message.orEmpty(), "not 346013440")
+        val document = manifest("346415686")
+        val failure = assertFailsWith<PatchException> { document.spoofVersionCode("346415706", HIGHEST_VERSION_CODE) }
+        assertContains(failure.message.orEmpty(), "not 346415706")
         assertContains(failure.message.orEmpty(), "Use an unmodified arm64 Messenger")
-        assertEquals("346213494", document.code)
+        assertEquals("346415686", document.code)
 
         val blank = manifest("")
         assertFailsWith<PatchException> { blank.spoofVersionCode("", HIGHEST_VERSION_CODE) }
@@ -53,17 +53,17 @@ class SpoofPackageVersionPatchTest {
     @Test
     fun refusesAVersionCodeMajorBeforeChangingIt() {
         val document = manifest(major = "1")
-        val failure = assertFailsWith<PatchException> { document.spoofVersionCode("346213494", HIGHEST_VERSION_CODE) }
+        val failure = assertFailsWith<PatchException> { document.spoofVersionCode("346415686", HIGHEST_VERSION_CODE) }
         assertContains(failure.message.orEmpty(), "versionCodeMajor")
-        assertEquals("346213494", document.code)
+        assertEquals("346415686", document.code)
     }
 
     @Test
     fun refusesCodesBelowOneBeforeChangingIt() {
         for (code in listOf(0, -1, Int.MIN_VALUE)) {
             val document = manifest()
-            assertFailsWith<PatchException> { document.spoofVersionCode("346213494", code) }
-            assertEquals("346213494", document.code)
+            assertFailsWith<PatchException> { document.spoofVersionCode("346415686", code) }
+            assertEquals("346415686", document.code)
         }
         assertFalse(validSpoofedVersionCode(null))
         assertTrue(validSpoofedVersionCode(1))

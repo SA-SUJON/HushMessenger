@@ -241,12 +241,12 @@ class ExpandedControlsTest {
         }
     }
 
-    @Test fun messenger581AdExitsEachKeepTheirOwnResultRegister() {
-        val body = "goto/16 :first_exit\n" + "nop\n".repeat(1449) + ":first_exit\nreturn-object v7\n" +
+    @Test fun adExitsReturningTwoRegistersEachKeepTheirOwnResultRegister() {
+        val body = "goto/16 :first_exit\n" + "nop\n".repeat(1452) + ":first_exit\nreturn-object v7\n" +
             "nop\n".repeat(8) + "return-object v2\n" + "nop\n".repeat(3)
-        activeProfile = PROFILE_346213494
+        activeProfile = BASE_PROFILE
         try {
-            val method = method("LX/2LJ;", "D3q", 24, IMMUTABLE_LIST, body)
+            val method = method("LX/2I2;", "D5T", 24, IMMUTABLE_LIST, body)
             method.injectAdFilter()
             val code = method.implementation!!.instructions
             val addresses = code.runningFold(0) { address, instruction -> address + instruction.codeUnits }
@@ -257,10 +257,10 @@ class ExpandedControlsTest {
             }
             assertEquals(listOf(7, 2), kept.map { (it as com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction).registerA })
             for (changed in listOf(body.replace("return-object v2", "return-object v7"), body.replace("return-object v7", "return-object v5"))) {
-                assertFailsWith<PatchException> { method("LX/2LJ;", "D3q", 24, IMMUTABLE_LIST, changed).injectAdFilter() }
+                assertFailsWith<PatchException> { method("LX/2I2;", "D5T", 24, IMMUTABLE_LIST, changed).injectAdFilter() }
             }
         } finally {
-            activeProfile = BASE_PROFILE
+            activeProfile = SYNTHETIC_PROFILE
         }
     }
 
@@ -331,8 +331,11 @@ class ExpandedControlsTest {
         val both = builder(folderRow("LX/HRf;", settingsKey) + folderRow("LX/HRf;", qrKey))
         assertEquals("LX/HRf;", both.menuFolderItemType())
         assertEquals(2, both.settingsRowCall())
+        // 582's main family builds each row's icon in place, straight into the constructor's icon argument (v3).
+        assertEquals("LX/HRf;", builder("new-instance v3, LX/KGb;\n" + folderRow("LX/HRf;", settingsKey)).menuFolderItemType())
         for (changed in listOf(
             folderRow("LX/HRf;", settingsKey) + "new-instance v2, LX/HRg;\n",
+            "new-instance v2, LX/KGb;\n" + folderRow("LX/HRf;", settingsKey),
             folderRow("LX/HRf;", settingsKey) + folderRow("LX/HRf;", settingsKey),
             folderRow("LX/HRf;", qrKey),
             "new-instance v1, LX/HRf;\n",

@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
 
 class InboxRefreshTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
     }
 
     private fun resolve(classes: List<ClassDef>, items: Method = classes.single { it.type == INBOX_SUPPLIER }.methods

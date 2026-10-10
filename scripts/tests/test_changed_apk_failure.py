@@ -28,7 +28,7 @@ WRAPPED_REASON = (
     'depends on "BytecodePatch@1727420902", which raised an exception:\r\n'
     "app.morphe.patcher.patch.PatchException: Install beside Meta apps: "
     "expected 6 permission loads, found 4. Use an unmodified arm64 Messenger "
-    f"580.0.0.49.91 APK (version code {SUPPORTED}).\r\r\n"
+    f"582.0.0.61.92 APK (version code {SUPPORTED}).\r\r\n"
     "\tat app.hushmessenger.patches.coexist.InstallBesideMetaAppsPatchKt.validateDexSites(InstallBesideMetaAppsPatch.kt:203)\r\n"
 )
 

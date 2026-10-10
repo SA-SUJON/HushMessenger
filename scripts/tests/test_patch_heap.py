@@ -107,7 +107,7 @@ class PatchHeapChecks(unittest.TestCase):
                     checked.append(code)
                 return f"PASS {code}"
 
-            # The real records and supported codes, not fixtures: 580 and 581 together.
+            # The real records and supported codes, not fixtures: both 582 families.
             with (
                 patch.object(checker, "ROOT", root),
                 patch.object(checker, "verify_development", return_value="metadata OK"),
@@ -119,8 +119,8 @@ class PatchHeapChecks(unittest.TestCase):
             ):
                 self.assertEqual(0, checker.main())
             self.assertEqual(sorted(checker.recorded_builds()), sorted(checked))
-            self.assertIn(346013387, checked)
-            self.assertIn(346213494, checked)
+            self.assertIn(346415686, checked)
+            self.assertIn(346415706, checked)
 
     def test_corrupt_output_entry_fails_that_build_and_keeps_the_others(self):
         with tempfile.TemporaryDirectory() as directory:

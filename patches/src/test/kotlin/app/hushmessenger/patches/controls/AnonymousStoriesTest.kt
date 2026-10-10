@@ -25,7 +25,7 @@ import kotlin.test.assertTrue
 
 class AnonymousStoriesTest {
     @AfterTest fun reset() {
-        activeProfile = BASE_PROFILE
+        activeProfile = SYNTHETIC_PROFILE
     }
 
     // The fixtures are raw strings in a file Git may check out with CRLF; the edits below split lines on LF.
@@ -226,9 +226,8 @@ class AnonymousStoriesTest {
             assertEquals("$MONTAGE_BUCKET_PREVIEW->$STORY_RING_HELPER($MONTAGE_BUCKET_PREVIEW)V", reference(init[init.size - 2]), code)
             assertEquals(Opcode.RETURN_VOID, init.last().opcode, code)
         }
-        // 580 keeps the card in A05 and the flag in A0D; 581 moved them to A06 and A0G.
+        // Every 582 build keeps the card in A06 and the flag in A0G.
         assertEquals(setOf(
-            "$MONTAGE_BUCKET_PREVIEW->A05:$MONTAGE_CARD $MONTAGE_BUCKET_PREVIEW->A0D:Z $MONTAGE_BUCKET_PREVIEW->A02:I",
             "$MONTAGE_BUCKET_PREVIEW->A06:$MONTAGE_CARD $MONTAGE_BUCKET_PREVIEW->A0G:Z $MONTAGE_BUCKET_PREVIEW->A02:I",
         ), ringFields)
     }
