@@ -33,7 +33,7 @@ internal val syntheticHooks: Map<String, Set<String>> = mapOf(
     "bubble_mode" to setOf("LX/2ZW;->A01(Lcom/facebook/auth/usersession/FbUserSession;)Z"),
     "browser" to setOf("Lcom/facebook/messaging/browser/util/MessengerBrowserLauncher;->A0L(Landroid/net/Uri;Lcom/facebook/auth/usersession/FbUserSession;)Z"),
     "ads" to setOf("LX/2Wl;->D2i(LX/1fx;${IMMUTABLE_LIST}Ljava/lang/String;)$IMMUTABLE_LIST"),
-    "people_jewel" to setOf("LX/HAR;->A01(LX/HAR;)Z"),
+    "people_jewel" to setOf(PEOPLE_JEWEL_HOOK),
     "people_tab" to setOf("LX/JZ6;->A01(LX/JZ6;)V"),
     "people_search" to setOf("LX/CX5;->DLP(LX/EA8;Ljava/lang/Object;)LX/EBu;"),
     "people_story" to setOf("Lcom/facebook/messaging/montage/viewer/MontageViewerFragment;->" +

@@ -214,7 +214,7 @@ internal fun inboxObserverClass(
 
 internal fun inboxRefreshClasses() = listOf(inboxSupplierClass(), inboxObserverClass())
 
-internal const val PEOPLE_JEWEL_HOOK = "LX/HAR;->A01(LX/HAR;)Z"
+internal const val PEOPLE_JEWEL_HOOK = "LX/HAR;->A01(LX/3nt;LX/HAR;)Z"
 internal const val PEOPLE_TAB_HOOK = "LX/JZ6;->A01(LX/JZ6;)V"
 
 /** The People tab handler's publish step as 346013440 has it: list and filter map to the listener it loads first. */
@@ -283,8 +283,10 @@ internal fun peopleStoryMethod(
 """.trimIndent(), registers = 4, flags = flags)
 
 /**
- * Instructions 0-20 match the supported APKs; one instruction stands in for the list reset. With [inlinedReset],
- * 346013423's single call replaces the two calls at 14-15, so the server flag moves from 17 to 16.
+ * Instructions 0-20 match the supported APKs; one instruction stands in for the list reset. The suggestions logger
+ * comes first, so the owner is p1, and false lives in v5 of ten registers. The older shapes are only there to be
+ * refused: with [inlinedReset] one call replaces the two at 14-15, so the server flag moves from 17 to 16, and
+ * without [logged] the reader takes only its owner and keeps false in v4 of six registers.
  */
 internal fun peopleJewelMethod(
     key: String = "LX/JTx;->A01:LX/1BL;",
@@ -295,9 +297,8 @@ internal fun peopleJewelMethod(
     inlinedReset: Boolean = false,
     extraFlag: Boolean = false,
     extraFlagValue: String = serverFlag,
-    // 582 passes the suggestions logger first, so the owner is p1, and keeps false in v5 of ten registers.
-    logged: Boolean = false,
-) = fixtureMethod(if (logged) PEOPLE_JEWEL_HOOK.replace("(", "(LX/3nt;") else PEOPLE_JEWEL_HOOK, """
+    logged: Boolean = true,
+) = fixtureMethod(if (logged) PEOPLE_JEWEL_HOOK else PEOPLE_JEWEL_HOOK.replace("(LX/3nt;", "("), """
     iget-object v0, ${if (logged) "p1" else "p0"}, LX/HAR;->A07:LX/17Z;
     invoke-static {v0}, LX/17Z;->A0F(LX/17Z;)Ljava/lang/Object;
     move-result-object v0

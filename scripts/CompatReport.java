@@ -451,13 +451,13 @@ public class CompatReport {
     static List<String> peopleSection(List<Method> jewel, String getter) {
         if (jewel.size() != 1) return null;
         var code = instructions(jewel.get(0));
-        // The server flag loads at 17, or at 16 where Redex inlined the list reset into one call (346013423).
+        // The server flag loads at 17.
         var flags = new ArrayList<Integer>();
         for (int i = 0; i < code.size(); i++) {
             if (code.get(i).getOpcode() == Opcode.CONST_WIDE && code.get(i) instanceof WideLiteralInstruction flag &&
                 PEOPLE_SERVER_FLAGS.contains(flag.getWideLiteral())) flags.add(i);
         }
-        if (flags.size() != 1 || flags.get(0) < 16 || flags.get(0) > 17) return null;
+        if (flags.size() != 1 || flags.get(0) != 17) return null;
         int at = flags.get(0);
         if (code.size() < at + 4 || code.get(8).getOpcode() != Opcode.SGET_OBJECT || register(code.get(8)) != 0 ||
             code.get(10).getOpcode() != Opcode.INVOKE_INTERFACE || !getter.equals(ref(code.get(10))) ||
@@ -2558,9 +2558,8 @@ public class CompatReport {
                     found.get("browser").add(method);
                 }
 
-                // people_jewel, kept once discovery knows the preference getter. 582 passes the suggestions logger first.
-                if ("Z".equals(method.getReturnType()) && isStatic && (paramTypes.equals(List.of(cls.getType())) ||
-                    (paramTypes.size() == 2 && paramTypes.get(1).equals(cls.getType())))) {
+                // people_jewel, kept once discovery knows the preference getter. It takes the suggestions logger, then its owner.
+                if ("Z".equals(method.getReturnType()) && isStatic && paramTypes.size() == 2 && paramTypes.get(1).equals(cls.getType())) {
                     var refIds = refs.stream().map(Object::toString).collect(Collectors.toSet());
                     if (!Collections.disjoint(refIds, peopleJewelKeys)) jewelCandidates.add(Map.entry(method, refIds));
                 }

@@ -669,23 +669,21 @@ internal fun Method.jumpTargets(): Set<Int> {
 private val PEOPLE_SERVER_FLAGS = setOf(72344188615734930L)
 
 /**
- * Where the Notifications tab loads its server flag: the method's only constant with one of those values, after the
- * preference branch at 12. It's at 17 in most builds and at 16 where Redex inlined the list reset into one call.
+ * Where the Notifications tab loads its server flag: the method's only constant with one of those values, at 17,
+ * after the preference branch at 12.
  */
 private fun List<Instruction>.peopleFlagIndex(): Int =
     indices.filter { i -> this[i].opcode == Opcode.CONST_WIDE && (this[i] as? WideLiteralInstruction)?.wideLiteral in PEOPLE_SERVER_FLAGS }
-        .singleOrNull()?.takeIf { it in 16..17 } ?: -1
+        .singleOrNull()?.takeIf { it == 17 } ?: -1
 
-/** The section check takes its owner, and from 582 on the suggestions logger before it. */
-private fun Method.isPeopleSectionShape() = parameterTypes.map(CharSequence::toString).let {
-    it == listOf(definingClass) || (it.size == 2 && it[1] == definingClass)
-}
+/** The section check takes the suggestions logger, then its owner. */
+private fun Method.isPeopleSectionShape() = parameterTypes.map(CharSequence::toString).let { it.size == 2 && it[1] == definingClass }
 
 /**
  * The Notifications tab reads its stock "section hidden" preference into v0 and branches on it. A hidden
  * section is still shown when a server flag (v0, three instructions after its constant) is on; both branches
- * land on the final false return. The false value lives in v4, or in v5 in 582's ten-register body, which logs
- * a skipped impression under a monitor after the server branch.
+ * land on the final false return. The false value lives in v5 of the ten-register body, which logs a skipped
+ * impression under a monitor after the server branch.
  */
 internal fun MutableMethod.validatePeopleSection() {
     val code = implementation!!.instructions.toList()
@@ -695,10 +693,9 @@ internal fun MutableMethod.validatePeopleSection() {
     val at = code.peopleFlagIndex()
     val flag = code.getOrNull(at)
     val last = code.lastIndex
-    val logged = parameterTypes.size == 2
-    val no = if (logged) 5 else 4
+    val no = 5
     if (!AccessFlags.STATIC.isSet(accessFlags) || returnType != "Z" || !isPeopleSectionShape() ||
-        implementation!!.registerCount != (if (logged) 10 else 6) ||
+        implementation!!.registerCount != 10 ||
         flag?.opcode != Opcode.CONST_WIDE || (flag as? OneRegisterInstruction)?.registerA != 0 ||
         code.getOrNull(at + 1)?.opcode != Opcode.INVOKE_STATIC ||
         (code[at + 1] as? ReferenceInstruction)?.reference.toString() != activeProfile.peopleFlagCheck ||
