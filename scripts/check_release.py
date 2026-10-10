@@ -345,6 +345,29 @@ def stop_process_tree(process):
     process.kill()
 
 
+def run_bounded(command, *, timeout, capture_output=False, **kwargs):
+    """subprocess.run that stops the whole process tree when the limit passes.
+
+    Through the build queue the direct child is PowerShell, which starts the real job.
+    subprocess.run kills only that child and then waits on pipes the job still holds, so a
+    hung job would hang the caller and keep running outside any queue slot.
+    """
+    if capture_output:
+        kwargs["stdout"] = kwargs["stderr"] = subprocess.PIPE
+    with subprocess.Popen(command, start_new_session=sys.platform != "win32", **kwargs) as process:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            stop_process_tree(process)
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                process.communicate(timeout=30)
+            raise subprocess.TimeoutExpired(command, timeout) from None
+        except BaseException:
+            stop_process_tree(process)
+            raise
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
 def validate_catalog(root, bundle, evidence):
     """Run the same catalog/definition checks without invoking a bundle producer."""
     evidence.unlink(missing_ok=True)

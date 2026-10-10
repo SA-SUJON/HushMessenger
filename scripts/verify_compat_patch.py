@@ -13,10 +13,10 @@ from zipfile import BadZipFile, ZipFile
 
 if __package__:
     from .build_queue import gradle, queued, time_limit
-    from .check_release import stop_process_tree
+    from .check_release import run_bounded, stop_process_tree
 else:
     from build_queue import gradle, queued, time_limit
-    from check_release import stop_process_tree
+    from check_release import run_bounded, stop_process_tree
 
 
 def digest(path):
@@ -71,7 +71,7 @@ def verify(apk, bundle, desktop, java, names, apk_sha256, aapt2):
     with tempfile.TemporaryDirectory(prefix="hush-profile-") as scratch:
         root = Path(scratch)
         output, result = root / "patched.apk", root / "result.json"
-        run = subprocess.run(
+        run = run_bounded(
             queued(
                 [
                     str(java),
@@ -95,7 +95,6 @@ def verify(apk, bundle, desktop, java, names, apk_sha256, aapt2):
             encoding="utf-8",
             errors="replace",
             timeout=time_limit(1800),
-            check=False,
         )
         if run.returncode or not result.is_file() or not output.is_file():
             raise ValueError(

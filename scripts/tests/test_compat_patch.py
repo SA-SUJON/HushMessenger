@@ -138,7 +138,7 @@ class ProfilePatchChecks(unittest.TestCase):
                     )
 
                 with (
-                    patch.object(check.subprocess, "run", side_effect=run),
+                    patch.object(check, "run_bounded", side_effect=run),
                     patch.object(
                         check,
                         "validate_apk",
@@ -185,7 +185,7 @@ class ProfilePatchChecks(unittest.TestCase):
 
     def test_empty_or_duplicate_selection_never_launches_desktop(self):
         for names in ([], ["menu", "menu"]):
-            with patch.object(check.subprocess, "run") as run:
+            with patch.object(check, "run_bounded") as run:
                 with self.assertRaises(ValueError):
                     check.verify(
                         Path("stock"),
@@ -202,7 +202,7 @@ class ProfilePatchChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "input"
             source.write_bytes(b"changed after discovery")
-            with patch.object(check.subprocess, "run") as run:
+            with patch.object(check, "run_bounded") as run:
                 with self.assertRaisesRegex(
                     ValueError, "changed after compatibility discovery"
                 ):

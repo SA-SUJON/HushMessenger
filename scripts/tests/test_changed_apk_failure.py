@@ -162,7 +162,7 @@ class ChangedApkChecks(unittest.TestCase):
                 with (
                     self.subTest(case=case),
                     patch.object(checker, "STOCK_SHA256", {digest}),
-                    patch.object(checker.subprocess, "run", side_effect=desktop),
+                    patch.object(checker, "run_bounded", side_effect=desktop),
                     redirect_stdout(io.StringIO()),
                 ):
                     if case in {"valid", "wrapped-reason"}:

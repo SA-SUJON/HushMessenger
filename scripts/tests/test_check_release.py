@@ -9,6 +9,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import time
 import tempfile
 import unittest
 import zipfile
@@ -514,6 +515,20 @@ class ReleaseChecks(unittest.TestCase):
         self.assertEqual(":patches:checkFrozenPatchCatalog", command[1])
         self.assertEqual([release.CATALOG_TIMEOUT], gradle.waits)
         self.assertFalse(gradle.killed)
+
+    def test_bounded_run_stops_a_grandchild_that_holds_the_pipes(self):
+        # A queued job is PowerShell starting java, and java keeps the output pipes open.
+        child = (
+            "import subprocess, sys, time; "
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'], "
+            "stdout=sys.stdout, stderr=sys.stderr); time.sleep(120)"
+        )
+        started = time.monotonic()
+        with self.assertRaises(subprocess.TimeoutExpired):
+            release.run_bounded(
+                [sys.executable, "-c", child], timeout=2, capture_output=True, text=True
+            )
+        self.assertLess(time.monotonic() - started, 60)
 
     def test_catalog_timeout_stops_the_gradle_tree_without_an_unbounded_wait(self):
         for stuck in (False, True):

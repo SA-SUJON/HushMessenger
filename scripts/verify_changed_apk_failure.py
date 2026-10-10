@@ -14,8 +14,10 @@ from zipfile import BadZipFile, ZipFile
 
 if __package__:
     from .build_queue import queued, time_limit
+    from .check_release import run_bounded
 else:
     from build_queue import queued, time_limit
+    from check_release import run_bounded
 
 PROFILES =Path(__file__).resolve().parent / "profiles"
 
@@ -95,14 +97,13 @@ def check(args: argparse.Namespace) -> int:
             f"-o={output_apk}",
             str(changed_apk),
         ]
-        run = subprocess.run(
+        run = run_bounded(
             queued(command, "hushmessenger changed APK check"),
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
             timeout=time_limit(300),
-            check=False,
         )
         log = run.stdout + run.stderr
         if not report_path.is_file():
