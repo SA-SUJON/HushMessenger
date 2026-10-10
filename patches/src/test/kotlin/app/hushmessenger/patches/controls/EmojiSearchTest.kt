@@ -20,33 +20,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-private const val WATCHER_581 = "LX/7Ql;->A8h(Landroid/text/Editable;Z)V"
-private const val WATCHER_580 = "LX/7TX;->A8Y(Landroid/text/Editable;Z)V"
+private const val WATCHER = "LX/7TX;->A8Y(Landroid/text/Editable;Z)V"
+private const val LOOKUP = "const/16 v0, 0x289\ninvoke-static {v0}, LX/46q;->A00(I)Ljava/lang/String;\nmove-result-object v0"
 
-/** 581 loads the search mode itself. The plain mode jumps back to the one call that hands the mode over. */
-private fun watcher581(id: String = WATCHER_581, search: String = "const-string v0, \"expression_search\"") = fixtureMethod(id, """
-    const-string v6, "afterTextChanged"
-    iget-object v1, p0, LX/7Ql;->A05:LX/H2g;
-    if-eqz v8, :plain
-    $search
-    :call
-    invoke-interface {v1, v0}, LX/H2g;->DVq(Ljava/lang/String;)V
-    goto :done
-    :plain
-    const-string v0, "expression"
-    goto :call
-    :done
-    return-void
-""".trimIndent(), registers = 10)
-
-/** 580 asks a generated switch table for the same string by number. */
-private fun watcher580(call: String = "invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)V") = fixtureMethod(WATCHER_580, """
+/**
+ * The search mode comes from a generated switch table, asked by number. The plain mode jumps back to the one call that
+ * hands the mode over.
+ */
+private fun watcher(
+    call: String = "invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)V",
+    id: String = WATCHER,
+    search: String = LOOKUP,
+) = fixtureMethod(id, """
     const-string v2, "afterTextChanged"
     iget-object v1, p0, LX/7Sa;->A05:LX/H7o;
     if-eqz v10, :plain
-    const/16 v0, 0x289
-    invoke-static {v0}, LX/46q;->A00(I)Ljava/lang/String;
-    move-result-object v0
+    $search
     :call
     $call
     goto :done
@@ -57,8 +46,8 @@ private fun watcher580(call: String = "invoke-interface {v1, v0}, LX/H7o;->DUX(L
     return-void
 """.trimIndent(), registers = 12)
 
-/** The watcher in the base 580 mapping, for the catalog-wide discovery fixture. */
-internal fun emojiSearchFixture() = listOf(fixtureClass("LX/7TX;", listOf(watcher580())))
+/** The watcher for the catalog-wide discovery fixture. */
+internal fun emojiSearchFixture() = listOf(fixtureClass("LX/7TX;", listOf(watcher())))
 
 private fun Method.code() = implementation!!.instructions.toList()
 
@@ -88,50 +77,50 @@ class EmojiSearchTest {
     private fun found(vararg methods: MutableMethod) =
         findControls(methods.map { fixtureClass(it.definingClass, listOf(it)) }).getValue(EMOJI_SEARCH)
 
-    @Test fun bothTheLiteralAnd580sTableLookupGoThroughTheExtensionAndNothingStockMoves() {
-        for ((label, method) in mapOf("581" to watcher581(), "580" to watcher580())) {
-            assertEquals(listOf(method.hookId()), found(method).map { it.hookId() }, label)
-            activeProfile = if (label == "581") BASE_PROFILE else SYNTHETIC_PROFILE
-            validateControls(findControls(listOf(fixtureClass(method.definingClass, listOf(method)))), setOf(EMOJI_SEARCH))
-            val before = method.code()
-            val call = method.emojiSearchCall()
-            injectControl(EMOJI_SEARCH, mapOf(EMOJI_SEARCH to listOf(method)))
-            assertSearchHook(before, method.code(), call, label)
-        }
+    @Test fun theTableLookupGoesThroughTheExtensionAndNothingStockMoves() {
+        val method = watcher()
+        assertEquals(listOf(method.hookId()), found(method).map { it.hookId() })
+        validateControls(findControls(listOf(fixtureClass(method.definingClass, listOf(method)))), setOf(EMOJI_SEARCH))
+        val before = method.code()
+        val call = method.emojiSearchCall()
+        injectControl(EMOJI_SEARCH, mapOf(EMOJI_SEARCH to listOf(method)))
+        assertSearchHook(before, method.code(), call, "watcher")
         // Two methods that look like the watcher are ambiguous, so neither is hooked.
-        assertTrue(found(watcher581(), watcher581(id = "LX/7GE;->A8e(Landroid/text/Editable;Z)V")).isEmpty())
+        assertTrue(found(watcher(), watcher(id = "LX/7GE;->A8e(Landroid/text/Editable;Z)V")).isEmpty())
     }
 
     @Test fun aShapeThatMovedStopsBeforeAnyEdit() {
         val shapes = mapOf(
-            "search path isn't the search mode" to watcher581(search = "const-string v0, \"expression_other\""),
-            "search path writes another register" to watcher581(search = "const-string v2, \"expression_search\""),
-            "call takes an Object" to watcher580("invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/Object;)V"),
-            "call returns a value" to watcher580("invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)Z"),
-            "call is static" to watcher580("invoke-static {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)V"),
-            "call has a third argument" to watcher580("invoke-interface {v1, v0, v2}, LX/H7o;->DUX(Ljava/lang/String;)V"),
-            "another jump into the call" to fixtureMethod(WATCHER_581, """
-                const-string v6, "afterTextChanged"
-                if-eqz v8, :plain
-                const-string v0, "expression_search"
+            // An older release loaded the search mode as a literal. Every supported build asks the table.
+            "search mode loaded as a literal" to watcher(search = "const-string v0, \"$EMOJI_SEARCH_MODE\""),
+            "lookup takes no number" to watcher(search = LOOKUP.replace("{v0}, LX/46q;->A00(I)", "{}, LX/46q;->A00()")),
+            "lookup answers another register" to watcher(search = LOOKUP.replace("move-result-object v0", "move-result-object v2")),
+            "call takes an Object" to watcher("invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/Object;)V"),
+            "call returns a value" to watcher("invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)Z"),
+            "call is static" to watcher("invoke-static {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)V"),
+            "call has a third argument" to watcher("invoke-interface {v1, v0, v2}, LX/H7o;->DUX(Ljava/lang/String;)V"),
+            "another jump into the call" to fixtureMethod(WATCHER, """
+                const-string v2, "afterTextChanged"
+                if-eqz v10, :plain
+                $LOOKUP
                 :call
-                invoke-interface {v1, v0}, LX/H2g;->DVq(Ljava/lang/String;)V
+                invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)V
                 return-void
                 :plain
                 if-eqz v3, :call
                 const-string v0, "expression"
                 goto :call
-            """.trimIndent(), registers = 10),
-            "plain mode doesn't jump" to fixtureMethod(WATCHER_581, """
-                const-string v6, "afterTextChanged"
+            """.trimIndent(), registers = 12),
+            "plain mode doesn't jump" to fixtureMethod(WATCHER, """
+                const-string v2, "afterTextChanged"
                 const-string v0, "expression"
-                const-string v0, "expression_search"
-                invoke-interface {v1, v0}, LX/H2g;->DVq(Ljava/lang/String;)V
+                $LOOKUP
+                invoke-interface {v1, v0}, LX/H7o;->DUX(Ljava/lang/String;)V
                 return-void
-            """.trimIndent(), registers = 10),
+            """.trimIndent(), registers = 12),
         )
         for ((case, bad) in shapes) {
-            val good = watcher581(id = "LX/7GF;->A8e(Landroid/text/Editable;Z)V")
+            val good = watcher(id = "LX/7GF;->A8e(Landroid/text/Editable;Z)V")
             val before = good.code()
             val failure = assertFailsWith<PatchException>(case) {
                 injectControl(EMOJI_SEARCH, mapOf(EMOJI_SEARCH to listOf(good, bad)))
