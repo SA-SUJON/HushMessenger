@@ -228,6 +228,26 @@ public final class Settings {
     public static boolean suppressTyping() { return enabled("typing"); }
     /** Every analytics upload service, job and retry asks this as it starts, so a change applies to the next upload. */
     public static boolean stopAnalyticsUploads() { return enabled("analytics_uploads"); }
+    /** The extra holding the Messenger that the analytics logger's upload starter waits on. */
+    static final String UPLOAD_STARTER = "_messenger";
+    /**
+     * Run before a skipped upload service start stops. The logger that starts the service holds a wakelock for up to 90
+     * seconds and keeps a handler until the service sends one empty message back, which Messenger's own service does as
+     * soon as it holds its own wakelock. Without this answer every skipped start kept the phone awake for the full 90
+     * seconds (#37). A start from an alarm carries no starter, so it has nothing to answer.
+     */
+    public static void releaseUploadStarter(android.content.Intent intent) {
+        if (intent == null) return;
+        try {
+            android.os.Bundle extras = intent.getExtras();
+            Object starter = extras == null ? null : extras.get(UPLOAD_STARTER);
+            if (starter instanceof android.os.Messenger) ((android.os.Messenger) starter).send(android.os.Message.obtain());
+        } catch (android.os.DeadObjectException gone) {
+            // The starter's process has died, and its wakelock went with it.
+        } catch (android.os.RemoteException | android.os.BadParcelableException error) {
+            hookFailed("analytics_uploads", "Couldn't answer the analytics upload starter", error);
+        }
+    }
     /** Asked each time the ad attribution job runs, before it reads the Advertising ID; true skips that run. */
     public static boolean stopAttributionUploads() { return enabled("attribution_uploads"); }
     /** Asked before the inbox visibility event and the ad deep link's entry event are logged; true drops that one event. */

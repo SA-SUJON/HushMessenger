@@ -182,10 +182,11 @@ internal fun MutableMethod.validateAnalyticsUpload() {
 }
 
 /**
- * While the switch is on, a service start stops that start and asks Android not to restart it, a job reports it has no
- * work and the retry receiver does nothing. A bound task reports success to Google Play (0, so it isn't retried) and
- * frees its tag through Messenger's own reporter, once. The XAnalytics timer skips that run's flush and upload. Off,
- * Pause and safe mode run Messenger's own code.
+ * While the switch is on, a service start first answers the logger that started it, so its 90 second wakelock is
+ * released right away as Messenger's own service would (#37), then stops that start and asks Android not to restart
+ * it. A job reports it has no work and the retry receiver does nothing. A bound task reports success to Google Play
+ * (0, so it isn't retried) and frees its tag through Messenger's own reporter, once. The XAnalytics timer skips that
+ * run's flush and upload. Off, Pause and safe mode run Messenger's own code.
  */
 internal fun MutableMethod.injectAnalyticsUpload() {
     validateAnalyticsUpload()
@@ -208,7 +209,8 @@ internal fun MutableMethod.injectAnalyticsUpload() {
     }
     val stop = when {
         isDelegatedUploadTask() -> "const/4 v0, 0x0\nreturn v0"
-        entryPoint() == START_COMMAND -> "invoke-virtual {p0, p3}, Landroid/app/Service;->stopSelf(I)V\nconst/4 v0, 0x2\nreturn v0"
+        entryPoint() == START_COMMAND -> "invoke-static {p1}, $SETTINGS->releaseUploadStarter(Landroid/content/Intent;)V\n" +
+            "invoke-virtual {p0, p3}, Landroid/app/Service;->stopSelf(I)V\nconst/4 v0, 0x2\nreturn v0"
         entryPoint() == START_JOB -> "const/4 v0, 0x0\nreturn v0"
         else -> "return-void"
     }

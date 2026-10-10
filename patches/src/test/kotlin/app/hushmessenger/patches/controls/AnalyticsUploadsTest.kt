@@ -312,15 +312,19 @@ class AnalyticsUploadsTest {
         assertEquals("$SETTINGS->stopAnalyticsUploads()Z", reference(0, code))
         assertEquals(Opcode.MOVE_RESULT, code[1].opcode)
         assertEquals(Opcode.IF_EQZ, code[2].opcode)
-        assertEquals(6, code.branchTarget(2))
-        val stop = code[3] as FiveRegisterInstruction
-        assertEquals("$SERVICE->stopSelf(I)V", reference(3, code))
+        assertEquals(7, code.branchTarget(2))
+        // The starter's wakelock is answered before the start stops, with the start's own Intent (p1, v5).
+        val answer = code[3] as FiveRegisterInstruction
+        assertEquals("$SETTINGS->releaseUploadStarter(Landroid/content/Intent;)V", reference(3, code))
+        assertEquals(listOf(1, 5), listOf(answer.registerCount, answer.registerC))
+        val stop = code[4] as FiveRegisterInstruction
+        assertEquals("$SERVICE->stopSelf(I)V", reference(4, code))
         // p0 and p3 of an eight-register (Intent, int, int) method: this and the start ID.
         assertEquals(listOf(4, 7), listOf(stop.registerC, stop.registerD))
-        assertEquals(2, (code[4] as NarrowLiteralInstruction).narrowLiteral)
-        assertEquals(Opcode.RETURN, code[5].opcode)
-        assertEquals((code[4] as OneRegisterInstruction).registerA, (code[5] as OneRegisterInstruction).registerA)
-        assertEquals(before, code.drop(6))
+        assertEquals(2, (code[5] as NarrowLiteralInstruction).narrowLiteral)
+        assertEquals(Opcode.RETURN, code[6].opcode)
+        assertEquals((code[5] as OneRegisterInstruction).registerA, (code[6] as OneRegisterInstruction).registerA)
+        assertEquals(before, code.drop(7))
     }
 
     @Test fun aJobReportsNoWorkAndTheRetryReceiverDoesNothing() {
