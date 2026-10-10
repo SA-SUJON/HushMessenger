@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Turn off the swipe up for disappearing messages** is a new switch under Conversations that starts off ([#36](https://github.com/SysAdminDoc/HushMessenger/issues/36)). With it on, swiping up at the bottom of a chat no longer turns on disappearing messages, so a scroll can't set the timer by accident. Scrolling works as usual, and you can still turn disappearing messages on from the chat's settings. It takes effect right away, with no restart.
 - With **Hide People You May Know** on, HushMessenger asks Messenger for your chat list again about half a second after it starts instead of after 2.5 seconds, to shorten the loading circle that could still sit under your chats for a few seconds. It tries up to three more times in the first 8 seconds and stops as soon as your chats show up ([#30](https://github.com/SysAdminDoc/HushMessenger/issues/30)).
 - Extended the app audit with actual Messenger packet observations, background job and CPU measurements, and physically unplugged battery readings. Revision 2 includes aggregate data, a charge-counter chart and a repeatable procedure. It distinguishes shared encrypted hosts from specific tracking operations and documents the limits of short observations on a paused installation. No patch behavior changed.
 

@@ -184,6 +184,7 @@ public class CompatReport {
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Send photos at original quality", List.of("original_photo"));
         PATCHES.put("Send videos without re-encoding", List.of("original_video"));
+        PATCHES.put("Turn off the swipe up for disappearing messages", List.of("disappearing_swipe"));
         PATCHES.put("Use the phone's camera app", List.of("system_camera"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
         PATCHES.put("Keep a message log", List.of("message_log"));
@@ -2056,6 +2057,34 @@ public class CompatReport {
         return watchers.size() == 1 ? watchers : List.of();
     }
 
+    static final String OVERSCROLL_BEHAVIOR = "Lcom/facebook/messaging/threadview/overscroll/ui/OverScrollActionBehavior;";
+
+    /**
+     * disappearing_swipe: the chat overscroll behavior's own non-static onStartNestedScroll, which still logs
+     * "dm_swipe_up_impression". The class keeps its name in every build. Mirrors DisappearingSwipe.kt.
+     */
+    static List<Method> disappearingSwipeStarts(List<ClassDef> classes) {
+        var starts = new ArrayList<Method>();
+        for (var cls : classes) {
+            if (!OVERSCROLL_BEHAVIOR.equals(cls.getType())) continue;
+            for (var method : cls.getMethods()) {
+                if (method.getImplementation() == null || AccessFlags.STATIC.isSet(method.getAccessFlags()) ||
+                    !"onStartNestedScroll".equals(method.getName()) || !"Z".equals(method.getReturnType())) continue;
+                var params = new ArrayList<String>();
+                for (var t : method.getParameterTypes()) params.add(t.toString());
+                if (!params.equals(List.of("Landroidx/coordinatorlayout/widget/CoordinatorLayout;", "Landroid/view/View;",
+                    "Landroid/view/View;", "Landroid/view/View;", "I", "I"))) continue;
+                for (var i : method.getImplementation().getInstructions())
+                    if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                        "dm_swipe_up_impression".equals(sr.getString())) {
+                        starts.add(method);
+                        break;
+                    }
+            }
+        }
+        return starts;
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -2066,6 +2095,7 @@ public class CompatReport {
         if (community != null) found.get("community_inbox").add(community.render());
         found.get("emoji_drawer").addAll(emojiDrawerReaders(classes));
         found.get("emoji_search").addAll(emojiSearchWatchers(classes));
+        found.get("disappearing_swipe").addAll(disappearingSwipeStarts(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
         found.get("system_camera").addAll(systemCameraLaunches(classes));

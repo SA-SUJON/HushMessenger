@@ -213,6 +213,8 @@ public final class Settings {
     public static boolean suppressTyping() { return enabled("typing"); }
     /** Every analytics upload service, job and retry asks this as it starts, so a change applies to the next upload. */
     public static boolean stopAnalyticsUploads() { return enabled("analytics_uploads"); }
+    /** Asked each time a chat's swipe up for disappearing messages could start; true keeps the gesture from starting. */
+    public static boolean blockDisappearingSwipe() { return enabled("disappearing_swipe"); }
     /** Messenger's own original-upload check allows 25 MB, so a bigger video keeps its re-encode. */
     static final long ORIGINAL_VIDEO_MAX_BYTES = 25L * 1024 * 1024;
     /**
