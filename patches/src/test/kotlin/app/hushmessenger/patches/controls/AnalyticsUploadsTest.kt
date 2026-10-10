@@ -163,6 +163,9 @@ class AnalyticsUploadsTest {
             "a base that isn't a service" to analyticsUploadFixture(tasks = listOf(taskBase(superclass = "Ljava/lang/Object;"), taskRunner())),
             "a Runnable that doesn't hold the base" to analyticsUploadFixture(tasks = listOf(taskBase(),
                 taskRunner(base = "LX/Elsewhere;", run = inlinedTask(base = "LX/Elsewhere;")))),
+            // Its instance-of could then never match, so the switch would quietly do nothing.
+            "a Runnable whose first read isn't the service" to analyticsUploadFixture(tasks = listOf(taskBase(),
+                taskRunner(run = inlinedTask(base = "Ljava/lang/Object;")))),
             "no task base" to analyticsUploadFixture(tasks = listOf(taskRunner())),
             "an override the base never declared" to analyticsUploadFixture(play = delegatingPlay,
                 tasks = listOf(taskBase("LX/QBX;"), delegatedTaskFixture()[1])),

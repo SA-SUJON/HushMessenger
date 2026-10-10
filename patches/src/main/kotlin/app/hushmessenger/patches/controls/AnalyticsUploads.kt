@@ -132,7 +132,7 @@ internal fun findBoundUploadTasks(classes: Iterable<ClassDef>): List<Method> {
     val delegated = play.methods.filter { it.entryPoint() in abstractTasks && it.isDelegatedUploadTask() }
     val inlined = classes.filter { cls ->
         "Ljava/lang/Runnable;" in cls.interfaces && cls.fields.any { it.type == base && !AccessFlags.STATIC.isSet(it.accessFlags) }
-    }.flatMap { it.methods }.filter { it.isInlinedUploadTask() }
+    }.flatMap { it.methods }.filter { it.isInlinedUploadTask() && it.taskServiceField()?.type == base }
     return delegated + inlined
 }
 

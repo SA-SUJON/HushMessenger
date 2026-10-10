@@ -2031,14 +2031,14 @@ public class CompatReport {
     }
 
     /** The Runnable's run() with the uploader's task inlined: reads its service field first and reports through one (I)V. */
-    static boolean isInlinedUploadTask(Method m) {
+    static boolean isInlinedUploadTask(Method m, String base) {
         if (!"run()V".equals(entryPoint(m)) || AccessFlags.STATIC.isSet(m.getAccessFlags()) || !holdsBoundUploadMark(m) ||
             !typeChecked(m, Opcode.INSTANCE_OF, TASK_SERVICE_COMPAT) || !typeChecked(m, Opcode.CHECK_CAST, GOOGLE_PLAY_UPLOAD_SERVICE)) return false;
         var code = m.getImplementation();
         var first = code.getInstructions().iterator().next();
         if (first.getOpcode() != Opcode.IGET_OBJECT || ((TwoRegisterInstruction) first).getRegisterB() != code.getRegisterCount() - 1 ||
             !(((ReferenceInstruction) first).getReference() instanceof FieldReference field) ||
-            !m.getDefiningClass().equals(field.getDefiningClass())) return false;
+            !m.getDefiningClass().equals(field.getDefiningClass()) || !base.equals(field.getType())) return false;
         var reporters = new TreeSet<String>();
         for (var i : code.getInstructions())
             if (i.getOpcode() == Opcode.INVOKE_DIRECT && ((ReferenceInstruction) i).getReference() instanceof MethodReference r &&
@@ -2068,7 +2068,7 @@ public class CompatReport {
             if (!cls.getInterfaces().contains("Ljava/lang/Runnable;")) continue;
             boolean holdsService = false;
             for (var f : cls.getFields()) if (base.equals(f.getType()) && !AccessFlags.STATIC.isSet(f.getAccessFlags())) holdsService = true;
-            if (holdsService) for (var m : cls.getMethods()) if (isInlinedUploadTask(m)) found.add(m);
+            if (holdsService) for (var m : cls.getMethods()) if (isInlinedUploadTask(m, base)) found.add(m);
         }
         return found;
     }
