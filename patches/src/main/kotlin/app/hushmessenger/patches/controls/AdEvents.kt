@@ -75,9 +75,10 @@ private val FIELD_WRITE = Regex("^[isa]put")
 /**
  * The event is created right after its name loads, takes the name in its constructor, and goes to the logger in one
  * invoke-virtual whose only argument is that event. Everything from the new-instance through that call runs straight
- * through with nothing landing inside it. It writes no field or array, and its only void calls are on the event, so
- * skipping it leaves the tracker as it was. After it the method only closes its ReqContext and returns, reading no
- * register the skipped code writes, and every catch handler covering the skip or the close only rethrows.
+ * through with nothing landing inside it. It writes no field or array, and every call in it is either on the event or
+ * asked for its answer, so none is there only to change something else. After it the method only closes its
+ * ReqContext and returns, reading no register the skipped code writes, and every catch handler covering the skip or
+ * the close only rethrows.
  */
 internal fun Method.inboxVisibilitySubmit(): VisibilitySubmit {
     fun refuse(): Nothing =
@@ -109,7 +110,12 @@ internal fun Method.inboxVisibilitySubmit(): VisibilitySubmit {
             is RegisterRangeInstruction -> instruction.startRegister.takeIf { instruction.registerCount > 0 }
             else -> null
         }
-        if (FIELD_WRITE.containsMatchIn(code[i].opcode.name) || call?.returnType == "V" && receiver != event) refuse()
+        val invoke = code[i].opcode.name.startsWith("invoke")
+        val answerUsed = code.getOrNull(i + 1)?.opcode?.name?.startsWith("move-result") == true
+        // A call on anything but the event has to be asked for its answer. One made for its effect alone could be
+        // changing the tracker.
+        if (FIELD_WRITE.containsMatchIn(code[i].opcode.name) || invoke && call == null ||
+            call != null && receiver != event && (call.returnType == "V" || !answerUsed)) refuse()
     }
     val addresses = code.runningFold(0) { address, instruction -> address + instruction.codeUnits }
     val indexAt = code.indices.associateBy { addresses[it] }

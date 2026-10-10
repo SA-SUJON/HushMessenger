@@ -55,6 +55,7 @@ private val VISIBILITY_BODY = """
     const-string v0, "messenger_inbox_ads"
     invoke-virtual {v2, v1, v0}, LX/2Kb;->A0E($S$S)V
     invoke-virtual {v11}, LX/24f;->A02()I
+    move-result v0
     iget-object v0, v11, LX/24f;->A03:LX/5vW;
     invoke-virtual {v0, v2}, LX/5vW;->A03(LX/2Kb;)V
     if-eqz v3, :closed
@@ -180,7 +181,7 @@ class AdEventsTest {
     }
 
     @Test fun aChangedCallbackRefusesBothEventsBeforeAnyEdit() {
-        val getter = "invoke-virtual {v11}, LX/24f;->A02()I"
+        val getter = "invoke-virtual {v11}, LX/24f;->A02()I\nmove-result v0"
         val bodies = mapOf(
             "the loop lands on the event" to VISIBILITY_BODY.replace(
                 ":rows_done\nconst-string v0, \"$INBOX_VISIBILITY_EVENT\"", "const-string v0, \"$INBOX_VISIBILITY_EVENT\"\n:rows_done"),
@@ -194,6 +195,12 @@ class AdEventsTest {
             "no constructor right after the name" to VISIBILITY_BODY.replace("new-instance v2, LX/2Kb;", "new-instance v2, LX/2Kb;\nconst/4 v6, 0x0"),
             "the event code writes the tracker" to VISIBILITY_BODY.replace(getter, "iput-boolean v13, v11, LX/24f;->A00:Z"),
             "the event code calls into the tracker" to VISIBILITY_BODY.replace(getter, "invoke-virtual {v11}, LX/24f;->A04()V"),
+            "the event code calls the tracker by range" to VISIBILITY_BODY.replace(getter, "invoke-virtual/range {v11 .. v11}, LX/24f;->A04()V"),
+            "the event code calls a static helper" to VISIBILITY_BODY.replace(getter, "invoke-static {v11}, LX/24f;->A05(LX/24f;)V"),
+            "the event code adds to a list and drops the answer" to VISIBILITY_BODY.replace(getter,
+                "invoke-interface {v0, v11}, Ljava/util/List;->add(Ljava/lang/Object;)Z"),
+            "the event code writes a static" to VISIBILITY_BODY.replace(getter, "sput-boolean v13, LX/24f;->A09:Z"),
+            "the event code writes an array" to VISIBILITY_BODY.replace(getter, "aput v6, v0, v6"),
             "the rethrow reads the event" to VISIBILITY_BODY.replace("move-exception v1\nthrow v1",
                 "move-exception v1\ninvoke-static {v2, v1}, LX/36T;->A01(Ljava/lang/Object;Ljava/lang/Throwable;)V\nthrow v1"),
         )
