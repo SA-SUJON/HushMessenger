@@ -55,13 +55,23 @@ public class RestartStateTest {
         assertNull("Controls that follow the switch live never hold an answer", Settings.heldUntilRestart("people"));
     }
 
+    @Test public void anAccountWithoutTheRedesignHoldsNothingSoItsRowNeverWaits() {
+        Settings.preferences.edit().putBoolean("emoji_drawer", true).commit();
+        assertFalse(Settings.redesignedEmojiDrawer(false));
+        Settings.preferences.edit().putBoolean("emoji_drawer", false).commit();
+        assertNull(Settings.heldUntilRestart("emoji_drawer"));
+        assertTrue("A later redesigned read still holds the switch as it is then", Settings.redesignedEmojiDrawer(true));
+        Settings.preferences.edit().putBoolean("emoji_drawer", true).commit();
+        assertEquals(Boolean.FALSE, Settings.heldUntilRestart("emoji_drawer"));
+    }
+
     @Test public void theRowSaysWhenTheMetaAiTabWaitsForARestartInEitherDirection() {
         assertFalse(Settings.hideMetaAiTab());
         Settings.preferences.edit().putBoolean("meta_ai", true).commit();
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
             View root = screen.get().getWindow().getDecorView();
             TextView label = root.findViewWithTag("active_meta_ai");
-            assertEquals("Saved. The Meta AI tab goes after Messenger restarts", label.getText().toString());
+            assertEquals("The Meta AI tab is hidden after Messenger restarts", label.getText().toString());
             assertEquals(View.VISIBLE, label.getVisibility());
             Switch control = root.findViewWithTag("meta_ai");
             assertTrue(control.getContentDescription().toString().endsWith(label.getText().toString()));
@@ -79,7 +89,7 @@ public class RestartStateTest {
             TextView label = root.findViewWithTag("active_meta_ai");
             assertFalse(((Switch) root.findViewWithTag("meta_ai")).isChecked());
             assertEquals("An off switch still shows the tab is hidden until a restart", View.VISIBLE, label.getVisibility());
-            assertEquals("Saved. The Meta AI tab comes back after Messenger restarts", label.getText().toString());
+            assertEquals("The Meta AI tab comes back after Messenger restarts", label.getText().toString());
 
             root.findViewWithTag("tab_app").performClick();
             root.findViewWithTag("copy_setup").performClick();

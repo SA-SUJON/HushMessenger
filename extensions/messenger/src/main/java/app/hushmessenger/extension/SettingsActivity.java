@@ -110,7 +110,7 @@ public final class SettingsActivity extends Activity {
         {"emoji_drawer", "Restore old emoji drawer", "Brings back the earlier emoji keyboard layout by turning off Meta's redesign. Restart Messenger to see the change. Nothing changes if you never got the redesign.", "stickers"},
         {"emoji_search", "Keep emoji search on emoji", "Typing while the emoji keyboard is open no longer jumps to sticker search. The keyboard stays on emoji.", "stickers"},
         {"chat_promotions", "Hide chat promotions", "Hides promotion banners inside conversations.", "conversations"},
-        {"ad_context_banner", "Hide ad banners in business chats", "Hides the banner in a chat with a business that shows the ad the chat started from.", "conversations"},
+        {"ad_context_banner", "Hide ad banners in business chats", "In a chat you started from a business's ad, hides the banner that shows that ad.", "conversations"},
         {"suggested_replies", "Hide business reply suggestions", "Hides suggested replies in conversations with businesses.", "conversations"},
         {"business_suggestions", "Hide business typing suggestions", "Hides business suggestions that pop up as you type.", "conversations"},
         {"event_prompts", "Hide event prompts", "Hides event promotion prompts inside chats.", "conversations"},

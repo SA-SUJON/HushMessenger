@@ -204,10 +204,10 @@ final class SettingsText {
         ENGLISH.put("hours_short", "%dh");
         ENGLISH.put("not_active", "Not used yet since Messenger started");
         ENGLISH.put("unsent_not_active", "No unsent message seen since Messenger started");
-        ENGLISH.put("restart_pending_on", "Saved. Takes effect after Messenger restarts");
-        ENGLISH.put("restart_pending_off", "Saved. Stays in effect until Messenger restarts");
-        ENGLISH.put("meta_ai_tab_pending_on", "Saved. The Meta AI tab goes after Messenger restarts");
-        ENGLISH.put("meta_ai_tab_pending_off", "Saved. The Meta AI tab comes back after Messenger restarts");
+        ENGLISH.put("restart_pending_on", "Takes effect after Messenger restarts");
+        ENGLISH.put("restart_pending_off", "Stays in effect until Messenger restarts");
+        ENGLISH.put("meta_ai_tab_pending_on", "The Meta AI tab is hidden after Messenger restarts");
+        ENGLISH.put("meta_ai_tab_pending_off", "The Meta AI tab comes back after Messenger restarts");
         ENGLISH.put("error_now", "Stopped with an error just now");
         ENGLISH.put("error_ago", "Stopped with an error %s ago");
         ENGLISH.put("changes_paused", "Changes paused");

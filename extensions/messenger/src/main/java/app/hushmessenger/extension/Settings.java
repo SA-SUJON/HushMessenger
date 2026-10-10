@@ -184,6 +184,8 @@ public final class Settings {
      * and a switch, Pause or safe-mode change can't leave half the drawer redesigned. This only ever turns a yes into a no.
      */
     public static boolean redesignedEmojiDrawer(boolean original) {
+        // Without the redesign there's nothing to hold, so the settings row doesn't wait for a restart that changes nothing.
+        if (!original) return false;
         Boolean old = oldEmojiDrawer;
         if (old == null) {
             synchronized (EMOJI_DRAWER) {
@@ -191,7 +193,7 @@ public final class Settings {
                 old = oldEmojiDrawer;
             }
         }
-        if (!original || !old) return original;
+        if (!old) return true;
         activeAt.put("emoji_drawer", System.currentTimeMillis());
         return false;
     }

@@ -27,8 +27,6 @@ private val BANNER_LOG_NAME = BANNER.removePrefix("com.facebook.").replace(".plu
 
 private fun Method.code() = implementation!!.instructions.toList()
 
-private fun Method.literals() = code().mapNotNull { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string }
-
 class AdContextBannerTest {
     @AfterTest fun reset() {
         activeProfile = SYNTHETIC_PROFILE
@@ -98,9 +96,8 @@ class AdContextBannerTest {
             val code = apk.fileName.toString().substringBeforeLast(".apk").substringAfterLast('-')
             activeProfile = controlProfileFor(code)
             val dex = DexFileFactory.loadDexContainer(apk.toFile(), Opcodes.forApi(35))
-            // Every class that names the banner, so discovery sees each place it could be built.
+            // Every class, so a gate that names the banner through a Redex string table counts too.
             val classes: List<ClassDef> = dex.dexEntryNames.flatMap { dex.getEntry(it)!!.dexFile.classes }
-                .filter { cls -> cls.methods.any { m -> m.implementation != null && BANNER in m.literals() } }
             val gates = findControls(classes).getValue(AD_CONTEXT_BANNER)
             assertEquals(activeProfile.hooks.getValue(AD_CONTEXT_BANNER), gates.map { it.hookId() }.toSet(), code)
             validateControls(mapOf(AD_CONTEXT_BANNER to gates), setOf(AD_CONTEXT_BANNER))
