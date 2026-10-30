@@ -3586,11 +3586,78 @@ public class CompatReport {
         return found;
     }
 
+    static final String COMPOSER_FACTORY = "Lcom/facebook/messaging/msys/thread/composer/configuration/xapp/BaseXappComposerConfigurationFactory;";
+    static final Set<Opcode> TRAY_NULLS = Set.of(Opcode.CONST_4, Opcode.CONST_16, Opcode.CONST);
+    static final Set<Opcode> TRAY_GOTOS = Set.of(Opcode.GOTO, Opcode.GOTO_16, Opcode.GOTO_32);
+
+    /** The tray gate's single return, when no branch lands on it and its register is below v16. Mirrors traySite. */
+    static int traySite(Method m) {
+        if (!m.getParameterTypes().isEmpty() || !"Z".equals(m.getReturnType()) || m.getImplementation() == null) return -1;
+        var code = instructions(m);
+        int at = -1;
+        for (int i = 0; i < code.size(); i++)
+            if (CHAT_RUN_ENDS.contains(code.get(i).getOpcode())) {
+                if (at >= 0) return -1;
+                at = i;
+            }
+        if (at < 0 || code.get(at).getOpcode() != Opcode.RETURN || register(code.get(at)) > 15 || mediaTargets(m).contains(at)) return -1;
+        return at;
+    }
+
+    /**
+     * The composer factory's override of the base call it asks before building the tray plugin, the one whose event set
+     * takes the tray insert. A false answer jumps to a zero for the plugin and a goto past where it's built. Only a factory
+     * that overrides its gate counts. Mirrors trayGate in GalleryToChat.kt.
+     */
+    static Method trayGate(List<ClassDef> classes) {
+        var trays = new HashSet<String>();
+        for (var cls : classes) for (var m : cls.getMethods()) {
+            if (!m.getParameterTypes().isEmpty() || !"Ljava/util/Set;".equals(m.getReturnType()) || m.getImplementation() == null) continue;
+            for (var i : instructions(m)) if (i.getOpcode() == Opcode.CONST_CLASS && INSERT_PREVIEW.equals(typeOf(i))) trays.add(cls.getType());
+        }
+        var gates = new LinkedHashSet<String>();
+        for (var factory : classes) {
+            if (!COMPOSER_FACTORY.equals(factory.getSuperclass())) continue;
+            for (var m : factory.getMethods()) {
+                if (m.getImplementation() == null) continue;
+                var code = instructions(m);
+                for (int built = 0; built < code.size(); built++) {
+                    if (code.get(built).getOpcode() != Opcode.NEW_INSTANCE || !trays.contains(typeOf(code.get(built)))) continue;
+                    int plugin = register(code.get(built));
+                    for (int none = 0; none + 1 < code.size(); none++) {
+                        var zero = code.get(none);
+                        if (!TRAY_NULLS.contains(zero.getOpcode()) || register(zero) != plugin || ((NarrowLiteralInstruction) zero).getNarrowLiteral() != 0 ||
+                            !TRAY_GOTOS.contains(code.get(none + 1).getOpcode()) || mediaTarget(code, none + 1) <= built) continue;
+                        for (int guard = 2; guard < code.size(); guard++) {
+                            if (code.get(guard).getOpcode() != Opcode.IF_EQZ || mediaTarget(code, guard) != none) continue;
+                            var call = code.get(guard - 2);
+                            if (code.get(guard - 1).getOpcode() != Opcode.MOVE_RESULT || register(code.get(guard - 1)) != register(code.get(guard)) ||
+                                (call.getOpcode() != Opcode.INVOKE_VIRTUAL && call.getOpcode() != Opcode.INVOKE_VIRTUAL_RANGE) ||
+                                !(((ReferenceInstruction) call).getReference() instanceof MethodReference asked) ||
+                                !COMPOSER_FACTORY.equals(asked.getDefiningClass()) || !asked.getParameterTypes().isEmpty() || !"Z".equals(asked.getReturnType())) continue;
+                            boolean overridden = false;
+                            for (var own : factory.getMethods())
+                                overridden |= own.getName().equals(asked.getName()) && own.getParameterTypes().isEmpty() && "Z".equals(own.getReturnType());
+                            if (overridden) gates.add(factory.getType() + "->" + asked.getName() + "()Z");
+                        }
+                    }
+                }
+            }
+        }
+        if (gates.size() != 1) return null;
+        Method gate = null;
+        for (var cls : classes) for (var m : cls.getMethods()) if (hookId(m).equals(gates.iterator().next())) {
+            if (gate != null) return null;
+            gate = m;
+        }
+        return gate != null && traySite(gate) >= 0 ? gate : null;
+    }
+
     /**
      * gallery_to_chat: Open your gallery app's handler for a photo from another app and the one coroutine it starts, while
      * the handler has four locals and its event below v16, the event's intent field is public and writable, the coroutine
-     * has the editor site, and the chat type it casts to has one public dispatcher. Mirrors findGalleryToChat in
-     * GalleryToChat.kt.
+     * has the editor site, and the chat type it casts to has one public dispatcher, plus the composer's tray gate. Mirrors
+     * findGalleryToChat in GalleryToChat.kt.
      */
     static List<Method> galleryToChatHooks(List<ClassDef> classes) {
         var byType = new HashMap<String, ClassDef>();
@@ -3633,7 +3700,9 @@ public class CompatReport {
         if (!insertable) return List.of();
         var dispatchers = chatDispatchers(classes, byType);
         dispatchers.values().removeIf(ids -> ids.size() != 1);
-        return galleryChatSite(editor, dispatchers.keySet()) == null ? List.of() : List.of(items, editor);
+        if (galleryChatSite(editor, dispatchers.keySet()) == null) return List.of();
+        var tray = trayGate(classes);
+        return tray == null ? List.of() : List.of(items, editor, tray);
     }
 
     static final String FONT_LAYOUT_ANCHOR = "Hit OEM font NPE in Paint.setTypeface, keeping previous typeface";

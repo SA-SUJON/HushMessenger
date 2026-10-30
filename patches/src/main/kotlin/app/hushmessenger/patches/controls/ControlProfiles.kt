@@ -143,7 +143,7 @@ internal val PROFILE_347015062 = ControlProfile(
         "friend_requests" to setOf("LX/1r8;->A08()Z", "LX/2Oq;->A04()Z"),
         "gallery_to_chat" to setOf(
             "LX/6Ik;->A00(Landroidx/fragment/app/Fragment;Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threadkey/ThreadKey;Lcom/facebook/xapp/messaging/composer/activity/event/ActivityResultEvent;LX/5Vw;)V",
-            "LX/NFg;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+            "LX/AEa;->A1J()Z", "LX/NFg;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
         ),
         "growth" to setOf("LX/1r8;->A09()Z"),
         "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->A01(Landroidx/fragment/app/Fragment;LX/Tv8;Ljava/util/List;LX/5TQ;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
@@ -370,7 +370,7 @@ internal val PROFILE_347014996 = ControlProfile(
         "friend_requests" to setOf("LX/1r8;->A08()Z", "LX/2Oq;->A04()Z"),
         "gallery_to_chat" to setOf(
             "LX/6Ik;->A00(Landroidx/fragment/app/Fragment;Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threadkey/ThreadKey;Lcom/facebook/xapp/messaging/composer/activity/event/ActivityResultEvent;LX/5Vw;)V",
-            "LX/NFg;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+            "LX/AEa;->A1J()Z", "LX/NFg;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
         ),
         "growth" to setOf("LX/1r8;->A09()Z"),
         "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->A01(Landroidx/fragment/app/Fragment;LX/Tv8;Ljava/util/List;LX/5TQ;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
@@ -597,7 +597,7 @@ internal val PROFILE_347014974 = ControlProfile(
         "friend_requests" to setOf("LX/1sP;->A08()Z", "LX/2QK;->A04()Z"),
         "gallery_to_chat" to setOf(
             "LX/6Lb;->A00(Landroidx/fragment/app/Fragment;Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threadkey/ThreadKey;Lcom/facebook/xapp/messaging/composer/activity/event/ActivityResultEvent;LX/5Yh;)V",
-            "LX/NOw;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+            "LX/AJ1;->A1J()Z", "LX/NOw;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
         ),
         "growth" to setOf("LX/1sP;->A09()Z"),
         "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->A01(Landroidx/fragment/app/Fragment;LX/Or6;Ljava/util/List;LX/5WB;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
@@ -823,7 +823,7 @@ internal val PROFILE_347014990 = ControlProfile(
         "friend_requests" to setOf("LX/1rY;->A08()Z", "LX/2PG;->A04()Z"),
         "gallery_to_chat" to setOf(
             "LX/6HJ;->A00(Landroidx/fragment/app/Fragment;Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threadkey/ThreadKey;Lcom/facebook/xapp/messaging/composer/activity/event/ActivityResultEvent;LX/5VK;)V",
-            "LX/Mpl;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+            "LX/AC5;->A1J()Z", "LX/Mpl;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
         ),
         "growth" to setOf("LX/1rY;->A09()Z"),
         "growth_notes" to setOf("Lcom/facebook/presence/note/ui/nux/controller/NotesNuxController;->A01(Landroidx/fragment/app/Fragment;LX/Od5;Ljava/util/List;LX/5So;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;"),
