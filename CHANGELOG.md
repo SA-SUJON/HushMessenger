@@ -5,6 +5,7 @@
 ### New
 
 - `Quiet incoming calls` has a new **Only chosen chats** switch under it. Turn it on, then pick from the people who called you lately (they're listed newest first), and only their calls come in quietly. Everyone else rings as usual. Refs #117.
+- `Android Auto messages` is a new switch under Conversations. Android Auto only reads a message out and takes a spoken reply when the notification has a mark-as-read action, and Messenger's don't, so Auto fell back to treating them as plain alerts. With the switch on, each message notification carries Messenger's own car mark-as-read as an action you never see on the phone, and Messenger's Reply takes what you say. Android Auto only lists apps installed from the Play Store until you turn on Unknown sources in its developer settings. Starts off. Refs #75.
 - `Hide the Instants button` is a new switch under Inbox. It hides the + button that slides in at the right edge of your chat list and opens Instants, on every 585 build. Refs #118.
 - `Hide the Instants button` also takes away the Instants button under your chat heads, the one that sits right where your thumb goes when you reach for a chat. Refs #104.
 - `Save voice messages you play` is a new switch under Photos and videos. Each voice message you play also lands in Recordings/Messenger on your phone (Music/Messenger on Android 10 and 11), so a file manager or another player can open it later. Playing the same one again doesn't make a second copy. It needs Android 10 or newer and starts off. Refs #90.

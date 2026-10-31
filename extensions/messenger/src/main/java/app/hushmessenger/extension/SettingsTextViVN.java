@@ -437,6 +437,8 @@ final class SettingsTextViVN {
         {"text_style.description", "Chọn văn bản bạn đã nhập, sau đó chọn 'Đậm' hoặc 'Nghiêng' trong menu bật lên (có thể ẩn trong menu ba chấm). Chọn lại để hoàn tác. 'Đậm' chuyển đổi các chữ cái từ A đến Z (bao gồm cả chữ cái có dấu) và chữ số; 'Nghiêng' chỉ chuyển đổi các chữ cái, các hệ thống văn bản khác giữ nguyên. Đây là các ký tự Unicode đặc biệt nên điện thoại nào cũng hiển thị được, nhưng trình đọc màn hình có thể đọc chúng theo cách không tự nhiên."},
         {"quiet_calls.title", "Tắt tiếng cuộc gọi đến"},
         {"quiet_calls.description", "Vẫn nhận được cuộc gọi đến, nhưng Messenger sẽ không đổ chuông, rung hoặc bật lên màn hình. Cuộc gọi đến sẽ nằm trong thanh thông báo kèm theo các nút trả lời và từ chối. Cuộc gọi nhỡ sẽ vẫn hiển thị trong phòng chat. Bật Chỉ những cuộc trò chuyện đã chọn để chỉ áp dụng cho những cuộc trò chuyện bạn chọn, các cuộc gọi khác vẫn đổ chuông. Nếu ứng dụng Facebook đã được cài đặt trên điện thoại, nó vẫn có thể đổ chuông do cùng một cuộc gọi đó."},
+        {"car_messages.title", "Tin nhắn trên Android Auto"},
+        {"car_messages.description", "Cho phép Android Auto đọc to tin nhắn của bạn và gửi câu trả lời bạn nói, trên màn hình nhắn tin của Android Auto. Android Auto chỉ hiển thị ứng dụng cài từ Play Store cho đến khi bạn bật Nguồn không xác định trong phần cài đặt dành cho nhà phát triển của nó."},
         {"original_photo.title", "Gửi ảnh với chất lượng gốc"},
         {"original_photo.description", "Khi bật HD, hãy gửi ảnh JPEG với kích thước đầy đủ, không còn thu nhỏ nữa. Thông tin vị trí sẽ vẫn bị xóa. Ảnh lớn hơn 20 MB vẫn sẽ bị thu nhỏ."},
         {"original_video.title", "Gửi video mà không mã hóa lại"},

@@ -179,6 +179,7 @@ internal fun MutableMethod.validateHook(hook: String) {
         STORY_RING -> validateStoryRing()
         QUIET_CALL_RING -> validateQuietCallRing()
         QUIET_CALL_NOTIFICATION -> validateQuietCallNotification()
+        CAR_MESSAGES -> validateCarMessages()
         TEXT_STYLE -> validateTextStyleField()
         MESSAGE_LOG, AUTO_REPLY -> validateMessageLog()
         UNSENT_RECALL -> validateUnsentRecall()
@@ -266,6 +267,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             STORY_RING -> method.injectStoryRing()
             QUIET_CALL_RING -> method.injectQuietCallRing()
             QUIET_CALL_NOTIFICATION -> method.injectQuietCallNotification()
+            CAR_MESSAGES -> method.injectCarMessages()
             TEXT_STYLE -> method.injectTextStyleField()
             MESSAGE_LOG -> method.injectMessageLog()
             UNSENT_RECALL -> method.injectUnsentRecall()
@@ -511,6 +513,9 @@ val autoReplyPatch = controlPatch("auto_reply", "Auto reply",
 val quietIncomingCallsPatch = controlPatch("quiet_calls", "Quiet incoming calls",
     "Calls still come in, but Messenger doesn't ring, vibrate or pop the call up over your screen. The call waits in the notification shade with Answer and Decline. A call you miss still shows in the chat. Only chosen chats keeps this to the chats you pick, and every other call rings. If the Facebook app is on your phone, it can still ring for the same call.", "Conversations",
     QUIET_CALL_RING, QUIET_CALL_NOTIFICATION)
+@Suppress("unused")
+val carMessagesPatch = controlPatch("car_messages", "Android Auto messages",
+    "Lets Android Auto read your Messenger messages out loud and send the replies you speak, through its own messaging screen. Android Auto only shows apps installed from the Play Store until you turn on Unknown sources in its developer settings.", "Conversations")
 @Suppress("unused")
 val systemCameraPatch = controlPatch("system_camera", "Use the phone's camera app",
     "The camera button in a chat opens your phone's own camera app. The photo then opens in Messenger's editor, ready to send. Photos only.", "Photos and videos",

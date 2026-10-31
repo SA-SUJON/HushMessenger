@@ -213,6 +213,7 @@ public class CompatReport {
         PATCHES.put("Keep a message log", List.of("message_log", "unsent_recall", "unsent_clear"));
         PATCHES.put("Auto reply", List.of("auto_reply"));
         PATCHES.put("Quiet incoming calls", List.of("quiet_call_ring", "quiet_call_notification"));
+        PATCHES.put("Android Auto messages", List.of("car_messages"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "reply_read"));
         PATCHES.put("Mark as read button", List.of("mark_read_bar", "mark_read_click"));
@@ -5632,6 +5633,42 @@ public class CompatReport {
         return posters;
     }
 
+    static final String CAR_EXTENSIONS = "android.car.EXTENSIONS";
+    static final String CAR_CONVERSATION = "car_conversation";
+    static final String PUT_BUNDLE = "Landroid/os/Bundle;->putBundle(Ljava/lang/String;Landroid/os/Bundle;)V";
+
+    /** The car bundle's register when code[index] stores it under android.car.EXTENSIONS loaded right before, else -1. */
+    static int carBundleStored(List<Instruction> code, int index) {
+        if (!(code.get(index) instanceof FiveRegisterInstruction put) || put.getOpcode() != Opcode.INVOKE_VIRTUAL || put.getRegisterCount() != 3 ||
+            !PUT_BUNDLE.equals(ref(put)) || index == 0) return -1;
+        var key = code.get(index - 1);
+        return CAR_EXTENSIONS.equals(text(key)) && register(key) == put.getRegisterD() ? put.getRegisterE() : -1;
+    }
+
+    /**
+     * car_messages: the app's only method writing both car_conversation and android.car.EXTENSIONS, an instance (X)V
+     * method whose single car bundle store comes right before a return-void nothing jumps to. Mirrors CarMessages.kt.
+     */
+    static List<Method> carMessages(List<ClassDef> classes) {
+        var writers = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            var strings = new HashSet<String>();
+            for (var i : instructions(method)) { var s = text(i); if (s != null) strings.add(s); }
+            if (strings.contains(CAR_CONVERSATION) && strings.contains(CAR_EXTENSIONS)) writers.add(method);
+        }
+        if (writers.size() != 1) return List.of();
+        var method = writers.get(0);
+        if (AccessFlags.STATIC.isSet(method.getAccessFlags()) || !"V".equals(method.getReturnType()) || params(method).size() != 1) return List.of();
+        var code = instructions(method);
+        if (code.stream().filter(i -> CAR_CONVERSATION.equals(text(i))).count() != 1) return List.of();
+        var stores = new ArrayList<Integer>();
+        for (int i = 0; i < code.size(); i++) if (carBundleStored(code, i) >= 0) stores.add(i);
+        if (stores.size() != 1) return List.of();
+        int ret = stores.get(0) + 1;
+        if (ret >= code.size() || code.get(ret).getOpcode() != Opcode.RETURN_VOID || mediaTargets(method).contains(ret)) return List.of();
+        return List.of(method);
+    }
+
     static final String PHONE_ID_PROVIDER = ".provider.phoneid";
     static final String GET_PHONE_ID = "com.facebook.GET_PHONE_ID";
     static final String INSTALLED_PACKAGES = "Landroid/content/pm/PackageManager;->getInstalledPackages(I)Ljava/util/List;";
@@ -6316,6 +6353,7 @@ public class CompatReport {
         found.get("story_ring").addAll(storyRing(classes));
         found.get("quiet_call_ring").addAll(quietCallRing(classes));
         found.get("quiet_call_notification").addAll(quietCallNotification(classes));
+        found.get("car_messages").addAll(carMessages(classes));
         var markRead = markReadButton(classes);
         if (!markRead.isEmpty()) {
             found.get("mark_read_bar").add(markRead.get(0));
