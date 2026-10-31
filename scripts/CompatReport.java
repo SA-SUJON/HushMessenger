@@ -210,13 +210,13 @@ public class CompatReport {
         PATCHES.put("Stop live connection logging", List.of("mqtt_telemetry"));
         PATCHES.put("Stop nearby scans", List.of("nearby_scans", "wifi_identity"));
         PATCHES.put("Stop app list and device ID sharing", List.of("phone_id_sync"));
-        PATCHES.put("Keep a message log", List.of("message_log", "unsent_recall"));
+        PATCHES.put("Keep a message log", List.of("message_log", "unsent_recall", "unsent_clear"));
         PATCHES.put("Auto reply", List.of("auto_reply"));
         PATCHES.put("Quiet incoming calls", List.of("quiet_call_ring", "quiet_call_notification"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
         PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "reply_read"));
         PATCHES.put("Mark as read button", List.of("mark_read_bar", "mark_read_click"));
-        PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent", "unsent_recall"));
+        PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent", "unsent_recall", "unsent_clear"));
         PATCHES.put("Unlock app icons", List.of("app_icons"));
         PATCHES.put("Square profile pictures", List.of("avatar_shape", "story_ring"));
         PATCHES.put("Use your own font", List.of("font_layout", "font_repository", "font_roboto", "font_by_name", "font_input"));
@@ -2788,6 +2788,75 @@ public class CompatReport {
             recaller = method;
         }
         return recaller == null ? List.of() : List.of(recaller);
+    }
+
+    static final List<String> CLEAR_THREAD_PARAMETERS = List.of(BUBBLE_SESSION, "Lcom/facebook/messaging/model/threadkey/ThreadKey;", "Ljava/lang/String;");
+    static final List<String> DROP_LOG_PARAMETERS = List.of("Lcom/facebook/messaging/notify/client/MessagesNotificationManager;",
+        "Ljava/lang/String;", "Ljava/lang/String;", "Ljava/lang/String;");
+
+    static boolean invokes(Instruction i, String owner, List<String> params, String returns) {
+        return i instanceof ReferenceInstruction r && r.getReference() instanceof MethodReference m &&
+            (owner == null || owner.equals(m.getDefiningClass())) && returns.equals(m.getReturnType()) && refParams(m).equals(params);
+    }
+
+    /**
+     * unsent_clear: the notification manager's one method that clears a chat's notification with "UnsendMessage" when
+     * the unsent message is the only one it shows. Its recaller call's message id register must be the one the drop log
+     * after the clear prints, unwritten between, and no jump may land on the load or the clear. Mirrors MessageLog.kt's
+     * findUnsentClear.
+     */
+    static List<Method> unsentClear(List<ClassDef> classes) {
+        String manager = "Lcom/facebook/messaging/notify/client/MessagesNotificationManager;";
+        Method match = null;
+        for (var cls : classes) {
+            if (!manager.equals(cls.getType())) continue;
+            for (var method : cls.getMethods()) {
+                if (method.getImplementation() == null || !stringsOf(method).contains("new_message_notification_recalled_by_clearing")) continue;
+                var code = instructions(method);
+                int reason = -1, loads = 0;
+                for (int at = 0; at + 1 < code.size(); at++) {
+                    var load = code.get(at);
+                    if ((load.getOpcode() != Opcode.CONST_STRING && load.getOpcode() != Opcode.CONST_STRING_JUMBO) ||
+                        !(((ReferenceInstruction) load).getReference() instanceof StringReference s) || !"UnsendMessage".equals(s.getString())) continue;
+                    var args = callArgs(code.get(at + 1));
+                    if (!invokes(code.get(at + 1), manager, CLEAR_THREAD_PARAMETERS, "V") || args.isEmpty() ||
+                        args.get(args.size() - 1) != ((OneRegisterInstruction) load).getRegisterA()) continue;
+                    reason = at;
+                    loads++;
+                }
+                if (loads != 1) continue;
+                var jumps = mediaTargets(method);
+                if (jumps.contains(reason) || jumps.contains(reason + 1)) continue;
+                Integer id = null;
+                int recalls = 0;
+                for (var i : code) {
+                    if (i.getOpcode() == Opcode.INVOKE_STATIC || i.getOpcode() == Opcode.INVOKE_STATIC_RANGE ||
+                        !invokes(i, null, RECALLER_PARAMETERS, "Z")) continue;
+                    recalls++;
+                    var args = callArgs(i);
+                    id = args.size() > 2 ? args.get(2) : null;
+                }
+                if (recalls != 1 || id == null) continue;
+                int end = -1;
+                for (int at = reason + 2; at < code.size(); at++) if (!code.get(at).getOpcode().canContinue()) { end = at; break; }
+                if (end < 0) continue;
+                int log = -1, logs = 0;
+                for (int at = reason + 2; at < end; at++) {
+                    var i = code.get(at);
+                    if ((i.getOpcode() == Opcode.INVOKE_STATIC || i.getOpcode() == Opcode.INVOKE_STATIC_RANGE) &&
+                        invokes(i, manager, DROP_LOG_PARAMETERS, "V")) { log = at; logs++; }
+                }
+                if (logs != 1) continue;
+                var logArgs = callArgs(code.get(log));
+                if (logArgs.size() < 3 || logArgs.get(2).intValue() != id) continue;
+                boolean rewritten = false;
+                for (int at = reason; at < log; at++) if (writes(code.get(at), id)) rewritten = true;
+                if (rewritten) continue;
+                if (match != null) return List.of();
+                match = method;
+            }
+        }
+        return match == null ? List.of() : List.of(match);
     }
 
     static final String SECRET_STRING = "Lcom/facebook/secure/secrettypes/SecretString;";
@@ -6257,6 +6326,7 @@ public class CompatReport {
         found.get("message_log").addAll(messageLogHooks(classes));
         found.get("auto_reply").addAll(messageLogHooks(classes));
         found.get("unsent_recall").addAll(unsentRecall(classes));
+        found.get("unsent_clear").addAll(unsentClear(classes));
         found.get("system_camera").addAll(systemCameraLaunches(classes));
         found.get("external_gallery").addAll(externalGalleryHooks(classes));
         found.get("gallery_to_chat").addAll(galleryToChatHooks(classes));

@@ -232,6 +232,7 @@ internal val PROFILE_347015062 = ControlProfile(
         "text_style" to setOf("LX/A4m;->onFocusChanged(ZILandroid/graphics/Rect;)V"),
         "typing" to setOf("LX/BFC;->run()V"),
         "typing_mailbox" to setOf("LX/8o5;->A0M(Ljava/lang/String;Z)LX/31v;"),
+        "unsent_clear" to setOf("Lcom/facebook/messaging/notify/client/MessagesNotificationManager;->A0G(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/notify/type/NewMessageNotification;)V"),
         "unsent_indicator" to setOf("LX/W6h;->Cf5(I)Ljava/lang/String;"),
         "unsent_recall" to setOf("LX/98W;->A00(Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"),
         "wifi_identity" to setOf(
@@ -459,6 +460,7 @@ internal val PROFILE_347014996 = ControlProfile(
         "text_style" to setOf("LX/A4m;->onFocusChanged(ZILandroid/graphics/Rect;)V"),
         "typing" to setOf("LX/BFC;->run()V"),
         "typing_mailbox" to setOf("LX/8o5;->A0M(Ljava/lang/String;Z)LX/31v;"),
+        "unsent_clear" to setOf("Lcom/facebook/messaging/notify/client/MessagesNotificationManager;->A0G(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/notify/type/NewMessageNotification;)V"),
         "unsent_indicator" to setOf("LX/W6h;->Cf5(I)Ljava/lang/String;"),
         "unsent_recall" to setOf("LX/98W;->A00(Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"),
         "wifi_identity" to setOf(
@@ -685,6 +687,7 @@ internal val PROFILE_347014974 = ControlProfile(
         "text_style" to setOf("LX/A9D;->onFocusChanged(ZILandroid/graphics/Rect;)V"),
         "typing" to setOf("LX/BJi;->run()V"),
         "typing_mailbox" to setOf("LX/8sW;->A0M(Ljava/lang/String;Z)LX/33a;"),
+        "unsent_clear" to setOf("Lcom/facebook/messaging/notify/client/MessagesNotificationManager;->A0G(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/notify/type/NewMessageNotification;)V"),
         "unsent_indicator" to setOf("LX/TCX;->CfG(I)Ljava/lang/String;"),
         "unsent_recall" to setOf("LX/9Cx;->A00(Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"),
         "wifi_identity" to setOf(
@@ -911,6 +914,7 @@ internal val PROFILE_347014990 = ControlProfile(
         "text_style" to setOf("LX/A2H;->onFocusChanged(ZILandroid/graphics/Rect;)V"),
         "typing" to setOf("LX/BCh;->run()V"),
         "typing_mailbox" to setOf("LX/8m9;->A0M(Ljava/lang/String;Z)LX/32L;"),
+        "unsent_clear" to setOf("Lcom/facebook/messaging/notify/client/MessagesNotificationManager;->A0G(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/notify/type/NewMessageNotification;)V"),
         "unsent_indicator" to setOf("LX/W52;->CfI(I)Ljava/lang/String;"),
         "unsent_recall" to setOf("LX/96Z;->A00(Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"),
         "wifi_identity" to setOf(

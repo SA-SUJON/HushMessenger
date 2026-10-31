@@ -205,6 +205,7 @@ hook tab_people LX/1kt;->A0E(LX/1kt;)Z
 hook text_style LX/A4m;->onFocusChanged(ZILandroid/graphics/Rect;)V
 hook typing LX/BFC;->run()V
 hook typing_mailbox LX/8o5;->A0M(Ljava/lang/String;Z)LX/31v;
+hook unsent_clear Lcom/facebook/messaging/notify/client/MessagesNotificationManager;->A0G(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/notify/type/NewMessageNotification;)V
 hook unsent_indicator LX/W6h;->Cf5(I)Ljava/lang/String;
 hook unsent_recall LX/98W;->A00(Lcom/facebook/auth/usersession/FbUserSession;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
 hook wifi_identity LX/1fe;->A02()LX/bOd;
