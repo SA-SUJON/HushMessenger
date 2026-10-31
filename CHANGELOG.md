@@ -17,6 +17,7 @@
 
 ### Changed and fixed
 
+- The README's troubleshooting list now covers a login that gets past the password and then loops on a browser check. That's an account with a passkey, and removing the passkey on the web lets Facebook fall back to approving the login from another device. Refs #108.
 - HushMessenger now targets Messenger 585.0.0.53.94 and takes all 7 builds APKMirror lists for it, five for arm64 and two for armv7. 584.1.0.61.98 is no longer supported, so update Messenger before you patch. Each build was checked patch by patch, and Morphe Desktop applied and rebuilt every one of them.
 - `Hide Facebook shortcuts` now also hides the View profile button under the person's name and picture at the top of a chat with no messages yet. It opened their Facebook profile. With `Keep the Profile button` on, that one stays too.
 - `Hide inbox tabs` now says what it hides on 585: the All, Unread and Groups tabs above your chats. The old text named Home and Channels tabs Messenger doesn't show anymore. Checked on 585, where On hides the tabs and Off or Pause brings them back.
