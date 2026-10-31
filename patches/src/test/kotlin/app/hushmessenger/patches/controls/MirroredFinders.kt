@@ -69,7 +69,6 @@ private fun mirrored(classes: Iterable<ClassDef>, skip: Set<String>, find: (List
             val savedPicture = autoReplyPictureRecipe
             val savedGallery = galleryRoute
             val savedGalleryChat = galleryChatRoute
-            val savedPinRow = pinRowGuard
             val savedCircle = vitoCircleField
             val savedTile = tileShapeSetter
             try {
@@ -86,7 +85,6 @@ private fun mirrored(classes: Iterable<ClassDef>, skip: Set<String>, find: (List
                 autoReplyPictureRecipe = savedPicture
                 galleryRoute = savedGallery
                 galleryChatRoute = savedGalleryChat
-                pinRowGuard = savedPinRow
                 vitoCircleField = savedCircle
                 tileShapeSetter = savedTile
             }

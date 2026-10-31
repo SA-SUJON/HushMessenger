@@ -105,7 +105,6 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         autoReplyPictureRecipe = null
         galleryRoute = null
         galleryChatRoute = null
-        pinRowGuard = null
     }
 }
 
@@ -170,7 +169,7 @@ internal fun MutableMethod.validateHook(hook: String) {
         ATTRIBUTION_UPLOADS -> validateAttributionUpload()
         AD_EVENTS -> validateAdEvent()
         MQTT_TELEMETRY -> validateMqttTelemetry()
-        PINNED_CHATS -> validatePinnedChats()
+        PINNED_CHATS -> validatePinnedChatLimit()
         NEARBY_SCANS -> validateNearbyScans()
         WIFI_IDENTITY -> validateWifiIdentity()
         PHONE_ID_SYNC -> validatePhoneIdSync()
@@ -256,7 +255,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             ATTRIBUTION_UPLOADS -> method.injectAttributionUpload()
             AD_EVENTS -> method.injectAdEvent()
             MQTT_TELEMETRY -> method.injectMqttTelemetry()
-            PINNED_CHATS -> method.injectPinnedChats()
+            PINNED_CHATS -> method.injectPinnedChatLimit()
             NEARBY_SCANS -> method.injectNearbyScans()
             WIFI_IDENTITY -> method.injectWifiIdentity()
             PHONE_ID_SYNC -> method.injectPhoneIdSync()
@@ -432,7 +431,7 @@ val hideSubtabsPatch = controlPatch("subtabs", "Hide inbox tabs", "Hides the All
 @Suppress("unused")
 val hideMarkReadPatch = controlPatch("mark_read_action", "Hide Mark as read", "Hides Mark as read in the menu you get when you press and hold a chat in your chat list, so you can't mark a chat read by accident. Mark as unread stays.", "Inbox")
 @Suppress("unused")
-val pinMoreChatsPatch = controlPatch("pinned_chats", "Pin more chats", "Raises Messenger's limit of three pinned chats to 20, and adds Pin to a chat's long-press menu when Messenger leaves it out. Messenger's servers can still stop you sooner.", "Inbox")
+val pinMoreChatsPatch = controlPatch("pinned_chats", "Pin more chats", "Raises Messenger's limit of three pinned chats to 20, so you can keep more chats at the top of your chat list. Messenger's servers can still stop you sooner.", "Inbox")
 @Suppress("unused")
 val hideFacebookPatch = controlPatch("facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and the Also from Meta and Subscriptions sections in the Menu tab. Handy if you only use Messenger.", "Navigation", "facebook", FACEBOOK_PROFILE, FACEBOOK_PROFILE_HEADER)
 @Suppress("unused")

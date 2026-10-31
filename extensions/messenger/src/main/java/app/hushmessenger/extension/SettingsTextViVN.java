@@ -388,7 +388,7 @@ final class SettingsTextViVN {
         {"mark_read_action.title", "Ẩn 'Đánh dấu là đã đọc'"},
         {"mark_read_action.description", "Ẩn 'Đánh dấu là đã đọc' trong menu hiển thị khi nhấn giữ phòng chat trong danh sách trò chuyện, tránh việc vô tình đánh dấu phòng chat là đã đọc. 'Đánh dấu là chưa đọc' sẽ vẫn được giữ lại."},
         {"pinned_chats.title", "Ghim nhiều cuộc trò chuyện hơn"},
-        {"pinned_chats.description", "Tăng giới hạn phòng chat có thể ghim trong Messenger từ 3 lên 20 và thêm mục Ghim vào menu nhấn giữ của phòng chat khi Messenger không hiện mục này. Máy chủ Messenger vẫn có thể giới hạn bạn trước khi đạt đến số lượng này."},
+        {"pinned_chats.description", "Tăng giới hạn phòng chat có thể ghim trong Messenger từ 3 lên 20, giúp giữ nhiều phòng chat ở đầu danh sách hơn. Máy chủ Messenger vẫn có thể giới hạn bạn trước khi đạt đến số lượng này."},
         {"facebook.title", "Ẩn phím tắt Facebook"},
         {"facebook.description", "Ẩn nút Facebook, phím tắt trang cá nhân và chia sẻ, cũng như phần 'Các sản phẩm khác của Meta' và 'Đăng ký' trong tab 'Menu'. Phù hợp với người dùng chỉ sử dụng Messenger."},
         {"meta_ai.title", "Ẩn Meta AI"},

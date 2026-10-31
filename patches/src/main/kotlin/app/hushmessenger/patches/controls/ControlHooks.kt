@@ -393,7 +393,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     found.getValue(ATTRIBUTION_UPLOADS).addAll(findAttributionUploads(classes))
     found.getValue(AD_EVENTS).addAll(findAdEvents(classes))
     found.getValue(MQTT_TELEMETRY).addAll(findMqttTelemetry(classes))
-    found.getValue(PINNED_CHATS).addAll(findPinnedChats(classes))
+    found.getValue(PINNED_CHATS).addAll(findPinnedChatLimit(classes))
     found.getValue(NEARBY_SCANS).addAll(patchStage("Find nearby scans") { findNearbyScans(classes) })
     found.getValue(WIFI_IDENTITY).addAll(patchStage("Find Wi-Fi identity reads") { findWifiIdentityReads(classes) })
     found.getValue(PHONE_ID_SYNC).addAll(findPhoneIdSync(classes))
