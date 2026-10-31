@@ -572,6 +572,18 @@ public final class Settings {
             return stock;
         }
     }
+    /**
+     * Asked each time a chat's long-press menu decides on Pin or Unpin, once the chat's own checks pass and only the
+     * server's say is left (#56). True lists the row. Off, Pause and safe mode leave it to the server.
+     */
+    public static boolean showPinRows() {
+        try {
+            return enabled(PINNED_CHATS);
+        } catch (RuntimeException error) {
+            hookFailed(PINNED_CHATS, "Can't check the Pin row", error);
+            return false;
+        }
+    }
     /** Asked each time a chat's swipe up for disappearing messages could start; true keeps the gesture from starting. */
     public static boolean blockDisappearingSwipe() { return enabled("disappearing_swipe"); }
     /** Asked each time a chat looks for a photo or video taken just before it opened; true shows no card for it. */

@@ -50,6 +50,22 @@ public class PinnedChatsTest {
         }
     }
 
+    @Test public void thePinRowsShowOnlyWhileTheSwitchIsOn() {
+        assertFalse("Messenger's server decides while the switch is off", Settings.showPinRows());
+        Settings.preferences.edit().putBoolean("pinned_chats", true).commit();
+        assertTrue(Settings.showPinRows());
+        assertTrue(Settings.lastActive("pinned_chats") > 0);
+        for (String state : new String[] {"paused", "safe", "missing"}) {
+            Settings.initialize(RuntimeEnvironment.getApplication());
+            Settings.preferences.edit().clear().putBoolean("pinned_chats", true)
+                .putBoolean("paused", state.equals("paused")).putBoolean("safe_mode", state.equals("safe")).commit();
+            CrashGuard.resetForTests();
+            CrashGuard.onProcessStart(RuntimeEnvironment.getApplication());
+            if (state.equals("missing")) Settings.installed = Collections.emptySet();
+            assertFalse(state, Settings.showPinRows());
+        }
+    }
+
     @Test public void theSwitchSitsUnderInboxAndStartsOff() {
         assertTrue(Settings.installed.contains("pinned_chats"));
         String[] row = Arrays.stream(SettingsActivity.CONTROLS).filter(c -> c[0].equals("pinned_chats")).findFirst().orElseThrow();

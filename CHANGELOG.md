@@ -26,6 +26,7 @@
 - The README's Help section explains why videos can go missing from Messenger's own picker on Android 14 and newer: with Messenger's photo access set to "Allow limited access" the picker shows only the items you chose. "Allow all" or `Open your gallery app` brings them back. Refs #114.
 - With `Square profile pictures` on, the story ring around a picture in your chat list is square too, or rounded with **Round the corners**, so it hugs the picture instead of circling it. A ring that's still filling in follows the same edge. Refs #116.
 - `Hide stories and notes` also takes away the story rings around people's pictures in your chat list, the colored circle that says someone posted. It works with or without `Square profile pictures`. Refs #118.
+- `Pin more chats` now puts Pin back in a chat's long-press menu when Messenger leaves it out. Messenger's servers turn that menu item off for some accounts, so on those the higher limit had nothing to pin with. With the switch on, Pin shows for chats in your main chat list (archived chats and message requests still go by Messenger's say), and Unpin shows on every pinned chat so you can always take a pin off again. Messenger's servers can still refuse a pin. Refs #56.
 - The patches are built with Morphe patcher 2.1.0 now, the patcher that comes with Morphe Manager 2.3.0 and Morphe Desktop 1.20.0. Manager won't load a bundle made with a newer patcher than its own, so update Manager to 2.3.0 or newer, or Desktop to 1.20.0, before you add this release.
 
 ### Checks

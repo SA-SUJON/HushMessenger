@@ -4885,6 +4885,115 @@ public class CompatReport {
         return found;
     }
 
+    static final String PIN_ROW = "Lcom/facebook/messaging/threadlist/threaditemmenu/plugins/core/pinmenuitem/PinMenuItemImplementation;";
+    static final String UNPIN_ROW = "Lcom/facebook/messaging/threadlist/threaditemmenu/plugins/core/unpinmenuitem/UnpinMenuItemImplementation;";
+    static final String PIN_THREAD = "Lcom/facebook/messaging/model/threads/ThreadSummary;";
+
+    /**
+     * Index right after the point where a chat menu row's own checks meet, or -1: the first static read two branches land
+     * on, one of them comparing the menu's surface parameter, with the read's register written again before any read and,
+     * for Pin, a constant next whose register is free too. Mirrors pinRowSite in PinnedChats.kt.
+     */
+    static int pinRowSite(Method m) {
+        String owner = m.getDefiningClass();
+        if (!(PIN_ROW.equals(owner) || UNPIN_ROW.equals(owner)) || !"A00".equals(m.getName()) || !"Z".equals(m.getReturnType()) ||
+            !AccessFlags.STATIC.isSet(m.getAccessFlags()) || m.getImplementation() == null) return -1;
+        var params = m.getParameterTypes().stream().map(Object::toString).toList();
+        if (params.size() != 3 || !"Lcom/facebook/auth/usersession/FbUserSession;".equals(params.get(0)) || !PIN_THREAD.equals(params.get(1))) return -1;
+        var code = instructions(m);
+        int[] addresses = new int[code.size() + 1];
+        for (int k = 0; k < code.size(); k++) addresses[k + 1] = addresses[k] + code.get(k).getCodeUnits();
+        var indexAt = new HashMap<Integer, Integer>();
+        for (int k = 0; k < code.size(); k++) indexAt.put(addresses[k], k);
+        var jumps = new HashMap<Integer, Integer>();
+        for (int k = 0; k < code.size(); k++)
+            if (code.get(k) instanceof OffsetInstruction o && indexAt.get(addresses[k] + o.getCodeOffset()) instanceof Integer to) jumps.put(k, to);
+        int surface = parameterRegister(m, 2), join = -1;
+        for (int k = 0; k < code.size() && join < 0; k++) {
+            if (code.get(k).getOpcode() != Opcode.SGET_OBJECT) continue;
+            int landing = 0;
+            boolean onSurface = false;
+            for (var jump : jumps.entrySet()) if (jump.getValue() == k) {
+                landing++;
+                if (code.get(jump.getKey()).getOpcode() == Opcode.IF_EQ && code.get(jump.getKey()) instanceof TwoRegisterInstruction t &&
+                    (t.getRegisterA() == surface || t.getRegisterB() == surface)) onSurface = true;
+            }
+            if (landing == 2 && onSurface) join = k;
+        }
+        if (join < 0) return -1;
+        int at = join + 1;
+        if (jumps.containsValue(at)) return -1;
+        for (var block : m.getImplementation().getTryBlocks())
+            for (var handler : block.getExceptionHandlers()) if (Integer.valueOf(at).equals(indexAt.get(handler.getHandlerCodeAddress()))) return -1;
+        int scratch = register(code.get(join));
+        if (scratch > 15 || parameterRegister(m, 1) > 15) return -1;
+        for (int k = at; k < Math.min(code.size(), at + 4); k++) {
+            var next = code.get(k);
+            if (next instanceof FiveRegisterInstruction call) {
+                int[] used = {call.getRegisterC(), call.getRegisterD(), call.getRegisterE(), call.getRegisterF(), call.getRegisterG()};
+                for (int r = 0; r < call.getRegisterCount(); r++) if (used[r] == scratch) return -1;
+            }
+            if ((next.getOpcode() == Opcode.MOVE_RESULT || next.getOpcode() == Opcode.MOVE_RESULT_OBJECT) && register(next) == scratch) {
+                if (UNPIN_ROW.equals(owner)) return at;
+                var spare = code.get(at);
+                return (spare.getOpcode() == Opcode.CONST_4 || spare.getOpcode() == Opcode.CONST_16) &&
+                    register(spare) != scratch && register(spare) <= 15 ? at : -1;
+            }
+            if (next instanceof OffsetInstruction || next.getOpcode() == Opcode.RETURN || next.getOpcode() == Opcode.RETURN_OBJECT ||
+                next.getOpcode() == Opcode.RETURN_VOID || next.getOpcode() == Opcode.RETURN_WIDE) return -1;
+        }
+        return -1;
+    }
+
+    /** A static (ThreadSummary)Z helper that starts `chat.folder == INBOX`. Mirrors inboxCheck in PinnedChats.kt. */
+    static boolean inboxCheck(Method m) {
+        if (!m.getParameterTypes().stream().map(Object::toString).toList().equals(List.of(PIN_THREAD)) || !"Z".equals(m.getReturnType()) ||
+            m.getImplementation() == null) return false;
+        var code = instructions(m);
+        if (code.isEmpty() || code.get(0).getOpcode() != Opcode.IGET_OBJECT || !(code.get(0) instanceof TwoRegisterInstruction read) ||
+            !(((ReferenceInstruction) read).getReference() instanceof FieldReference folder) || !PIN_THREAD.equals(folder.getDefiningClass()) ||
+            read.getRegisterB() != parameterRegister(m, 0)) return false;
+        int load = -1;
+        for (int k = 0; k < Math.min(5, code.size()) && load < 0; k++) if (code.get(k).getOpcode() == Opcode.SGET_OBJECT) load = k;
+        if (load <= 0 || !(((ReferenceInstruction) code.get(load)).getReference() instanceof FieldReference inbox) ||
+            !folder.getType().equals(inbox.getDefiningClass()) || !folder.getType().equals(inbox.getType())) return false;
+        return load + 1 < code.size() && code.get(load + 1).getOpcode() == Opcode.IF_NE && code.get(load + 1) instanceof TwoRegisterInstruction compare &&
+            new HashSet<>(List.of(compare.getRegisterA(), compare.getRegisterB())).equals(new HashSet<>(List.of(read.getRegisterA(), register(code.get(load)))));
+    }
+
+    static Method onlyPinRow(ClassDef cls) {
+        if (cls == null) return null;
+        Method row = null;
+        for (var method : cls.getMethods()) if (pinRowSite(method) >= 0) { if (row != null) return null; row = method; }
+        return row;
+    }
+
+    /**
+     * pinned_chats, the chat menu's Pin and Unpin rows: both when each has the shape pinRowSite checks and the Pin row's
+     * own checks go on to call the inbox helper with the chat, or neither. Mirrors findPinRows in PinnedChats.kt.
+     */
+    static List<Method> pinRows(List<ClassDef> classes) {
+        var byType = new HashMap<String, ClassDef>();
+        for (var cls : classes) byType.put(cls.getType(), cls);
+        Method pin = onlyPinRow(byType.get(PIN_ROW)), unpin = onlyPinRow(byType.get(UNPIN_ROW));
+        if (pin == null || unpin == null) return List.of();
+        var code = instructions(pin);
+        int thread = parameterRegister(pin, 1);
+        for (int k = pinRowSite(pin); k < code.size(); k++) {
+            if (code.get(k).getOpcode() != Opcode.INVOKE_STATIC || !(code.get(k) instanceof FiveRegisterInstruction call) ||
+                call.getRegisterCount() != 1 || call.getRegisterC() != thread ||
+                !(((ReferenceInstruction) call).getReference() instanceof MethodReference ref) || byType.get(ref.getDefiningClass()) == null) continue;
+            var params = new StringBuilder();
+            for (var p : ref.getParameterTypes()) params.append(p);
+            String id = ref.getDefiningClass() + "->" + ref.getName() + "(" + params + ")" + ref.getReturnType();
+            Method helper = null;
+            int matches = 0;
+            for (var candidate : byType.get(ref.getDefiningClass()).getMethods()) if (hookId(candidate).equals(id)) { helper = candidate; matches++; }
+            if (matches == 1 && inboxCheck(helper)) return List.of(pin, unpin);
+        }
+        return List.of();
+    }
+
     static boolean calls(Method method, String owner) {
         for (var i : instructions(method))
             if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof MethodReference call &&
@@ -6237,7 +6346,12 @@ public class CompatReport {
         found.get("attribution_uploads").addAll(attributionUploads(classes));
         found.get("ad_events").addAll(adEvents(classes));
         found.get("mqtt_telemetry").addAll(mqttTelemetry(classes));
-        found.get("pinned_chats").addAll(pinnedChatLimit(classes));
+        var pinLimit = pinnedChatLimit(classes);
+        var pinRows = pinRows(classes);
+        if (!pinLimit.isEmpty() && !pinRows.isEmpty()) {
+            found.get("pinned_chats").addAll(pinLimit);
+            found.get("pinned_chats").addAll(pinRows);
+        }
         found.get("nearby_scans").addAll(nearbyScans(classes));
         found.get("wifi_identity").addAll(wifiIdentityReads(classes));
         found.get("phone_id_sync").addAll(phoneIdSync(classes));

@@ -2645,7 +2645,7 @@
         },
         {
             "name": "Pin more chats",
-            "description": "Raises Messenger's limit of three pinned chats to 20, so you can keep more chats at the top of your chat list. Messenger's servers can still stop you sooner. Starts off. Turn it on in HushMessenger settings > Controls.",
+            "description": "Raises Messenger's limit of three pinned chats to 20, and adds Pin to a chat's long-press menu when Messenger leaves it out. Messenger's servers can still stop you sooner. Starts off. Turn it on in HushMessenger settings > Controls.",
             "default": true,
             "category": "Inbox",
             "dependencies": [

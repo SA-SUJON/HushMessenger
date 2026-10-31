@@ -172,6 +172,8 @@ hook pinned_chats LX/Jj0;->A01(Landroid/content/Context;Landroid/content/DialogI
 hook pinned_chats LX/KA3;->onCompletion(Ljava/lang/Object;)V
 hook pinned_chats LX/Pn3;->onCompletion(Ljava/lang/Object;)V
 hook pinned_chats Lcom/facebook/messaging/modularsync/networkfetcher/MessengerMsysDbNetworkFetcher;->A0M(LX/8VO;LX/1Bl;LX/5WB;)Ljava/lang/Object;
+hook pinned_chats Lcom/facebook/messaging/threadlist/threaditemmenu/plugins/core/pinmenuitem/PinMenuItemImplementation;->A00(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/1pP;)Z
+hook pinned_chats Lcom/facebook/messaging/threadlist/threaditemmenu/plugins/core/unpinmenuitem/UnpinMenuItemImplementation;->A00(Lcom/facebook/auth/usersession/FbUserSession;Lcom/facebook/messaging/model/threads/ThreadSummary;LX/1pP;)Z
 hook quiet_call_notification Lcom/facebook/rtc/notification/RtcNotificationForegroundService;->A00(Landroid/app/Notification;Landroid/content/Context;LX/BWo;LX/BlG;LX/BDX;Lcom/facebook/rtc/notification/RtcNotificationForegroundService;LX/HU4;Ljava/lang/Integer;Ljava/lang/String;IZZZ)V
 hook quiet_call_ring LX/BBn;->run()V
 hook recent_media LX/AP5;->A01(LX/5Yh;Lkotlin/jvm/functions/Function0;)V
