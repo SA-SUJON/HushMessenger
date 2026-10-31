@@ -17,6 +17,7 @@
 
 ### Changed and fixed
 
+- On a Samsung phone, `Bold and italic text` now tells you where to switch Bold and Italic on. Samsung keeps other apps' entries out of the text menu until you tick them under the three dots and Manage apps, so turning on the switch alone looked like it did nothing. Refs #42.
 - The README's troubleshooting list now covers a login that gets past the password and then loops on a browser check. That's an account with a passkey, and removing the passkey on the web lets Facebook fall back to approving the login from another device. Refs #108.
 - HushMessenger now targets Messenger 585.0.0.53.94 and takes all 7 builds APKMirror lists for it, five for arm64 and two for armv7. 584.1.0.61.98 is no longer supported, so update Messenger before you patch. Each build was checked patch by patch, and Morphe Desktop applied and rebuilt every one of them.
 - `Hide Facebook shortcuts` now also hides the View profile button under the person's name and picture at the top of a chat with no messages yet. It opened their Facebook profile. With `Keep the Profile button` on, that one stays too.
