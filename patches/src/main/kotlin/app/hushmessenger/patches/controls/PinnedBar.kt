@@ -13,6 +13,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
@@ -29,9 +30,12 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference
  * The extension gets the chat fragment and its view at the handover the jump menu takes, and four stubs of its own get
  * bodies built from this build's code:
  * - loadPins starts the list's load the way See all does for an encrypted chat. The sheet's view setup checks the thread
- *   key, then reads its two long ids, and its load asks for 1000 rows of the first id as text and the second as a long,
- *   with the flags true and false. The count helper of community chats shows how the loader is reached and which
- *   options it takes. The load hands its answer to the callback the extension passes in.
+ *   key and hands its two long ids to the pin store it makes. The page's load then asks for the store's first id as
+ *   text, a list kind, the second id as a long, and two flags. msys keys an encrypted chat's pin list by that kind and
+ *   the id (0x1000 on 588, where community chats name 0), so the kind and the flags are read from the page's own loads.
+ *   The first version wrote a decimal 1000 there and got an empty list in every chat (#213). The count helper of
+ *   community chats shows how the loader is reached and which options it takes. The load hands its answer to the
+ *   callback the extension passes in.
  * - pinCount and pinRow read the answer the way the count helper does: the field it counts holds rows of the message
  *   row interface, read with the message id, text and time getters the text hooks already use.
  * - jumpToPin hands the chat's own jump listener what See all hands it: a fragment result under event_publisher_key with
@@ -65,8 +69,8 @@ internal const val PINNED_RESULT_KEY = "event_publisher_key"
 internal const val PINNED_JUMP_EVENT = "JUMP_TO_MESSAGE_KEY"
 private val JUMP_STRINGS = setOf("event_name", PINNED_JUMP_EVENT, "MESSAGE_ID")
 
-/** See all's encrypted load asks for this many rows. */
-internal const val PINNED_LIST_ROWS = 1000
+/** The literals See all's encrypted load passes: the list's kind and its two flags, each 0 or 1. */
+internal data class PinnedListLoad(val kind: Int, val first: Int, val second: Int)
 
 /** Everything the four stubs' bodies name, from the build being patched. */
 internal class PinnedBarRecipe(
@@ -89,6 +93,7 @@ internal class PinnedBarRecipe(
     val row: String,
     val childManager: String,
     val setResult: String,
+    val list: PinnedListLoad,
 )
 
 /** The recipe of the build being patched, found with the hooks. */
@@ -127,6 +132,79 @@ internal fun Method.pinnedKeyCheck(): PinnedKeyCheck? {
     val (id, long) = reads.map { it.field().toString() }
     if (id == long) return null
     return PinnedKeyCheck(code[at].method().toString(), id, long)
+}
+
+/** See all's pin store for an encrypted chat: its class and the fields it keeps the key's two ids in. */
+internal class PinnedStore(val type: String, val idField: String, val longField: String)
+
+private val PLAIN_MOVES = setOf(Opcode.MOVE, Opcode.MOVE_FROM16, Opcode.MOVE_16, Opcode.MOVE_WIDE, Opcode.MOVE_WIDE_FROM16,
+    Opcode.MOVE_WIDE_16, Opcode.MOVE_OBJECT, Opcode.MOVE_OBJECT_FROM16, Opcode.MOVE_OBJECT_16)
+private val LITERAL_LOADS = setOf(Opcode.CONST_4, Opcode.CONST_16, Opcode.CONST, Opcode.CONST_HIGH16)
+private const val STRING_OF_LONG = "Ljava/lang/String;->valueOf(J)Ljava/lang/String;"
+
+private fun widthOf(type: String) = if (type == "J" || type == "D") 2 else 1
+
+/** The register a non-static invoke of [call] hands its parameter [index] in. */
+private fun Instruction.argumentOf(call: MethodReference, index: Int): Int? {
+    val word = 1 + call.params().take(index).sumOf { widthOf(it) }
+    return when (this) {
+        is RegisterRangeInstruction -> startRegister + word
+        is FiveRegisterInstruction -> if (word < registerCount) listOf(registerC, registerD, registerE, registerF, registerG)[word] else null
+        else -> null
+    }
+}
+
+/**
+ * The index of the instruction that last set [register] before [at], read back in code order past casts and through
+ * plain moves, or null. The loads read here build their arguments in a straight line just before the call.
+ */
+private fun List<Instruction>.setterOf(at: Int, register: Int): Int? {
+    var wanted = register
+    for (i in at - 1 downTo 0) {
+        val target = (this[i] as? OneRegisterInstruction)?.registerA ?: continue
+        val opcode = this[i].opcode
+        if (!opcode.setsRegister() || (target != wanted && !(opcode.setsWideRegister() && target + 1 == wanted))) continue
+        when {
+            opcode == Opcode.CHECK_CAST -> Unit
+            opcode in PLAIN_MOVES && target == wanted -> wanted = (this[i] as TwoRegisterInstruction).registerB
+            else -> return i
+        }
+    }
+    return null
+}
+
+/**
+ * The pin store the sheet's view setup makes once [check] says yes: the first constructor after it that takes two longs
+ * and gets the key's two ids, in [check]'s order, and the fields that constructor keeps each one in.
+ */
+internal fun Method.pinnedStore(check: PinnedKeyCheck, classOf: (String) -> ClassDef?): PinnedStore? {
+    val code = code()
+    val from = code.indexOfFirst { it.method()?.toString() == check.encrypted }
+    if (from < 0) return null
+    val at = (from + 1 until code.size).firstOrNull {
+        val call = code[it].method()
+        (code[it].opcode == Opcode.INVOKE_DIRECT || code[it].opcode == Opcode.INVOKE_DIRECT_RANGE) && call != null &&
+            call.name == "<init>" && call.params().count { p -> p == "J" } == 2
+    } ?: return null
+    val init = code[at].method()!!
+    val longs = init.params().indices.filter { init.params()[it] == "J" }
+    val given = longs.map { p ->
+        code[at].argumentOf(init, p)?.let { code.setterOf(at, it) }?.let { code[it] }
+            ?.takeIf { it.opcode == Opcode.IGET_WIDE }?.field()?.toString()
+    }
+    if (given != listOf(check.keyId, check.keyLong)) return null
+    val constructor = classOf(init.definingClass)?.methods?.singleOrNull { it.hookId() == init.toString() } ?: return null
+    val registers = constructor.implementation?.registerCount ?: return null
+    val self = registers - 1 - init.params().sumOf { widthOf(it) }
+    val kept = longs.map { p ->
+        val register = self + 1 + init.params().take(p).sumOf { widthOf(it) }
+        constructor.code().filter {
+            it.opcode == Opcode.IPUT_WIDE && (it as TwoRegisterInstruction).registerA == register && it.registerB == self
+        }.mapNotNull { it.field()?.takeIf { f -> f.definingClass == init.definingClass && f.type == "J" }?.toString() }
+            .distinct().singleOrNull() ?: return null
+    }
+    if (kept[0] == kept[1]) return null
+    return PinnedStore(init.definingClass, kept[0], kept[1])
 }
 
 /** How the count helper reaches the loader and reads its answer. */
@@ -183,6 +261,50 @@ internal fun Method.pinnedLoadSite(classOf: (String) -> ClassDef?, makers: List<
     }.distinctBy { it.toString() }.singleOrNull() ?: return null
     return PinnedLoadSite(locator.toString(), id, locator.parameterTypes[0].toString(), unwrap.toString(), load.definingClass,
         options, load.toString(), rows.definingClass, rows.toString())
+}
+
+/**
+ * What this method's loads of an encrypted chat's pins name, each one that asks the way See all's page does: the text
+ * of [store]'s first id field, then the kind, the long of its second id field and the two flags. Null when such a load
+ * takes the kind or a flag from anything but a literal, or a flag isn't 0 or 1.
+ */
+internal fun Method.pinnedListLoads(load: String, store: PinnedStore): List<PinnedListLoad>? {
+    val code = code()
+    val found = mutableListOf<PinnedListLoad>()
+    for (at in code.indices) {
+        val call = code[at].method() ?: continue
+        if (code[at].opcode != Opcode.INVOKE_VIRTUAL_RANGE || call.toString() != load) continue
+        fun setter(p: Int) = code[at].argumentOf(call, p)?.let { code.setterOf(at, it) }
+        val text = setter(1)?.takeIf { it > 0 && code[it].opcode == Opcode.MOVE_RESULT_OBJECT } ?: continue
+        val valueOf = code[text - 1]
+        if (valueOf.opcode != Opcode.INVOKE_STATIC || valueOf.method()?.toString() != STRING_OF_LONG) continue
+        val id = code.setterOf(text - 1, (valueOf as FiveRegisterInstruction).registerC)?.let { code[it] }
+        val long = setter(3)?.let { code[it] }
+        if (id?.opcode != Opcode.IGET_WIDE || id?.field()?.toString() != store.idField ||
+            long?.opcode != Opcode.IGET_WIDE || long?.field()?.toString() != store.longField) continue
+        val (kind, first, second) = listOf(2, 4, 5).map { p ->
+            setter(p)?.let { code[it] }?.takeIf { it.opcode in LITERAL_LOADS }?.let { (it as NarrowLiteralInstruction).narrowLiteral }
+                ?: return null
+        }
+        if (first !in 0..1 || second !in 0..1) return null
+        found += PinnedListLoad(kind, first, second)
+    }
+    return found
+}
+
+/** What See all's loads of an encrypted chat's pins name, when there is one and they all name the same. */
+internal fun pinnedListLoadOf(classes: Iterable<ClassDef>, load: String, store: PinnedStore): PinnedListLoad? {
+    val loader = load.substringBefore("->")
+    val name = load.substringAfter("->").substringBefore('(')
+    val asks = mutableListOf<PinnedListLoad>()
+    for (cls in classes) for (method in cls.methods) {
+        val calls = method.implementation?.instructions?.any {
+            val call = (it as? ReferenceInstruction)?.reference as? MethodReference
+            it.opcode == Opcode.INVOKE_VIRTUAL_RANGE && call != null && call.name == name && call.definingClass == loader
+        } ?: false
+        if (calls) asks += method.pinnedListLoads(load, store) ?: return null
+    }
+    return asks.distinct().singleOrNull()
 }
 
 /** The one public method of the future's classes that takes a callback. Every answer goes to the callbacks it holds. */
@@ -253,9 +375,12 @@ internal fun resolvePinnedBar(classes: Iterable<ClassDef>, handover: Method?): P
     val manager = childManager.returnType
     val setResult = types[manager]?.methods?.filter { it.isSetFragmentResult() }?.singleOrNull() ?: return null
     if (!handover.publishesPinnedJumps(manager, classOf)) return null
-    val check = types[PINNED_SHEET]?.methods?.singleOrNull { it.hookId() == PINNED_SHEET_VIEW }?.pinnedKeyCheck() ?: return null
+    val sheetView = types[PINNED_SHEET]?.methods?.singleOrNull { it.hookId() == PINNED_SHEET_VIEW } ?: return null
+    val check = sheetView.pinnedKeyCheck() ?: return null
+    val store = sheetView.pinnedStore(check, classOf) ?: return null
     val makers = classes.flatMap { cls -> cls.methods.filter { it.returnType == PINNED_LOAD_OPTIONS && it.isPinnedOptionsMaker() } }.map { it.hookId() }
     val site = types[PINNED_COUNT_HELPER]?.methods?.mapNotNull { it.pinnedLoadSite(classOf, makers) }?.singleOrNull() ?: return null
+    val list = pinnedListLoadOf(classes, site.load, store) ?: return null
     val listen = pinnedListenOf(classOf) ?: return null
     val callback = types[MAILBOX_CALLBACK] ?: return null
     if (!AccessFlags.INTERFACE.isSet(callback.accessFlags) ||
@@ -269,7 +394,7 @@ internal fun resolvePinnedBar(classes: Iterable<ClassDef>, handover: Method?): P
         !declares(messageTimestampGetterName, listOf("I"), "J")) return null
     val recipe = PinnedBarRecipe(chat.type, "${chat.type}->${session.name}:${session.type}", "${chat.type}->${key.name}:${key.type}",
         check.encrypted, check.keyId, check.keyLong, site.locator, site.locatorId, site.sessionType, site.unwrap, site.loader,
-        site.options, site.load, listen, site.result, site.rows, row.type, childManager.hookId(), setResult.hookId())
+        site.options, site.load, listen, site.result, site.rows, row.type, childManager.hookId(), setResult.hookId(), list)
     return recipe.takeIf { it.reachable(types) }
 }
 
@@ -340,10 +465,10 @@ internal fun pinnedLoadBuilder(stub: MutableMethod, r: PinnedBarRecipe): Mutable
             iget-wide v5, v1, ${r.keyId}
             invoke-static {v5, v6}, Ljava/lang/String;->valueOf(J)Ljava/lang/String;
             move-result-object v5
-            const/16 v6, $PINNED_LIST_ROWS
+            const v6, ${r.list.kind}
             iget-wide v7, v1, ${r.keyLong}
-            const/4 v9, 0x1
-            const/4 v10, 0x0
+            const/4 v9, ${r.list.first}
+            const/4 v10, ${r.list.second}
             invoke-virtual/range {v3 .. v10}, ${r.load}
             move-result-object v0
             if-eqz v0, :none

@@ -12,6 +12,7 @@ import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
@@ -53,11 +54,24 @@ private const val ENCRYPTED = "$THREAD_KEY_TYPE->A1G()Z"
 private const val KEY_ID = "$THREAD_KEY_TYPE->A01:J"
 private const val KEY_LONG = "$THREAD_KEY_TYPE->A03:J"
 private const val LOCATOR_ID = 0x18826
-private const val OPTIONS = "new-instance v6, $PINNED_LOAD_OPTIONS\n    invoke-direct {v6}, $PINNED_LOAD_OPTIONS-><init>()V"
+/** See all's pin store, made from the key's two ids, and the page's loads that read them back. */
+private const val STORE = "LX/HWj;"
+private const val STORE_INIT = "$STORE-><init>(Landroid/content/Context;LX/6gP;JJZ)V"
+private const val STORE_ID = "$STORE->A03:J"
+private const val STORE_LONG = "$STORE->A02:J"
+private const val PAGE = "LX/FwL;"
+private const val RELOAD = "LX/FzN;"
+private const val COMMUNITY_PAGE = "LX/FwK;"
+/** The list kind See all's encrypted load names, 0x1000 in both 588 families. */
+private const val LIST_KIND = 0x1000
+private const val OPTIONS ="new-instance v6, $PINNED_LOAD_OPTIONS\n    invoke-direct {v6}, $PINNED_LOAD_OPTIONS-><init>()V"
 
 private fun Method.code(): List<Instruction> = implementation!!.instructions.toList()
 private fun Instruction.ref() = (this as? ReferenceInstruction)?.reference?.toString()
 private fun Instruction.text() = ((this as? ReferenceInstruction)?.reference as? StringReference)?.string
+/** Each register a literal is loaded into, with the literal. */
+private fun List<Instruction>.literals() =
+    filterIsInstance<NarrowLiteralInstruction>().associate { (it as OneRegisterInstruction).registerA to it.narrowLiteral }
 
 /** The extension's stub as it ships: static, answering nothing, minus one or null. */
 internal fun pinnedBarStub(id: String, flags: Int = STATIC, body: String? = null): MutableMethod {
@@ -94,16 +108,57 @@ private fun handover(key: String = PINNED_RESULT_KEY) = fixtureMethod("$CHAT->on
     return-void
 """.trimIndent(), 6)
 
-private fun sheetView(second: String = KEY_LONG) = fixtureMethod(PINNED_SHEET_VIEW, """
+/** The sheet's view setup: an encrypted chat's two ids go to the pin store, the first one first unless [swapped]. */
+private fun sheetView(second: String = KEY_LONG, swapped: Boolean = false) = fixtureMethod(PINNED_SHEET_VIEW, """
     iget-object v0, p0, $PINNED_SHEET->A00:$THREAD_KEY_TYPE
     invoke-virtual {v0}, $ENCRYPTED
     move-result v1
     if-eqz v1, :done
     iget-wide v2, v0, $KEY_ID
     iget-wide v4, v0, $second
+    const/4 v13, 0x0
+    new-instance v6, $STORE
+    const/4 v7, 0x0
+    const/4 v8, 0x0
+    move-wide v9, ${if (swapped) "v4" else "v2"}
+    move-wide v11, ${if (swapped) "v2" else "v4"}
+    invoke-direct/range {v6 .. v13}, $STORE_INIT
     :done
     return-void
-""".trimIndent(), 9)
+""".trimIndent(), 17)
+
+/** The pin store's constructor, keeping its first long in [first] and its second in [second]. */
+private fun store(first: String = STORE_ID, second: String = STORE_LONG) = fixtureClass(STORE, listOf(fixtureMethod(STORE_INIT, """
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+    iput-wide p3, p0, $first
+    iput-wide p5, p0, $second
+    return-void
+""".trimIndent(), 8, PUBLIC or 0x10000)))
+
+/** A load of the page's pinned list the way 588's FwL and FzN make it: [id] as text, [kind], [long], then two flags. */
+private fun pageLoad(owner: String = PAGE, kind: String = "const/16 v7, $LIST_KIND", first: Int = 1, second: Int = 0,
+    id: String = STORE_ID, long: String = STORE_LONG) =
+    fixtureClass(owner, listOf(fixtureMethod("$owner->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;", """
+    const/4 v10, $first
+    iget-object v4, p0, $owner->A01:Ljava/lang/Object;
+    check-cast v4, $LOADER
+    iget-object v3, p0, $owner->A03:Ljava/lang/Object;
+    check-cast v3, ${id.substringBefore("->")}
+    iget-wide v1, v3, $id
+    invoke-static {v1, v2}, Ljava/lang/String;->valueOf(J)Ljava/lang/String;
+    move-result-object v6
+    iget-wide v8, v3, $long
+    iget-object v5, p0, $owner->A02:Ljava/lang/Object;
+    check-cast v5, $PINNED_LOAD_OPTIONS
+    const/4 v11, $second
+    $kind
+    invoke-virtual/range {v4 .. v11}, $LOAD
+    move-result-object v0
+    return-object v0
+""".trimIndent(), 14)))
+
+/** A community chat's page load, which names no kind and reads another store. */
+private fun communityLoad() = pageLoad(COMMUNITY_PAGE, "const/4 v7, 0x0", 0, 0, "LX/HWh;->A01:J", "LX/HWh;->A00:J")
 
 /** The count helper. 503's calls the options maker, 497's fills its own options in place ([OPTIONS]). */
 private fun countHelper(rows: String = ROWS, options: String = "invoke-static {}, $OPTIONS_MAKER\n    move-result-object v6") =
@@ -147,6 +202,10 @@ private fun pinnedFixture(vararg changed: MutableClass): List<MutableClass> {
             return-void
         """.trimIndent(), 4))),
         fixtureClass(PINNED_SHEET, listOf(sheetView())),
+        store(),
+        pageLoad(),
+        pageLoad(RELOAD),
+        communityLoad(),
         fixtureClass(PINNED_COUNT_HELPER, listOf(countHelper())),
         fixtureClass(THREAD_KEY_TYPE, extraFields = listOf(field(THREAD_KEY_TYPE, "A01", "J", PUBLIC or 0x10),
             field(THREAD_KEY_TYPE, "A03", "J", PUBLIC or 0x10)), methods = listOf(fixtureMethod(ENCRYPTED, "const/4 v0, 0x1\nreturn v0", 2))),
@@ -264,6 +323,12 @@ class PinnedBarTest {
                 fixtureClass(PINNED_COUNT_HELPER, listOf(countHelper(options = OPTIONS))), secondMaker),
             "the helper's maker makes nothing" to pinnedFixture(fixtureClass("LX/Fv9;", listOf(fixtureMethod(OPTIONS_MAKER,
                 "const/4 v0, 0x0\nreturn-object v0", 1, PUBLIC or STATIC)))),
+            "See all's load reads its kind from a field" to pinnedFixture(pageLoad(kind = "iget v7, p0, $PAGE->A00:I")),
+            "See all's two loads name different kinds" to pinnedFixture(pageLoad(RELOAD, "const/16 v7, 0x2000")),
+            "a flag that isn't yes or no" to pinnedFixture(pageLoad(first = 2)),
+            "the sheet hands the store its ids the other way round" to pinnedFixture(fixtureClass(PINNED_SHEET, listOf(sheetView(swapped = true)))),
+            "the store keeps its ids the other way round" to pinnedFixture(store(STORE_LONG, STORE_ID)),
+            "no load reads the store's ids" to pinnedFixture(pageLoad(long = STORE_ID), pageLoad(RELOAD, long = STORE_ID)),
         )
         for ((case, classes) in cases) assertNull(resolve(classes), case)
         assertNotNull(resolve(pinnedFixture(secondMaker)), "a second maker the helper doesn't call changes nothing")
@@ -287,15 +352,22 @@ class PinnedBarTest {
         val load = code.single { it.ref() == LOAD }
         assertEquals(Opcode.INVOKE_VIRTUAL_RANGE, load.opcode)
         assertEquals(listOf(3, 8), (load as RegisterRangeInstruction).let { listOf(it.startRegister, it.registerCount) })
-        val consts = code.filterIsInstance<NarrowLiteralInstruction>().associate { (it as com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction).registerA to it.narrowLiteral }
-        // 1000 rows, then true and false, as See all asks for them.
-        assertEquals(PINNED_LIST_ROWS, consts[6])
+        val consts = code.literals()
+        // See all's list kind, then true and false, as its own load names them. The community page's 0 doesn't count.
+        assertEquals(LIST_KIND, consts[6])
         assertEquals(1, consts[9])
         assertEquals(0, consts[10])
         assertTrue(code.any { it.ref() == "Ljava/lang/String;->valueOf(J)Ljava/lang/String;" })
         assertEquals(listOf(KEY_ID, KEY_LONG), code.mapNotNull { it.ref()?.takeIf { r -> r == KEY_ID || r == KEY_LONG } })
         val listen = code.single { it.ref() == LISTEN }
         assertEquals(listOf(0, 12), (listen as FiveRegisterInstruction).let { listOf(it.registerC, it.registerD) })
+    }
+
+    @Test fun theLoadNamesWhatSeeAllsOwnLoadNames() {
+        val recipe = assertNotNull(resolve(pinnedFixture(pageLoad(kind = "const/16 v7, 0x2000", first = 0, second = 1),
+            pageLoad(RELOAD, "const/16 v7, 0x2000", 0, 1))))
+        val consts = pinnedBarBuilders(recipe) { pinnedBarStub(it) }[0].second.code().literals()
+        assertEquals(listOf(0x2000, 0, 1), listOf(consts[6], consts[9], consts[10]))
     }
 
     @Test fun theJumpSendsWhatMessengersOwnPinnedBarSends() {
@@ -359,7 +431,10 @@ class PinnedBarTest {
                 assertEquals(listOf(CHILD_MANAGER, SET_RESULT), listOf(recipe.childManager, recipe.setResult), code)
             }
             assertEquals(FB_USER_SESSION, recipe.session.substringAfter(':'), code)
-            pinnedBarBuilders(recipe) { pinnedBarStub(it) }
+            // See all's encrypted load names the kind 0x1000 and the flags true and false in both families (laneA dumps of
+            // 503's FwL and FzN and 497's FuS and Fx5), where the count helper's community load names 0.
+            val asks = pinnedBarBuilders(recipe) { pinnedBarStub(it) }[0].second.code().literals()
+            assertEquals(listOf(LIST_KIND, 1, 0), listOf(asks[6], asks[9], asks[10]), code)
             val method = MutableMethod(found.getValue(PINNED_BAR).single())
             val before = method.code()
             method.injectPinnedBar()
