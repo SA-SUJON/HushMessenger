@@ -7,8 +7,12 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
@@ -42,8 +46,11 @@ internal const val CHAT_PREVIEW_COLD_HELPER = "$SETTINGS->chatPreviewCold(I)Z"
 
 private val CHAT_PREVIEW_FLAGS = setOf(CHAT_PREVIEW_FLAG, CHAT_PREVIEW_ENCRYPTED_FLAG)
 
-/** One flag read: which flag, the move-result that takes the answer and the register it fills. */
-internal class ChatPreviewSite(val flag: Long, val result: Int, val register: Int) {
+/**
+ * One flag read: which flag, the move-result that takes the answer and the register it fills. [again] marks a read of
+ * a register pair an earlier load of the flag filled (#261).
+ */
+internal class ChatPreviewSite(val flag: Long, val result: Int, val register: Int, val again: Boolean = false) {
     /** A preview flag's no can turn into a yes, a cold-start flag's yes into a no. */
     val helper get() = if (flag in CHAT_PREVIEW_COLD_FLAGS) CHAT_PREVIEW_COLD_HELPER else CHAT_PREVIEW_HELPER
 }
@@ -60,8 +67,9 @@ private fun Method.readsChatPreviewFlag() = implementation?.instructions?.any {
  * Each read loads its flag into a register pair, passes the pair as the last two arguments of a boolean (…J) check,
  * a static one or the config interface's right after a cast to it, and moves the answer into a register. Nothing may
  * jump into that sequence, so the answer the switch sees is the flag's. 586 branches on it at once, 587 sometimes a few
- * instructions later or with if-nez. The cold-start flags are read the same way. The preview flag is read once; any
- * other shape refuses the switch.
+ * instructions later or with if-nez. The cold-start flags are read the same way, and a later check of a pair that still
+ * holds its flag counts as another read of it (see askedAgain). The preview flag is loaded once. Any other shape
+ * refuses the switch. Sites come in the order their answers do.
  */
 internal fun Method.chatPreviewSites(): List<ChatPreviewSite> {
     fun refuse(): Nothing = throw PatchException("Messenger controls: the chat preview check in ${hookId()} no longer matches the tested build")
@@ -71,7 +79,7 @@ internal fun Method.chatPreviewSites(): List<ChatPreviewSite> {
         code[at].opcode == Opcode.CONST_WIDE && (code[at] as WideLiteralInstruction).wideLiteral.let {
             it in CHAT_PREVIEW_FLAGS || it in CHAT_PREVIEW_COLD_FLAGS
         }
-    }.map { at ->
+    }.flatMap { at ->
         val pair = (code[at] as OneRegisterInstruction).registerA
         val cast = code.getOrNull(at + 1)?.takeIf { it.opcode == Opcode.CHECK_CAST }
         val callAt = if (cast == null) at + 1 else at + 2
@@ -85,10 +93,91 @@ internal fun Method.chatPreviewSites(): List<ChatPreviewSite> {
         if (!form || check.returnType != "Z" || check.parameterTypes.lastOrNull()?.toString() != "J" ||
             arguments.size < 2 || arguments.takeLast(2) != listOf(pair, pair + 1) || result?.opcode != Opcode.MOVE_RESULT ||
             (at + 1..callAt + 1).any { it in targets }) refuse()
-        ChatPreviewSite((code[at] as WideLiteralInstruction).wideLiteral, callAt + 1, (result as OneRegisterInstruction).registerA)
+        val flag = (code[at] as WideLiteralInstruction).wideLiteral
+        val load = ChatPreviewSite(flag, callAt + 1, (result as OneRegisterInstruction).registerA)
+        listOf(load) + (askedAgain(code, flag, at, pair, callAt, targets) ?: refuse())
     }
-    if (sites.count { it.flag == CHAT_PREVIEW_FLAG } != 1) refuse()
-    return sites
+    if (sites.count { it.flag == CHAT_PREVIEW_FLAG && !it.again } != 1) refuse()
+    return sites.sortedBy { it.result }
+}
+
+/**
+ * Later reads of the flag a load at [at] put in [pair], past its own check at [call]. 588's long-press handler asks the
+ * preview flag again from the same pair before it adopts a preview the press made ready, and a no there gives the
+ * plain menu (#261). A boolean (…J) check of the pair counts wherever the pair holds what the load put there on every
+ * way in (see chatPreviewPairHolds). Null when such a read has another shape than a load's own: static, or the config
+ * interface's right after a cast to it, with its answer moved straight into a register, and nothing jumping onto that
+ * move or the instruction after it.
+ */
+private fun Method.askedAgain(code: List<Instruction>, flag: Long, at: Int, pair: Int, call: Int, targets: Set<Int>): List<ChatPreviewSite>? {
+    val holds = chatPreviewPairHolds(code, at, pair)
+    val found = mutableListOf<ChatPreviewSite>()
+    for (i in code.indices) {
+        if (i == call || !holds[i]) continue
+        val check = (code[i] as? ReferenceInstruction)?.reference as? MethodReference
+        val arguments = when (val invoke = code[i]) {
+            is FiveRegisterInstruction -> listOf(invoke.registerC, invoke.registerD, invoke.registerE, invoke.registerF, invoke.registerG).take(invoke.registerCount)
+            is RegisterRangeInstruction -> (invoke.startRegister until invoke.startRegister + invoke.registerCount).toList()
+            else -> emptyList()
+        }
+        if (check != null && arguments.size >= 2 && arguments.takeLast(2) == listOf(pair, pair + 1) &&
+            check.returnType == "Z" && check.parameterTypes.lastOrNull()?.toString() == "J") {
+            val cast = code[i - 1].takeIf { it.opcode == Opcode.CHECK_CAST }
+            val form = code[i].opcode == Opcode.INVOKE_STATIC || code[i].opcode == Opcode.INVOKE_INTERFACE && cast != null &&
+                arguments.first() == (cast as OneRegisterInstruction).registerA &&
+                (cast as ReferenceInstruction).reference.toString() == check.definingClass
+            val result = code.getOrNull(i + 1)
+            if (!form || result?.opcode != Opcode.MOVE_RESULT || i + 1 in targets || i + 2 in targets) return null
+            found += ChatPreviewSite(flag, i + 1, (result as OneRegisterInstruction).registerA, again = true)
+        }
+    }
+    return found
+}
+
+/** Whether [this] writes either register of [pair], counting the high half of a wide write. */
+private fun Instruction.writesChatPreviewPair(pair: Int): Boolean {
+    val destination = (this as? OneRegisterInstruction)?.registerA ?: return false
+    return opcode.setsRegister() && (destination == pair || destination == pair + 1 || opcode.setsWideRegister() && destination + 1 == pair)
+}
+
+/**
+ * Which instructions see [pair] holding what the load at [at] put there on every way in: falling through, a branch, a
+ * switch case, or a catch handler, which sees what each instruction of its try block saw. Loops count (588's handler
+ * jumps back between its two preview reads), and the method's own entry never holds it.
+ */
+private fun Method.chatPreviewPairHolds(code: List<Instruction>, at: Int, pair: Int): BooleanArray {
+    val addresses = code.runningFold(0) { address, instruction -> address + instruction.codeUnits }
+    val indexAt = code.indices.associateBy { addresses[it] }
+    val from = List(code.size) { mutableListOf<Int>() }
+    code.forEachIndexed { i, instruction ->
+        if (instruction.opcode.format.isPayloadFormat) return@forEachIndexed
+        if (i + 1 < code.size && instruction.opcode.canContinue()) from[i + 1] += i
+        if (instruction !is OffsetInstruction || instruction.opcode == Opcode.FILL_ARRAY_DATA) return@forEachIndexed
+        val landing = addresses[i] + instruction.codeOffset
+        if (instruction.opcode == Opcode.PACKED_SWITCH || instruction.opcode == Opcode.SPARSE_SWITCH) {
+            // Case offsets count from the switch instruction, not from its payload.
+            (indexAt[landing]?.let(code::get) as? SwitchPayload)?.switchElements
+                ?.forEach { case -> indexAt[addresses[i] + case.offset]?.let { from[it] += i } }
+        } else indexAt[landing]?.let { from[it] += i }
+    }
+    val caught = List(code.size) { mutableListOf<Int>() }
+    implementation?.tryBlocks?.forEach { block ->
+        val end = block.startCodeAddress + block.codeUnitCount
+        val covered = code.indices.filter { addresses[it] >= block.startCodeAddress && addresses[it] < end }
+        block.exceptionHandlers.forEach { handler -> indexAt[handler.handlerCodeAddress]?.let { caught[it] += covered } }
+    }
+    val holds = BooleanArray(code.size) { it != 0 }
+    fun after(i: Int) = i == at || holds[i] && !code[i].writesChatPreviewPair(pair)
+    var changed = true
+    while (changed) {
+        changed = false
+        for (i in 1 until code.size) {
+            if (!holds[i] || from[i].all(::after) && caught[i].all { holds[it] && after(it) }) continue
+            holds[i] = false
+            changed = true
+        }
+    }
+    return holds
 }
 
 /**

@@ -500,7 +500,8 @@ final class Chats {
      * One reader's flag reads have the tested shape: each const-wide of the preview, encrypted-chat or cold-start flags goes, after
      * an optional check-cast to the check's interface, into a boolean (…J) check taking the pair last, invoke-static or
      * (after the cast) invoke-interface on the cast register, then move-result, with nothing jumping into the read. The
-     * preview flag is read exactly once. Returns the encrypted-chat reads, or -1 for any other shape.
+     * preview flag is loaded exactly once, and a later check of a pair still holding its flag (chatPreviewAskedAgain) has a
+     * load's read shape too. Returns the encrypted-chat reads, or -1 for any other shape.
      */
     static int chatPreviewReads(Method method) {
         var code = instructions(method);
@@ -526,9 +527,102 @@ final class Chats {
                 code.get(callAt + 1).getOpcode() != Opcode.MOVE_RESULT)
                 return -1;
             for (int i = at + 1; i <= callAt + 1; i++) if (targets.contains(i)) return -1;
+            if (chatPreviewAskedAgain(method, code, at, pair, callAt, targets) < 0) return -1;
             if (flag == CHAT_PREVIEW_FLAG) previews++; else if (flag == CHAT_PREVIEW_ENCRYPTED_FLAG) encrypted++;
         }
         return previews == 1 ? encrypted : -1;
+    }
+
+    /**
+     * ChatPreview.kt's askedAgain: the boolean (…J) checks of the pair the load at [at] filled, past its own check at
+     * [call], wherever the pair still holds it on every way in (chatPreviewPairHolds). Returns how many, or -1 when one
+     * isn't invoke-static or a cast's invoke-interface, its answer isn't moved straight into a register, or something
+     * jumps onto that move or the instruction after it.
+     */
+    static int chatPreviewAskedAgain(Method method, List<Instruction> code, int at, int pair, int call, Set<Integer> targets) {
+        var holds = chatPreviewPairHolds(method, code, at, pair);
+        int found = 0;
+        for (int i = 0; i < code.size(); i++) {
+            if (i == call || !holds[i]) continue;
+            var insn = code.get(i);
+            if (!(insn instanceof ReferenceInstruction ri) || !(ri.getReference() instanceof MethodReference check)) continue;
+            List<Integer> args;
+            if (insn instanceof FiveRegisterInstruction five) {
+                args = List.of(five.getRegisterC(), five.getRegisterD(), five.getRegisterE(), five.getRegisterF(), five.getRegisterG()).subList(0, five.getRegisterCount());
+            } else if (insn instanceof RegisterRangeInstruction range) {
+                args = new ArrayList<>();
+                for (int r = 0; r < range.getRegisterCount(); r++) args.add(range.getStartRegister() + r);
+            } else continue;
+            var params = check.getParameterTypes();
+            if (args.size() < 2 || !args.subList(args.size() - 2, args.size()).equals(List.of(pair, pair + 1)) ||
+                !"Z".equals(check.getReturnType()) || params.isEmpty() || !"J".equals(params.get(params.size() - 1).toString())) continue;
+            var cast = code.get(i - 1).getOpcode() == Opcode.CHECK_CAST ? code.get(i - 1) : null;
+            boolean form = insn.getOpcode() == Opcode.INVOKE_STATIC || insn.getOpcode() == Opcode.INVOKE_INTERFACE && cast != null &&
+                args.get(0) == register(cast) && ((ReferenceInstruction) cast).getReference().toString().equals(check.getDefiningClass());
+            if (!form || i + 1 >= code.size() || code.get(i + 1).getOpcode() != Opcode.MOVE_RESULT ||
+                targets.contains(i + 1) || targets.contains(i + 2)) return -1;
+            found++;
+        }
+        return found;
+    }
+
+    /**
+     * ChatPreview.kt's chatPreviewPairHolds: which instructions see the pair holding what the load at [at] put there on
+     * every way in (falling through, a branch, a switch case, or a catch handler, which sees what each instruction of
+     * its try block saw). Loops count, and the method's own entry never holds it.
+     */
+    static boolean[] chatPreviewPairHolds(Method method, List<Instruction> code, int at, int pair) {
+        int n = code.size();
+        var addresses = new int[n + 1];
+        var indexAt = new HashMap<Integer, Integer>();
+        for (int k = 0; k < n; k++) { indexAt.put(addresses[k], k); addresses[k + 1] = addresses[k] + code.get(k).getCodeUnits(); }
+        var from = new ArrayList<List<Integer>>();
+        var caught = new ArrayList<List<Integer>>();
+        for (int k = 0; k < n; k++) { from.add(new ArrayList<>()); caught.add(new ArrayList<>()); }
+        for (int k = 0; k < n; k++) {
+            var insn = code.get(k);
+            if (insn.getOpcode().format.isPayloadFormat) continue;
+            if (k + 1 < n && insn.getOpcode().canContinue()) from.get(k + 1).add(k);
+            if (!(insn instanceof OffsetInstruction jump) || insn.getOpcode() == Opcode.FILL_ARRAY_DATA) continue;
+            Integer landing = indexAt.get(addresses[k] + jump.getCodeOffset());
+            if (insn.getOpcode() == Opcode.PACKED_SWITCH || insn.getOpcode() == Opcode.SPARSE_SWITCH) {
+                // Case offsets count from the switch instruction, not from its payload.
+                if (landing != null && code.get(landing) instanceof SwitchPayload payload)
+                    for (var e : payload.getSwitchElements()) {
+                        Integer target = indexAt.get(addresses[k] + e.getOffset());
+                        if (target != null) from.get(target).add(k);
+                    }
+            } else if (landing != null) from.get(landing).add(k);
+        }
+        if (method.getImplementation() != null) for (var block : method.getImplementation().getTryBlocks()) {
+            int start = block.getStartCodeAddress(), end = start + block.getCodeUnitCount();
+            for (var handler : block.getExceptionHandlers()) {
+                Integer handlerAt = indexAt.get(handler.getHandlerCodeAddress());
+                if (handlerAt == null) continue;
+                for (int k = 0; k < n; k++) if (addresses[k] >= start && addresses[k] < end) caught.get(handlerAt).add(k);
+            }
+        }
+        var holds = new boolean[n];
+        for (int k = 1; k < n; k++) holds[k] = true;
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (int k = 1; k < n; k++) {
+                if (!holds[k]) continue;
+                boolean keep = true;
+                for (int p : from.get(k)) if (!chatPreviewPairHeldAfter(code, holds, at, pair, p)) keep = false;
+                for (int p : caught.get(k)) if (!holds[p] || !chatPreviewPairHeldAfter(code, holds, at, pair, p)) keep = false;
+                if (keep) continue;
+                holds[k] = false;
+                changed = true;
+            }
+        }
+        return holds;
+    }
+
+    /** Whether the pair still holds the load's flag after instruction [k]: [k] is the load, or it held before and [k] writes neither half. */
+    static boolean chatPreviewPairHeldAfter(List<Instruction> code, boolean[] holds, int at, int pair, int k) {
+        return k == at || holds[k] && !writes(code.get(k), pair) && !writes(code.get(k), pair + 1);
     }
 
     /**

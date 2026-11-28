@@ -32,6 +32,8 @@ private const val ENCRYPTED_READ = "invoke-static {v0, v4, v2, v3}, LX/18A;->A1X
 private const val WARM = "LX/Cpf;->A00()Z"
 private const val COLD_FLAG = 0x2101053700084493L
 private const val COLD_READ = "invoke-static {v4, v2, v3}, LX/18A;->A1Y(Ljava/lang/Object;J)Z"
+private const val READY = "LX/Cpd;->A00()Z"
+private const val ADOPT_READ = "invoke-static {v0, v4, v2, v3}, LX/18A;->A1W(LX/30w;Ljava/lang/Object;J)Z"
 
 /**
  * The long-press handler as Messenger 587 and 588 write it, cut down: an encrypted chat asks the encrypted-chat flag
@@ -79,6 +81,58 @@ private val HANDLER_BODY = """
     invoke-virtual {p0}, $MENU
     return-void
 """.trimIndent()
+
+/**
+ * 588's handler when the press made a preview ready before the hold timed out (#261). It keeps the preview flag in
+ * its register pair, jumps back over a stretch of it before the cold-start read (588 loops there too), the cold-start
+ * read takes another pair, and before it adopts the ready preview it asks the preview flag again from the pair it
+ * kept. A no there gives the plain menu.
+ */
+private val ADOPTING_BODY = """
+    const/4 v4, 0x0
+    invoke-virtual {p0}, $HANDLER->A00()Z
+    move-result v1
+    if-eqz v1, :preview_flag
+    sget-object v0, LX/30w;->A0A:LX/30w;
+    const-wide v2, ${CHAT_PREVIEW_ENCRYPTED_FLAG}L
+    $ENCRYPTED_READ
+    move-result v0
+    if-eqz v0, :menu
+    :preview_flag
+    const-wide v2, ${CHAT_PREVIEW_FLAG}L
+    $PREVIEW_READ
+    move-result v6
+    if-eqz v6, :menu
+    :row
+    invoke-static {}, LX/Cpc;->A00()Z
+    move-result v0
+    if-eqz v0, :row
+    invoke-static {}, $WARM
+    move-result v0
+    if-nez v0, :warm
+    const-wide v5, ${COLD_FLAG}L
+    invoke-static {v4, v5, v6}, LX/18A;->A1Y(Ljava/lang/Object;J)Z
+    move-result v0
+    if-nez v0, :menu
+    :warm
+    invoke-static {}, $READY
+    move-result v0
+    if-eqz v0, :show
+    sget-object v0, LX/30w;->A0A:LX/30w;
+    $ADOPT_READ
+    move-result v0
+    if-eqz v0, :menu
+    :show
+    invoke-static {}, $BUILDER
+    move-result v0
+    return-void
+    :menu
+    invoke-virtual {p0}, $MENU
+    return-void
+""".trimIndent()
+
+/** The adopting handler with the first [from] swapped for [to]. */
+private fun adopting(from: String, to: String) = handler(ADOPTING_BODY.replaceFirst(from, to).also { check(it != ADOPTING_BODY) })
 
 /** 586's handler, which builds the preview itself behind the same reads. */
 private val HANDLER_586_BODY = HANDLER_BODY.replace("invoke-static {}, $BUILDER\nmove-result v0",
@@ -232,6 +286,63 @@ class ChatPreviewTest {
         }
     }
 
+    // #261: a press the chat list made a preview ready for asked the preview flag a second time, from the pair it had
+    // loaded for the first read, and that answer never went through the switch. With Meta's flag off, a group or plain
+    // chat opened the plain menu whenever its preview was ready in time, and an encrypted one (never made ready) peeked.
+    @Test fun aPreviewMadeReadyBeforeTheHoldAsksTheFlagAgainThroughTheSwitch() {
+        val method = handler(ADOPTING_BODY)
+        assertEquals(listOf(CHAT_PREVIEW_ENCRYPTED_FLAG, CHAT_PREVIEW_FLAG, COLD_FLAG, CHAT_PREVIEW_FLAG), method.chatPreviewSites().map { it.flag })
+        assertEquals(setOf(SYNTHETIC_CHAT_PREVIEW), found(chatPreviewFixture(handler(ADOPTING_BODY))))
+        validateControls(mirroredControls(chatPreviewFixture(handler(ADOPTING_BODY))), setOf(CHAT_PREVIEW))
+        val before = method.code()
+        injectControl(CHAT_PREVIEW, mapOf(CHAT_PREVIEW to listOf(method)))
+        val code = method.code()
+        val calls = method.helperCalls()
+        assertEquals(listOf(CHAT_PREVIEW_HELPER, CHAT_PREVIEW_HELPER, CHAT_PREVIEW_COLD_HELPER, CHAT_PREVIEW_HELPER), calls.map { code[it].helper() })
+        // The second answer comes from the read of the kept pair, goes back to the register the branch reads, and a no
+        // still lands on the plain menu.
+        val again = calls.last()
+        assertEquals(ADOPT_READ.substringAfter("}, "), (code[again - 2] as ReferenceInstruction).reference.toString())
+        assertEquals(Opcode.MOVE_RESULT, code[again + 1].opcode)
+        val branch = code[again + 2]
+        assertEquals(Opcode.IF_EQZ, branch.opcode)
+        assertEquals((code[again + 1] as OneRegisterInstruction).registerA, (branch as OneRegisterInstruction).registerA)
+        assertEquals(MENU, (code[code.branchTarget(again + 2)] as ReferenceInstruction).reference.toString())
+        assertEquals(before.map { it.opcode }, code.filterIndexed { i, _ -> calls.none { i == it || i == it + 1 } }.map { it.opcode })
+    }
+
+    // A pair is only taken for the preview flag while every way to the read comes through the flag's load with nothing
+    // writing the pair on the way. Otherwise the read is left as Messenger wrote it, and the rest still applies.
+    @Test fun aPairThatMayHoldSomethingElseIsNotTakenForThePreviewFlag() {
+        val adopt = "sget-object v0, LX/30w;->A0A:LX/30w;\n$ADOPT_READ"
+        val cases = mapOf(
+            "the pair loaded again" to adopting(adopt, "const-wide v2, 0x1L\n$adopt"),
+            "a wide write over the pair's low half" to adopting(adopt, "const-wide v1, 0x1L\n$adopt"),
+            "a write to the pair's high half" to adopting(adopt, "const/4 v3, 0x0\n$adopt"),
+            "a way in that skips the load" to adopting("$ENCRYPTED_READ\nmove-result v0\nif-eqz v0, :menu",
+                "$ENCRYPTED_READ\nmove-result v0\nif-eqz v0, :warm"),
+        )
+        for ((case, method) in cases) {
+            assertEquals(listOf(CHAT_PREVIEW_ENCRYPTED_FLAG, CHAT_PREVIEW_FLAG, COLD_FLAG), method.chatPreviewSites().map { it.flag }, case)
+            injectControl(CHAT_PREVIEW, mapOf(CHAT_PREVIEW to listOf(method)))
+            assertEquals(3, method.helperCalls().size, case)
+        }
+    }
+
+    @Test fun aSecondReadOfTheKeptPairInAnotherShapeRefusesTheSwitch() {
+        val cases = mapOf(
+            "a second read that isn't static" to adopting(ADOPT_READ, "invoke-virtual {v0, v2, v3}, LX/18A;->A1W(J)Z"),
+            "a second read over a register range" to adopting(ADOPT_READ, "invoke-static/range {v0 .. v3}, LX/18A;->A1W(LX/30w;Ljava/lang/Object;J)Z"),
+            "a second answer nothing takes" to adopting("$ADOPT_READ\nmove-result v0", "$ADOPT_READ\nconst/4 v0, 0x1"),
+        )
+        for ((case, method) in cases) {
+            assertTrue(found(chatPreviewFixture(method)).isEmpty(), case)
+            val before = method.code()
+            assertFailsWith<PatchException>(case) { injectControl(CHAT_PREVIEW, mapOf(CHAT_PREVIEW to listOf(method))) }
+            assertEquals(before, method.code(), case)
+        }
+    }
+
     // #231: a cold Messenger also asked two flags that gave the first long press after a restart the plain menu, and
     // turning the switch on means a restart.
     @Test fun everySupportedBuildPassesBothColdStartReadsThroughTheSwitch() {
@@ -274,10 +385,10 @@ class ChatPreviewTest {
             val hooks = findChatPreview(dex.dexEntryNames.flatMap { dex.getEntry(it)!!.dexFile.classes })
             assertEquals(activeProfile.hooks.getValue(CHAT_PREVIEW), hooks.map { it.hookId() }.toSet(), code)
             validateControls(mapOf(CHAT_PREVIEW to hooks), setOf(CHAT_PREVIEW))
-            // The long-press handler asks the encrypted-chat flag around its preview read, and the cold-start flag
-            // between them.
+            // The long-press handler asks the encrypted-chat flag around its preview read, the cold-start flag between
+            // them, and the preview flag a second time from the same pair when it adopts a preview made ready (#261).
             assertTrue(hooks.any { MutableMethod(it).chatPreviewSites().map { s -> s.flag } ==
-                listOf(CHAT_PREVIEW_ENCRYPTED_FLAG, CHAT_PREVIEW_FLAG, COLD_FLAG, CHAT_PREVIEW_ENCRYPTED_FLAG) }, code)
+                listOf(CHAT_PREVIEW_ENCRYPTED_FLAG, CHAT_PREVIEW_FLAG, COLD_FLAG, CHAT_PREVIEW_FLAG, CHAT_PREVIEW_ENCRYPTED_FLAG) }, code)
             // Both cold-start flags are asked somewhere the switch reaches, so a long press right after launch opens
             // the preview too (#231).
             val flags = hooks.flatMap { MutableMethod(it).chatPreviewSites().map { s -> s.flag } }.toSet()
