@@ -63,7 +63,7 @@ class ControlLifecycleTest {
             withLifecycleExtension(extension) { extensionReads ->
                 // Patcher initialization deletes its temporary root, which must not contain the input APK.
                 Patcher(PatcherConfig(apk, temporary.resolve("patcher-${selection.name}").toFile(),
-                    useBytecodeMode = BytecodeMode.FULL)).use { patcher ->
+                    useBytecodeMode = BytecodeMode.STRIP_FAST)).use { patcher ->
                     patcher += selection.patches
                     val results = collectLifecycle(patcher)
                     assertEquals(selection.patches, results.map { it.patch }.toSet(), selection.name)

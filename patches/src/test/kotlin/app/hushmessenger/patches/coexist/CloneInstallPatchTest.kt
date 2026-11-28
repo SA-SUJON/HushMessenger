@@ -705,7 +705,7 @@ class CloneInstallPatchTest {
             val owner = if (name == "on") COPY else "com.facebook.orca"
             val apk = lifecycleApk(temporary.resolve("input-$name"), lifecycleClasses(), permissions, components)
             withLifecycleExtension(extension) { _ ->
-                Patcher(PatcherConfig(apk, temporary.resolve("patcher-$name").toFile(), useBytecodeMode = BytecodeMode.FULL)).use { patcher ->
+                Patcher(PatcherConfig(apk, temporary.resolve("patcher-$name").toFile(), useBytecodeMode = BytecodeMode.STRIP_FAST)).use { patcher ->
                     patcher += selection
                     val results = collectLifecycle(patcher)
                     assertEquals(selection, results.map { it.patch }.toSet(), name)

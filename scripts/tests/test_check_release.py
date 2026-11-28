@@ -1139,6 +1139,11 @@ class ReleaseChecks(unittest.TestCase):
             release.verify(self.root)
         rebuild("2.5.0", "Use Morphe Manager (2.7.0 or newer), or Morphe Desktop 2.3.0 or newer.\n")
         self.assertIn("Release metadata passed", release.verify(self.root))
+        rebuild("2.6.0", "Use Morphe Manager (2.7.0 or newer), or Morphe Desktop 2.3.0 or newer.\n")
+        with self.assertRaisesRegex(ValueError, r"Morphe Manager \(2\.8\.0 or newer\)"):
+            release.verify(self.root)
+        rebuild("2.6.0", "Use Morphe Manager (2.8.0 or newer), or Morphe Desktop 2.4.0 or newer.\n")
+        self.assertIn("Release metadata passed", release.verify(self.root))
         # A patcher no table row names. A real one stops working here the day it gets its row.
         for patcher, message in (("99.0.0", "add the first Manager and Desktop"), (None, "no Patcher-Version")):
             rebuild(patcher, CLIENT_LINE)

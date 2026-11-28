@@ -58,6 +58,7 @@
 - `Show pinned messages` did nothing in end-to-end encrypted chats, because Messenger never turns its own pinned bar on there. With the switch on, those chats now get a bar right under the chat's name with the newest pinned message and how many are pinned. Tap it to jump to that message. It reads the same list as See all and updates when you come back to the chat after pinning or unpinning something. Refs #213.
 - With `Keep a message log` on, a reel, post or page someone shared showed up in the log only as Messenger's notification line, like "Shared a reel.", so once they unsent it there was nothing left to open. The log keeps the link itself now. A share with no words of its own is logged as its link, and one with words gets the link on its own line under them. Only web links are kept. Refs #70.
 - For developers, the release walk passes over a listed phone whose Messenger build has no stock APK in the fixtures and walks the next free one, saying which it skipped and why. It used to take the first free phone and stop there. `release.ps1 -WalkSerial <serial>` picks the walk device yourself.
+- The patches are built with Morphe patcher 2.6.0 now, the one that comes with Morphe Manager 2.8.0 and Morphe Desktop 2.4.0. Manager won't load a bundle made with a newer patcher than its own, so update Manager to 2.8.0 or newer (or Desktop to 2.4.0) before you add the next release.
 
 ## 0.31.0 (2026-11-25)
 
