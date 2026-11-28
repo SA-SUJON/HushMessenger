@@ -3,6 +3,7 @@ package app.hushmessenger.extension;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Picture;
 import android.view.MotionEvent;
 import android.view.View;
@@ -92,6 +93,11 @@ public final class TabSwipe {
         private final Map<Object, TabFollow.Shot> pictures = new HashMap<>();
         /** Set when this touch went down on a swipe still changing the tab, so the page on screen may not be its own. */
         private boolean cutShort;
+        /** Whether this touch went down on a row that scrolls sideways, once [sideChecked] says it was asked (#258). */
+        private boolean sideList;
+        private boolean sideChecked;
+        private final Matrix inverse = new Matrix();
+        private final float[] point = new float[2];
 
         SwipeFrame(Context context, Route route, Object home) {
             super(context);
@@ -108,6 +114,7 @@ public final class TabSwipe {
                     downX = event.getX();
                     downY = event.getY();
                     taken = false;
+                    sideList = sideChecked = false;
                     cutShort = endFollow(true);
                     endSlide();
                     bar = TabSlide.on() ? barAt(Math.round(event.getRawX()), Math.round(event.getRawY())) : null;
@@ -123,9 +130,17 @@ public final class TabSwipe {
                 } else if (action == MotionEvent.ACTION_MOVE && !taken && event.getPointerCount() == 1
                         && Settings.enabled(KEY)) {
                     float sideways = Math.abs(event.getX() - downX);
-                    // A child that scrolls sideways asks to keep the gesture as it starts dragging, which stops this
-                    // from being called at all, so the extra slop here is what keeps those lists working.
-                    taken = sideways >= (long) slop * TAKE_SLOPS && sideways > Math.abs(event.getY() - downY) * SIDEWAYS;
+                    boolean wouldTake = sideways >= (long) slop * TAKE_SLOPS
+                        && sideways > Math.abs(event.getY() - downY) * SIDEWAYS;
+                    // A list that scrolls sideways asks to keep the gesture only once a move of it scrolled, which
+                    // never happens at its start or on a quick first move (People's story cards, #258). So a touch
+                    // that went down on one is left to it. This asks here rather than at the down because Compose
+                    // answers for the spot its last finger went down on, which it has seen by now.
+                    if (wouldTake && !sideChecked) {
+                        sideChecked = true;
+                        sideList = scrollsSideways(this, downX, downY, 0);
+                    }
+                    taken = wouldTake && !sideList;
                     if (taken) startFollow();
                 }
             } catch (Throwable error) {
@@ -163,6 +178,29 @@ public final class TabSwipe {
                 if (follow != null) letGo(false, 0);
             }
             return true;
+        }
+
+        /**
+         * Whether a shown view group under [x],[y] (in [group]'s own coordinates) can scroll sideways either way. Only
+         * groups count: a line of text too long for its view says it scrolls too, and a row's name isn't a list.
+         */
+        private boolean scrollsSideways(ViewGroup group, float x, float y, int depth) {
+            for (int index = group.getChildCount() - 1; index >= 0; index--) {
+                View child = group.getChildAt(index);
+                if (child == null || child.getVisibility() != View.VISIBLE) continue;
+                // Where a touch lands in the child, the way ViewGroup works it out: scrolled, placed, then moved.
+                point[0] = x + group.getScrollX() - child.getLeft();
+                point[1] = y + group.getScrollY() - child.getTop();
+                Matrix matrix = child.getMatrix();
+                if (!matrix.isIdentity() && matrix.invert(inverse)) inverse.mapPoints(point);
+                float localX = point[0];
+                float localY = point[1];
+                if (localX < 0 || localY < 0 || localX >= child.getWidth() || localY >= child.getHeight()) continue;
+                if (!(child instanceof ViewGroup)) continue;
+                if (child.canScrollHorizontally(1) || child.canScrollHorizontally(-1)) return true;
+                if (depth < 48 && scrollsSideways((ViewGroup) child, localX, localY, depth + 1)) return true;
+            }
+            return false;
         }
 
         @Override

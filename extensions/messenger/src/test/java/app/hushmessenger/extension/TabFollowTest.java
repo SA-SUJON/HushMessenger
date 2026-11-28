@@ -92,6 +92,40 @@ public class TabFollowTest {
         assertTrue(Settings.lastActive(TabFollow.KEY) > 0);
     }
 
+    /** #258: a row of story cards on the page keeps a drag that starts on it, so the page doesn't start to follow. */
+    @Test public void aSwipeThatStartsOnARowOfCardsLeavesThePageWhereItIs() {
+        on(true);
+        TabSwipeTest.Home home = new TabSwipeTest.Home();
+        TabSwipe.SwipeFrame frame = floating(home, TabSwipeTest.Tab.INBOX);
+        FrameLayout cards = new FrameLayout(RuntimeEnvironment.getApplication()) {
+            @Override public boolean canScrollHorizontally(int direction) { return direction > 0; }
+
+            @Override public boolean onTouchEvent(MotionEvent event) { return true; }
+        };
+        FrameLayout.LayoutParams row = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 300);
+        row.topMargin = 400;
+        litho(tabPages.get(TabSwipeTest.Tab.INBOX)).addView(cards, row);
+        layOut(frame);
+
+        down(frame);
+        move(frame, 825);
+        move(frame, 600);
+        assertNull("The cards keep the drag", frame.following());
+        assertEquals(0f, holder.getTranslationX(), 0.01f);
+        up(frame, 600);
+        settle();
+        assertNull(home.picked);
+
+        // Under the cards the page follows the finger as before.
+        frame.dispatchTouchEvent(MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 900, 1200, 0));
+        frame.dispatchTouchEvent(MotionEvent.obtain(0, 10, MotionEvent.ACTION_MOVE, 825, 1200, 0));
+        frame.dispatchTouchEvent(MotionEvent.obtain(0, 20, MotionEvent.ACTION_MOVE, 600, 1200, 0));
+        assertNotNull(frame.following());
+        frame.dispatchTouchEvent(MotionEvent.obtain(0, 30, MotionEvent.ACTION_UP, 600, 1200, 0));
+        settle();
+        assertSame(TabSwipeTest.Tab.PEOPLE, home.picked);
+    }
+
     @Test public void aSwipeThatCommitsCarriesThePageOffThenTheNextTabSlidesIn() {
         on(true);
         TabSwipeTest.Home home = new TabSwipeTest.Home();
